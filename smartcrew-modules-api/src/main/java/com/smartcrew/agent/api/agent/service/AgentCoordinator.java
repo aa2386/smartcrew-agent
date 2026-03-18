@@ -8,5 +8,12 @@ import com.smartcrew.agent.api.agent.domain.vo.AgentDispatchResponse;
  */
 public interface AgentCoordinator {
 
+    /**
+     * 按 Agent 编码派发请求。
+     *
+     * @param agentCode Agent 编码。
+     * @param request 请求参数。
+     * @return 派发执行结果。
+     */
     AgentDispatchResponse dispatch(String agentCode, AgentDispatchRequest request);
 }

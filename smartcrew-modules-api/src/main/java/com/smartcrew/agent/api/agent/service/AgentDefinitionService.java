@@ -12,9 +12,26 @@ import java.util.Optional;
  */
 public interface AgentDefinitionService {
 
+    /**
+     * 注册或更新 Agent 定义。
+     *
+     * @param request 请求参数。
+     * @return 注册或更新后的 Agent 定义。
+     */
     AgentDefinition register(AgentRegisterRequest request);
 
+    /**
+     * 查询并返回全部记录。
+     *
+     * @return 结果列表。
+     */
     List<AgentDefinitionVo> listAll();
 
+    /**
+     * 按编码查询 Agent 定义。
+     *
+     * @param agentCode Agent 编码。
+     * @return 匹配结果；未找到时返回空 `Optional`。
+     */
     Optional<AgentDefinition> findByCode(String agentCode);
 }

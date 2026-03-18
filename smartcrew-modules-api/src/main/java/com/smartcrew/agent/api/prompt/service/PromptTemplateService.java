@@ -11,9 +11,26 @@ import java.util.Optional;
  */
 public interface PromptTemplateService {
 
+    /**
+     * 创建提示词模板。
+     *
+     * @param request 请求参数。
+     * @return 创建后的模板信息。
+     */
     PromptTemplateVo create(PromptTemplateRequest request);
 
+    /**
+     * 查询并返回全部记录。
+     *
+     * @return 结果列表。
+     */
     List<PromptTemplateVo> listAll();
 
+    /**
+     * 按分类查询提示词模板。
+     *
+     * @param category 模板分类。
+     * @return 匹配结果；未找到时返回空 `Optional`。
+     */
     Optional<PromptTemplateVo> queryByCategory(String category);
 }

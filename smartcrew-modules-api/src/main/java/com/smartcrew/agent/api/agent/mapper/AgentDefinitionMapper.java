@@ -12,6 +12,12 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface AgentDefinitionMapper extends BaseMapper<AgentDefinition> {
 
+    /**
+     * 按 Agent 编码查询定义。
+     *
+     * @param agentCode Agent 编码。
+     * @return 匹配到的 Agent 定义；未命中时返回 `null`。
+     */
     @Select("select * from agent_definition where agent_code = #{agentCode} limit 1")
     AgentDefinition selectByAgentCode(@Param("agentCode") String agentCode);
 }

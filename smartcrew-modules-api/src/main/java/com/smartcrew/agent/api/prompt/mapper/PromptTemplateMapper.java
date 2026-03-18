@@ -12,6 +12,12 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface PromptTemplateMapper extends BaseMapper<PromptTemplate> {
 
+    /**
+     * 按分类查询最新模板。
+     *
+     * @param category 模板分类。
+     * @return 匹配到的模板实体；未命中时返回 `null`。
+     */
     @Select("select * from prompt_template where category = #{category} order by update_time desc, id desc limit 1")
     PromptTemplate selectLatestByCategory(@Param("category") String category);
 }

@@ -7,5 +7,11 @@ import java.util.Optional;
  */
 public interface PlatformAdapterRegistry {
 
+    /**
+     * 按平台编码获取适配器。
+     *
+     * @param platform 平台编码，例如 `wecom`、`feishu`。
+     * @return 匹配结果；未找到时返回空 `Optional`。
+     */
     Optional<PlatformAdapter> getAdapter(String platform);
 }

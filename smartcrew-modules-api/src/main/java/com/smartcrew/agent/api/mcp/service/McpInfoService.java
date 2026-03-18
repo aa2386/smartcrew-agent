@@ -11,9 +11,26 @@ import java.util.Optional;
  */
 public interface McpInfoService {
 
+    /**
+     * 保存或更新目标记录。
+     *
+     * @param request 请求参数。
+     * @return 保存后的 MCP 信息。
+     */
     McpInfoVo saveOrUpdate(McpInfoRequest request);
 
+    /**
+     * 查询并返回全部记录。
+     *
+     * @return 结果列表。
+     */
     List<McpInfoVo> listAll();
 
+    /**
+     * 按服务名称查询 MCP 信息。
+     *
+     * @param serverName MCP 服务名称。
+     * @return 匹配结果；未找到时返回空 `Optional`。
+     */
     Optional<McpInfoVo> findByServerName(String serverName);
 }

@@ -5,5 +5,8 @@ package com.smartcrew.agent.api.agent.service;
  */
 public interface AgentDiscoveryService {
 
+    /**
+     * 发现并注册可用 Agent。
+     */
     void discoverAndRegister();
 }

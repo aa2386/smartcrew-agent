@@ -8,5 +8,10 @@ import com.smartcrew.agent.api.agent.domain.model.MessageEnvelope;
 @FunctionalInterface
 public interface AgentMessageHandler {
 
+    /**
+     * 处理派发命令并返回执行结果。
+     *
+     * @param envelope 消息封装对象。
+     */
     void handle(MessageEnvelope envelope);
 }

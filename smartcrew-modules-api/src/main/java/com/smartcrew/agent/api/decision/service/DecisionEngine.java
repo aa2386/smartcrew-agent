@@ -8,5 +8,11 @@ import com.smartcrew.agent.api.decision.domain.vo.DecisionPlanResponse;
  */
 public interface DecisionEngine {
 
+    /**
+     * 生成决策计划。
+     *
+     * @param request 请求参数。
+     * @return 结构化决策计划。
+     */
     DecisionPlanResponse plan(DecisionPlanRequest request);
 }
