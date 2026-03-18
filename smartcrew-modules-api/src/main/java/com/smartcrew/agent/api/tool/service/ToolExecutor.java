@@ -1,0 +1,11 @@
+package com.smartcrew.agent.api.tool.service;
+
+import java.util.Map;
+
+/**
+ * ???????????????????????
+ */
+public interface ToolExecutor {
+
+    Object execute(String toolCode, Map<String, Object> arguments);
+}

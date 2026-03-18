@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: smartcrew-agent
+  profiles:
+    active: dev
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: 8085
+
+mybatis-plus:
+  type-aliases-package: com.smartcrew.agent.api
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+smartcrew:
+  name: smartcrew-agent
+  version: 0.0.1-SNAPSHOT
+  llm:
+    enabled: false
+    provider: openai
+    model: gpt-4o-mini
+  tools:
+    enabled:
+      basic: true
+      file: true
+      image-search: true
+      plantuml: true
+      web-search: true
+      web-page: true
+      document: true
+      terminal: false
+  tooling:
+    file:
+      save-dir: ./tmp

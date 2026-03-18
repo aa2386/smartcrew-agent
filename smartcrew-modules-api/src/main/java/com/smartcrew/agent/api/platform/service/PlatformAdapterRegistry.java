@@ -1,0 +1,11 @@
+package com.smartcrew.agent.api.platform.service;
+
+import java.util.Optional;
+
+/**
+ * ????????????????????????
+ */
+public interface PlatformAdapterRegistry {
+
+    Optional<PlatformAdapter> getAdapter(String platform);
+}

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Annotation profile for smartcrew-agent" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$PROJECT_DIR$/../../Software/Maven/DevSoft/maven/apache-maven-3.6.1/mvn_resp/org/projectlombok/lombok/1.18.26/lombok-1.18.26.jar" />
+        </processorPath>
+        <module name="smartcrew-common" />
+        <module name="smartcrew-admin" />
+        <module name="smartcrew-modules" />
+        <module name="smartcrew-modules-api" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="smartcrew-admin" options="-parameters" />
+      <module name="smartcrew-common" options="-parameters" />
+      <module name="smartcrew-modules" options="-parameters" />
+      <module name="smartcrew-modules-api" options="-parameters" />
+    </option>
+  </component>
+</project>
