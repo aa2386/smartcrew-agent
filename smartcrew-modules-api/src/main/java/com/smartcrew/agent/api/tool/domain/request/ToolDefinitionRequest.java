@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
- * ???????????
+ * ToolDefinitionRequest 请求对象，封装接口调用所需的入参数据。
  */
 @Data
 public class ToolDefinitionRequest {

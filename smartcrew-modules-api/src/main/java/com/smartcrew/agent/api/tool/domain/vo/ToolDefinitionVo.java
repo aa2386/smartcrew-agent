@@ -4,7 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 /**
- * ?????????
+ * ToolDefinitionVo 视图对象，封装接口返回给调用方的数据。
  */
 @Data
 @Builder

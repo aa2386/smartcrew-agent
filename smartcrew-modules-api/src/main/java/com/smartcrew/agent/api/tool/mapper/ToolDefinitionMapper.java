@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 /**
- * ???????????
+ * ToolDefinitionMapper 接口，负责对应领域对象的数据访问操作。
  */
 @Mapper
 public interface ToolDefinitionMapper extends BaseMapper<ToolDefinition> {
