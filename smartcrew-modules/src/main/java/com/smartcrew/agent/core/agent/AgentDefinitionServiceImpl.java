@@ -7,6 +7,7 @@ import com.smartcrew.agent.api.agent.domain.vo.AgentDefinitionVo;
 import com.smartcrew.agent.api.agent.mapper.AgentDefinitionMapper;
 import com.smartcrew.agent.api.agent.service.AgentDefinitionService;
 import com.smartcrew.agent.api.agent.service.AgentRegistry;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ import java.util.Optional;
 /**
  * 代理定义服务实现，负责持久化代理定义并同步运行时注册表。
  */
+@RequiredArgsConstructor
 @Service
 public class AgentDefinitionServiceImpl implements AgentDefinitionService {
 
@@ -28,14 +30,6 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
      * 代理注册表。
      */
     private final AgentRegistry agentRegistry;
-
-    /**
-     * 构造 AgentDefinitionServiceImpl 所需的依赖对象。
-     */
-    public AgentDefinitionServiceImpl(AgentDefinitionMapper agentDefinitionMapper, AgentRegistry agentRegistry) {
-        this.agentDefinitionMapper = agentDefinitionMapper;
-        this.agentRegistry = agentRegistry;
-    }
 
     /**
      * 注册或更新目标对象。

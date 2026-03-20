@@ -3,6 +3,7 @@ package com.smartcrew.agent.core.memory;
 import com.smartcrew.agent.api.memory.domain.request.UserPreferenceUpsertRequest;
 import com.smartcrew.agent.api.memory.service.ConversationMemoryService;
 import com.smartcrew.agent.api.memory.service.UserPreferenceService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -11,6 +12,7 @@ import java.util.stream.Collectors;
 /**
  * 会话记忆服务实现，基于用户偏好服务读写会话记忆。
  */
+@RequiredArgsConstructor
 @Service
 public class ConversationMemoryServiceImpl implements ConversationMemoryService {
 
@@ -18,13 +20,6 @@ public class ConversationMemoryServiceImpl implements ConversationMemoryService 
      * 用户偏好服务。
      */
     private final UserPreferenceService userPreferenceService;
-
-    /**
-     * 构造 ConversationMemoryServiceImpl 所需的依赖对象。
-     */
-    public ConversationMemoryServiceImpl(UserPreferenceService userPreferenceService) {
-        this.userPreferenceService = userPreferenceService;
-    }
 
     /**
      * 加载指定用户的会话记忆。

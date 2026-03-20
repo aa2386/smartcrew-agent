@@ -4,6 +4,7 @@ import com.smartcrew.agent.api.tool.domain.model.ToolMetadata;
 import com.smartcrew.agent.api.tool.service.ToolExecutor;
 import com.smartcrew.agent.api.tool.service.ToolRegistry;
 import com.smartcrew.agent.common.exception.ServiceException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +13,7 @@ import java.util.Map;
 /**
  * 默认工具执行器实现，负责校验工具状态并定位目标 Bean。
  */
+@RequiredArgsConstructor
 @Service
 public class DefaultToolExecutor implements ToolExecutor {
 
@@ -23,14 +25,6 @@ public class DefaultToolExecutor implements ToolExecutor {
      * Spring 应用上下文。
      */
     private final ApplicationContext applicationContext;
-
-    /**
-     * 构造 DefaultToolExecutor 所需的依赖对象。
-     */
-    public DefaultToolExecutor(ToolRegistry toolRegistry, ApplicationContext applicationContext) {
-        this.toolRegistry = toolRegistry;
-        this.applicationContext = applicationContext;
-    }
 
     /**
      * 执行目标操作。

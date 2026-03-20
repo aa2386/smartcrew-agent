@@ -7,6 +7,7 @@ import com.smartcrew.agent.common.domain.R;
 import com.smartcrew.agent.common.exception.ServiceException;
 import com.smartcrew.agent.core.page.TableDataInfo;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 提示词模板控制器，提供模板创建、查询和按分类获取接口。
  */
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/prompts")
 public class PromptController {
@@ -25,13 +27,6 @@ public class PromptController {
      * 提示词模板服务。
      */
     private final PromptTemplateService promptTemplateService;
-
-    /**
-     * 构造 PromptController 所需的依赖对象。
-     */
-    public PromptController(PromptTemplateService promptTemplateService) {
-        this.promptTemplateService = promptTemplateService;
-    }
 
     /**
      * 查询列表数据。

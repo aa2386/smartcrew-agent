@@ -9,6 +9,7 @@ import com.smartcrew.agent.api.tool.service.ToolDefinitionService;
 import com.smartcrew.agent.api.tool.service.ToolRegistry;
 import com.smartcrew.agent.common.domain.R;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +22,7 @@ import java.util.List;
 /**
  * 工具管理控制器，提供工具定义维护和启停控制接口。
  */
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/tools")
 public class ToolController {
@@ -33,14 +35,6 @@ public class ToolController {
      * 工具定义服务。
      */
     private final ToolDefinitionService toolDefinitionService;
-
-    /**
-     * 构造 ToolController 所需的依赖对象。
-     */
-    public ToolController(ToolRegistry toolRegistry, ToolDefinitionService toolDefinitionService) {
-        this.toolRegistry = toolRegistry;
-        this.toolDefinitionService = toolDefinitionService;
-    }
 
     /**
      * 查询列表数据。

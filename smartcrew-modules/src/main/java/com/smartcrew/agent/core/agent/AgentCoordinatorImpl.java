@@ -9,6 +9,7 @@ import com.smartcrew.agent.api.agent.service.AgentCoordinator;
 import com.smartcrew.agent.api.agent.service.AgentMessageBus;
 import com.smartcrew.agent.api.agent.service.AgentRegistry;
 import com.smartcrew.agent.common.exception.ServiceException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -17,6 +18,7 @@ import java.util.UUID;
 /**
  * 代理协调服务实现，负责组装派发命令、发布消息并调用目标代理。
  */
+@RequiredArgsConstructor
 @Service
 public class AgentCoordinatorImpl implements AgentCoordinator {
 
@@ -28,14 +30,6 @@ public class AgentCoordinatorImpl implements AgentCoordinator {
      * 代理消息总线。
      */
     private final AgentMessageBus agentMessageBus;
-
-    /**
-     * 构造 AgentCoordinatorImpl 所需的依赖对象。
-     */
-    public AgentCoordinatorImpl(AgentRegistry agentRegistry, AgentMessageBus agentMessageBus) {
-        this.agentRegistry = agentRegistry;
-        this.agentMessageBus = agentMessageBus;
-    }
 
     /**
      * 按代理编码派发请求。

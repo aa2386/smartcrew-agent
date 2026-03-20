@@ -5,6 +5,7 @@ import com.smartcrew.agent.api.agent.service.Agent;
 import com.smartcrew.agent.api.agent.service.AgentDefinitionService;
 import com.smartcrew.agent.api.agent.service.AgentDiscoveryService;
 import com.smartcrew.agent.api.agent.service.AgentRegistry;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import java.util.List;
 /**
  * 代理发现服务实现，负责在应用启动时注册内置代理和数据库代理。
  */
+@RequiredArgsConstructor
 @Service
 public class AgentDiscoveryServiceImpl implements AgentDiscoveryService {
 
@@ -29,17 +31,6 @@ public class AgentDiscoveryServiceImpl implements AgentDiscoveryService {
      * 代理定义服务。
      */
     private final AgentDefinitionService agentDefinitionService;
-
-    /**
-     * 构造 AgentDiscoveryServiceImpl 所需的依赖对象。
-     */
-    public AgentDiscoveryServiceImpl(List<Agent> builtinAgents,
-                                     AgentRegistry agentRegistry,
-                                     AgentDefinitionService agentDefinitionService) {
-        this.builtinAgents = builtinAgents;
-        this.agentRegistry = agentRegistry;
-        this.agentDefinitionService = agentDefinitionService;
-    }
 
     /**
      * 发现并注册代理。

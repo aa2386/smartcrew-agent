@@ -10,6 +10,7 @@ import com.smartcrew.agent.api.agent.service.AgentDefinitionService;
 import com.smartcrew.agent.common.domain.R;
 import com.smartcrew.agent.core.page.TableDataInfo;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 代理管理控制器，提供代理注册、查询和派发相关 REST 接口。
  */
 @Validated
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/agents")
 public class AgentController {
@@ -35,14 +37,6 @@ public class AgentController {
      * 代理协调器。
      */
     private final AgentCoordinator agentCoordinator;
-
-    /**
-     * 构造 AgentController 所需的依赖对象。
-     */
-    public AgentController(AgentDefinitionService agentDefinitionService, AgentCoordinator agentCoordinator) {
-        this.agentDefinitionService = agentDefinitionService;
-        this.agentCoordinator = agentCoordinator;
-    }
 
     /**
      * 注册或更新目标对象。

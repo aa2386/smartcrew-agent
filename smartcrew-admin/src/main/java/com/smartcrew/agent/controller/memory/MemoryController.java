@@ -5,6 +5,7 @@ import com.smartcrew.agent.api.memory.domain.vo.UserPreferenceVo;
 import com.smartcrew.agent.api.memory.service.UserPreferenceService;
 import com.smartcrew.agent.common.domain.R;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -17,6 +18,7 @@ import java.util.List;
 /**
  * 记忆控制器，提供用户偏好查询与写入接口。
  */
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/memory/preferences")
 public class MemoryController {
@@ -25,13 +27,6 @@ public class MemoryController {
      * 用户偏好服务。
      */
     private final UserPreferenceService userPreferenceService;
-
-    /**
-     * 构造 MemoryController 所需的依赖对象。
-     */
-    public MemoryController(UserPreferenceService userPreferenceService) {
-        this.userPreferenceService = userPreferenceService;
-    }
 
     /**
      * 查询列表数据。
