@@ -6,10 +6,12 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 smartcrew:
+  llm:
+    api-key: ${DASHSCOPE_API_KEY:}
   tooling:
     tavily:
-      api-key:
+      api-key: ${TAVILY_API_KEY:}
       base-url: https://api.tavily.com/search
     pexels:
-      api-key:
+      api-key: ${PEXELS_API_KEY:}
       api-url: https://api.pexels.com/v1/search

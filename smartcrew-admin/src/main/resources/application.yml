@@ -22,8 +22,8 @@ smartcrew:
   version: 0.0.1-SNAPSHOT
   llm:
     enabled: false
-    provider: openai
-    model: gpt-4o-mini
+    provider: dashscope
+    model: qwen-plus
   tools:
     enabled:
       basic: true
