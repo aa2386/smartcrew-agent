@@ -38,7 +38,7 @@ public class WebPageTools implements SmartCrewTool {
      */
     @Override
     public String toolName() {
-        return "Web Page Tools";
+        return "网页工具";
     }
 
     /**
@@ -46,14 +46,14 @@ public class WebPageTools implements SmartCrewTool {
      */
     @Override
     public String description() {
-        return "Load and extract web page content";
+        return "加载并提取网页内容";
     }
 
     /**
      * 加载网页内容并返回纯文本。
      */
-    @Tool("Load a web page and return plain text")
-    public String load(@P("page url") String url) throws IOException {
+    @Tool("加载网页并返回纯文本内容")
+    public String load(@P("网页URL") String url) throws IOException {
         Request request = new Request.Builder().url(url).build();
         try (Response response = okHttpClient.newCall(request).execute()) {
             if (response.body() == null) {

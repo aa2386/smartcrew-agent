@@ -30,7 +30,7 @@ public class PlantUmlTools implements SmartCrewTool {
      */
     @Override
     public String toolName() {
-        return "PlantUML Tools";
+        return "PlantUML工具";
     }
 
     /**
@@ -38,14 +38,14 @@ public class PlantUmlTools implements SmartCrewTool {
      */
     @Override
     public String description() {
-        return "Generate PlantUML diagrams";
+        return "生成PlantUML图表";
     }
 
     /**
      * 将 PlantUML 源码转换为 SVG。
      */
-    @Tool("Generate SVG from PlantUML source")
-    public String generateSvg(@P("PlantUML source code") String umlCode) throws Exception {
+    @Tool("将PlantUML源码转换为SVG图片")
+    public String generateSvg(@P("PlantUML源码") String umlCode) throws Exception {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         new SourceStringReader(umlCode).generateImage(outputStream, new FileFormatOption(FileFormat.SVG));
         return outputStream.toString(StandardCharsets.UTF_8);

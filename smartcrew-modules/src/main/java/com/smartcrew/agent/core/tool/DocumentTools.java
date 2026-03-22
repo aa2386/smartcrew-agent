@@ -38,7 +38,7 @@ public class DocumentTools implements SmartCrewTool {
      */
     @Override
     public String toolName() {
-        return "Document Tools";
+        return "文档工具";
     }
 
     /**
@@ -46,14 +46,14 @@ public class DocumentTools implements SmartCrewTool {
      */
     @Override
     public String description() {
-        return "Load simple document text from a URL";
+        return "从指定URL加载文档文本内容";
     }
 
     /**
      * 解析目标内容。
      */
-    @Tool("Read document content from a URL")
-    public String parse(@P("document url") String fileUrl) throws IOException {
+    @Tool("从URL读取文档内容")
+    public String parse(@P("文档URL") String fileUrl) throws IOException {
         Request request = new Request.Builder().url(fileUrl).build();
         try (Response response = okHttpClient.newCall(request).execute()) {
             return response.body() == null ? "" : response.body().string();

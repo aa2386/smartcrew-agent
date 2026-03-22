@@ -41,7 +41,7 @@ public class ImageSearchTools implements SmartCrewTool {
      */
     @Override
     public String toolName() {
-        return "Image Search Tools";
+        return "图片搜索工具";
     }
 
     /**
@@ -49,14 +49,14 @@ public class ImageSearchTools implements SmartCrewTool {
      */
     @Override
     public String description() {
-        return "Search images with Pexels";
+        return "使用Pexels搜索图片";
     }
 
     /**
      * 执行搜索操作。
      */
-    @Tool("Search images from Pexels")
-    public String search(@P("search query") String query) {
+    @Tool("从Pexels搜索图片")
+    public String search(@P("搜索关键词") String query) {
         if (toolProperties.getPexels().getApiKey() == null || toolProperties.getPexels().getApiKey().isBlank()) {
             throw new ServiceException("Pexels API is not configured");
         }

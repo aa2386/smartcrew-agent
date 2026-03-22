@@ -27,7 +27,7 @@ public class BasicTools implements SmartCrewTool {
      */
     @Override
     public String toolName() {
-        return "Basic Tools";
+        return "基础工具";
     }
 
     /**
@@ -35,21 +35,21 @@ public class BasicTools implements SmartCrewTool {
      */
     @Override
     public String description() {
-        return "Basic utility helpers";
+        return "基础工具集，提供随机标识生成和时间查询功能";
     }
 
     /**
      * 生成随机标识。
      */
-    @Tool("Generate a random identifier with an optional prefix")
-    public String generateId(@P("identifier prefix") String prefix) {
+    @Tool("生成一个随机标识符，可指定可选前缀")
+    public String generateId(@P("标识符前缀") String prefix) {
         return (prefix == null ? "" : prefix) + UUID.randomUUID().toString().replace("-", "");
     }
 
     /**
      * 获取当前服务器时间。
      */
-    @Tool("Get current server time")
+    @Tool("获取当前服务器时间")
     public String currentTime() {
         return LocalDateTime.now().toString();
     }

@@ -53,7 +53,7 @@ public class WebSearchTools implements SmartCrewTool {
      */
     @Override
     public String toolName() {
-        return "Web Search Tools";
+        return "网络搜索工具";
     }
 
     /**
@@ -61,14 +61,14 @@ public class WebSearchTools implements SmartCrewTool {
      */
     @Override
     public String description() {
-        return "Search the web with Tavily";
+        return "使用Tavily进行网络搜索";
     }
 
     /**
      * 使用 Tavily 执行网络搜索。
      */
-    @Tool("Search the web for information")
-    public String search(@P("search query") String query) throws IOException {
+    @Tool("在网络上搜索信息")
+    public String search(@P("搜索关键词") String query) throws IOException {
         if (toolProperties.getTavily().getApiKey() == null || toolProperties.getTavily().getApiKey().isBlank()) {
             throw new ServiceException("Tavily API is not configured");
         }

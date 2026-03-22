@@ -40,7 +40,7 @@ public class FileTools implements SmartCrewTool {
      */
     @Override
     public String toolName() {
-        return "File Tools";
+        return "文件工具";
     }
 
     /**
@@ -48,22 +48,22 @@ public class FileTools implements SmartCrewTool {
      */
     @Override
     public String description() {
-        return "Read and write workspace tool files";
+        return "在工作目录中读写文件";
     }
 
     /**
      * 读取工作目录中的文件内容。
      */
-    @Tool("Read a file from the tool workspace")
-    public String readFile(@P("file name") String fileName) {
+    @Tool("从工具工作目录读取文件内容")
+    public String readFile(@P("文件名") String fileName) {
         return FileUtil.readUtf8String(resolve(fileName));
     }
 
     /**
      * 将内容写入工作目录中的文件。
      */
-    @Tool("Write content to a file in the tool workspace")
-    public String writeFile(@P("file name") String fileName, @P("content") String content) {
+    @Tool("将内容写入工具工作目录中的文件")
+    public String writeFile(@P("文件名") String fileName, @P("文件内容") String content) {
         File target = resolve(fileName);
         FileUtil.mkParentDirs(target);
         FileUtil.writeUtf8String(content, target);

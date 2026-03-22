@@ -43,7 +43,7 @@ public class TerminalTools implements SmartCrewTool {
      */
     @Override
     public String toolName() {
-        return "Terminal Tools";
+        return "终端工具";
     }
 
     /**
@@ -51,7 +51,7 @@ public class TerminalTools implements SmartCrewTool {
      */
     @Override
     public String description() {
-        return "Execute terminal commands in the tool workspace";
+        return "在工具工作目录中执行终端命令";
     }
 
     /**
@@ -73,8 +73,8 @@ public class TerminalTools implements SmartCrewTool {
     /**
      * 执行目标操作。
      */
-    @Tool("Execute a terminal command")
-    public String execute(@P("command line") String command) throws IOException, InterruptedException {
+    @Tool("执行终端命令")
+    public String execute(@P("命令行") String command) throws IOException, InterruptedException {
         ProcessBuilder processBuilder = new ProcessBuilder();
         if (System.getProperty("os.name").toLowerCase().contains("win")) {
             processBuilder.command("cmd.exe", "/c", command);
