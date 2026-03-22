@@ -85,7 +85,7 @@ public AgentDispatchResponse handle(AgentDispatchCommand command) {
   - API接口：`smartcrew-modules-api/src/main/java/com/smartcrew/agent/api/llm/`
   - 核心实现：`smartcrew-modules/src/main/java/com/smartcrew/agent/core/llm/`
   - Agent实现：`smartcrew-modules/src/main/java/com/smartcrew/agent/core/agent/`
-- **核心依赖**：`langchain4j-open-ai` (已在项目依赖管理中)
+- **核心依赖**：`langchain4j-community-dashscope` (已在项目依赖管理中)
 - **配置文件**：`smartcrew-admin/src/main/resources/application.yml`
 
 ### 2.2 核心开发步骤
@@ -234,11 +234,11 @@ public class LlmChatResponse {
 }
 ```
 
-#### 第三步：实现 OpenAI 客户端
-在 `smartcrew-modules` 中实现基于 LangChain4j 的 OpenAI 客户端。
+#### 第三步：实现千问客户端
+在 `smartcrew-modules` 中实现基于 LangChain4j 的千问（DashScope）客户端。
 
 ```java
-// 文件路径：smartcrew-modules/src/main/java/com/smartcrew/agent/core/llm/OpenAiLlmClient.java
+// 文件路径：smartcrew-modules/src/main/java/com/smartcrew/agent/core/llm/DashScopeLlmClient.java
 package com.smartcrew.agent.core.llm;
 
 import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
@@ -246,7 +246,7 @@ import com.smartcrew.agent.api.llm.domain.vo.LlmChatResponse;
 import com.smartcrew.agent.api.llm.service.LlmClient;
 import com.smartcrew.agent.common.config.SmartCrewProperties;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.community.model.dashscope.QwenChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -254,12 +254,12 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 
 /**
- * OpenAI LLM 客户端实现，基于 LangChain4j 框架。
+ * 千问（DashScope）LLM 客户端实现，基于 LangChain4j 框架。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OpenAiLlmClient implements LlmClient {
+public class DashScopeLlmClient implements LlmClient {
     
     private final SmartCrewProperties properties;
     private ChatLanguageModel chatModel;
@@ -299,7 +299,7 @@ public class OpenAiLlmClient implements LlmClient {
     
     @Override
     public String getClientId() {
-        return "openai-client";
+        return "dashscope-client";
     }
     
     /**
@@ -309,15 +309,14 @@ public class OpenAiLlmClient implements LlmClient {
     public void initializeModel() {
         SmartCrewProperties.Llm llmConfig = properties.getLlm();
         
-        this.chatModel = OpenAiChatModel.builder()
-                .baseUrl(llmConfig.getBaseUrl())
+        this.chatModel = QwenChatModel.builder()
                 .apiKey(llmConfig.getApiKey())
                 .modelName(llmConfig.getModel())
                 .temperature(0.7)
                 .timeout(Duration.ofSeconds(30))
                 .build();
                 
-        log.info("[LLM] OpenAI client initialized with model: {}", llmConfig.getModel());
+        log.info("[LLM] DashScope client initialized with model: {}", llmConfig.getModel());
     }
 }
 ```
@@ -330,7 +329,7 @@ public class OpenAiLlmClient implements LlmClient {
 package com.smartcrew.agent.core.config;
 
 import com.smartcrew.agent.common.config.SmartCrewProperties;
-import com.smartcrew.agent.core.llm.OpenAiLlmClient;
+import com.smartcrew.agent.core.llm.DashScopeLlmClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -348,16 +347,16 @@ import jakarta.annotation.PostConstruct;
 public class LlmConfig {
     
     private final SmartCrewProperties properties;
-    private final OpenAiLlmClient openAiLlmClient;
+    private final DashScopeLlmClient dashScopeLlmClient;
     
     @PostConstruct
     public void initializeLlmClients() {
         String provider = properties.getLlm().getProvider();
         log.info("[LLM] Initializing LLM client for provider: {}", provider);
         
-        if ("openai".equalsIgnoreCase(provider)) {
-            openAiLlmClient.initializeModel();
-            log.info("[LLM] OpenAI client initialized successfully");
+        if ("dashscope".equalsIgnoreCase(provider)) {
+            dashScopeLlmClient.initializeModel();
+            log.info("[LLM] DashScope client initialized successfully");
         } else {
             log.warn("[LLM] Unsupported LLM provider: {}", provider);
         }
@@ -461,10 +460,9 @@ smartcrew:
   version: 0.0.1-SNAPSHOT
   llm:
     enabled: true              # 启用 LLM 功能
-    provider: openai           # 供应商：openai
-    baseUrl: https://api.openai.com/v1  # OpenAI API 地址
-    apiKey: your-api-key-here  # 替换为你的 OpenAI API Key
-    model: gpt-4o-mini         # 使用的模型
+    provider: dashscope        # 供应商：dashscope（阿里云百炼）
+    apiKey: your-api-key-here  # 替换为你的阿里云百炼 API Key
+    model: qwen-plus           # 使用的模型（qwen-plus、qwen-turbo、qwen-max 等）
   tools:
     enabled:
       basic: true
@@ -596,7 +594,7 @@ private AgentDispatchResponse handleFallback(AgentDispatchCommand command, Strin
 添加性能监控和日志：
 
 ```java
-// 在 OpenAiLlmClient 中添加详细监控
+// 在 DashScopeLlmClient 中添加详细监控
 @Override
 public LlmChatResponse chat(LlmChatRequest request) {
     long startTime = System.currentTimeMillis();

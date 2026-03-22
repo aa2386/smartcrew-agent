@@ -112,9 +112,9 @@
 - 项目已有 LLM 配置模型：`SmartCrewProperties.Llm`
 - 默认配置为：
   - `enabled=false`
-  - `provider=openai`
-  - `model=gpt-4o-mini`
-- 当前代码中尚未形成“统一 LLM 调用服务层”。
+  - `provider=dashscope`
+  - `model=qwen-plus`
+- 当前代码中尚未形成"统一 LLM 调用服务层"。
 
 ### 4.2 目标能力
 
@@ -123,13 +123,13 @@
 - 模型路由（按任务选择模型）
 - 统一超时、重试、熔断
 - 统一日志与成本记录
-- 可插拔供应商（OpenAI / 本地模型 / 其他）
+- 可插拔供应商（千问 / 本地模型 / 其他）
 
 ### 4.3 最小可用接入步骤
 
 1. 在 `modules-api` 新增 LLM 服务接口（如 `LlmClient`）。
-2. 在 `modules` 新增实现（如 `OpenAiLlmClient`）。
-3. 在 `SmartCrewProperties` 中补足 `baseUrl/apiKey/model` 的读取逻辑。
+2. 在 `modules` 新增实现（如 `DashScopeLlmClient`）。
+3. 在 `SmartCrewProperties` 中补足 `apiKey/model` 的读取逻辑。
 4. 在 `DecisionEngine` 或 `Agent` 的处理链路引入该客户端。
 5. 为调用结果增加 traceId、耗时、token 统计日志。
 
