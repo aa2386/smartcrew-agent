@@ -23,6 +23,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * SmartCrew Agent 应用集成测试类
+ * 
+ * <p>测试覆盖以下功能模块：
+ * <ul>
+ *   <li>Agent 注册、查询和指令派发</li>
+ *   <li>决策规划器功能</li>
+ *   <li>工具管理和执行控制</li>
+ *   <li>用户偏好记忆管理</li>
+ *   <li>提示词模板管理</li>
+ *   <li>平台事件路由</li>
+ * </ul>
+ * 
+ * @author SmartCrew
+ */
 @ActiveProfiles("test")
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -37,8 +52,15 @@ class SmartCrewAgentApplicationTests {
     @Autowired
     private ToolExecutor toolExecutor;
 
+    /**
+     * 测试 Agent 的完整生命周期：
+     * 1. 注册一个新的自定义 Agent
+     * 2. 查询 Agent 列表验证注册成功
+     * 3. 向该 Agent 发送指令并验证响应
+     */
     @Test
     void shouldRegisterListAndDispatchAgent() throws Exception {
+        // 测试步骤 1：注册 Agent
         String registerBody = """
                 {
                   "agentCode": "custom-agent",
@@ -57,10 +79,12 @@ class SmartCrewAgentApplicationTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.agentCode").value("custom-agent"));
 
+        // 测试步骤 2：查询 Agent 列表
         mockMvc.perform(get("/api/v1/agents"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rows[?(@.agentCode=='custom-agent')]").exists());
 
+        // 测试步骤 3：向 Agent 发送指令
         String dispatchBody = """
                 {
                   "userId": 1001,
@@ -80,6 +104,13 @@ class SmartCrewAgentApplicationTests {
                 .andExpect(jsonPath("$.data.traceId").isNotEmpty());
     }
 
+    /**
+     * 测试决策规划器（Planner Agent）功能
+     * 验证系统能够根据用户输入生成决策计划，包括：
+     * - 思考过程（thought）
+     * - 执行步骤（steps）
+     * - 最终动作（finalAction）
+     */
     @Test
     void shouldReturnDecisionPlan() throws Exception {
         String request = """
@@ -102,8 +133,14 @@ class SmartCrewAgentApplicationTests {
                 .andExpect(jsonPath("$.data.finalAction").isNotEmpty());
     }
 
+    /**
+     * 测试工具管理和执行控制：
+     * 1. 验证终端工具（terminal）在列表中且默认禁用
+     * 2. 验证禁用的工具无法执行
+     */
     @Test
     void shouldExposeToolsAndRejectDisabledTerminalExecution() throws Exception {
+        // 测试步骤 1：获取工具列表并验证终端工具状态
         MvcResult result = mockMvc.perform(get("/api/v1/tools"))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -119,11 +156,17 @@ class SmartCrewAgentApplicationTests {
         assertThat(terminalNode).isNotNull();
         assertThat(terminalNode.path("enabled").asBoolean()).isFalse();
 
+        // 测试步骤 2：验证禁用的工具无法执行
         assertThatThrownBy(() -> toolExecutor.execute("terminal", Map.of("command", "echo hi")))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("disabled");
     }
 
+    /**
+     * 测试用户偏好记忆管理：
+     * 1. 为用户设置偏好（语言设置为简体中文）
+     * 2. 查询用户偏好验证设置成功
+     */
     @Test
     void shouldUpsertUserPreference() throws Exception {
         String request = """
@@ -135,18 +178,25 @@ class SmartCrewAgentApplicationTests {
                 }
                 """;
 
+        // 测试步骤 1：设置用户偏好
         mockMvc.perform(put("/api/v1/memory/preferences/88")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.prefKey").value("language"));
 
+        // 测试步骤 2：查询用户偏好
         mockMvc.perform(get("/api/v1/memory/preferences/88"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].prefKey").value("language"))
                 .andExpect(jsonPath("$.data[0].prefValue").value("zh-CN"));
     }
 
+    /**
+     * 测试提示词模板管理：
+     * 1. 创建一个新的提示词模板
+     * 2. 按分类查询验证创建成功
+     */
     @Test
     void shouldCreateAndQueryPromptTemplate() throws Exception {
         String request = """
@@ -158,17 +208,24 @@ class SmartCrewAgentApplicationTests {
                 }
                 """;
 
+        // 测试步骤 1：创建提示词模板
         mockMvc.perform(post("/api/v1/prompts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.category").value("chat"));
 
+        // 测试步骤 2：按分类查询提示词模板
         mockMvc.perform(get("/api/v1/prompts/category/chat"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.templateName").value("chat-default"));
     }
 
+    /**
+     * 测试企业微信平台事件路由：
+     * 1. 发送企业微信事件消息
+     * 2. 验证事件被正确路由和处理
+     */
     @Test
     void shouldRoutePlatformEvent() throws Exception {
         String request = """
@@ -190,6 +247,10 @@ class SmartCrewAgentApplicationTests {
                 .andExpect(jsonPath("$.data.handled").value(true));
     }
 
+    /**
+     * 测试未知平台事件处理：
+     * 验证当发送到不支持的平台时，系统能够正确拒绝处理
+     */
     @Test
     void shouldRejectUnknownPlatform() throws Exception {
         String request = """
