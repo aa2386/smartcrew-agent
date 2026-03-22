@@ -10,9 +10,12 @@ spring:
       schema-locations: classpath:sql/test-schema.sql
 
 smartcrew:
-  tools:
-    enabled:
-      terminal: false
+  llm:
+    api-key: ${DASHSCOPE_API_KEY:}
   tooling:
-    file:
-      save-dir: ./target/tmp
+    tavily:
+      api-key: ${TAVILY_API_KEY:}
+      base-url: https://api.tavily.com/search
+    pexels:
+      api-key: ${PEXELS_API_KEY:}
+      api-url: https://api.pexels.com/v1/search

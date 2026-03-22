@@ -21,7 +21,7 @@ smartcrew:
   name: smartcrew-agent
   version: 0.0.1-SNAPSHOT
   llm:
-    enabled: false
+    enabled: true
     provider: dashscope
     model: qwen-plus
   tools:

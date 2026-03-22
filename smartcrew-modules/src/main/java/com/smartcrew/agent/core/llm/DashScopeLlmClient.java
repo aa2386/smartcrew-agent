@@ -4,6 +4,7 @@ import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
 import com.smartcrew.agent.api.llm.domain.vo.LlmChatResponse;
 import com.smartcrew.agent.api.llm.service.LlmClient;
 import com.smartcrew.agent.common.config.SmartCrewProperties;
+import com.smartcrew.agent.common.util.StringUtils;
 import dev.langchain4j.community.model.dashscope.QwenChatModel;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class DashScopeLlmClient implements LlmClient {
         try {
             log.info("[LLM] Starting chat request, traceId: {}, message: {}", traceId, request.getUserMessage());
 
-            String response = chatModel.chat("你好");
+            String response = chatModel.chat(request.getUserMessage());
 
             long duration = System.currentTimeMillis() - startTime;
             log.info("[LLM] Chat completed, traceId: {}, duration: {}ms", traceId, duration);
@@ -65,12 +66,16 @@ public class DashScopeLlmClient implements LlmClient {
     public void initializeModel() {
         SmartCrewProperties.Llm llmConfig = properties.getLlm();
 
+        log.info("[LLM] 开始初始化 DashScope 模型");
+        log.info("[LLM] API Key: {}", StringUtils.isBlank(llmConfig.getApiKey()) ? "未配置" : "已配置");
+        log.info("[LLM] 模型名称: {}", llmConfig.getModel());
+
         this.chatModel = QwenChatModel.builder()
                 .apiKey(llmConfig.getApiKey())
                 .modelName(llmConfig.getModel())
                 .temperature(0.7F)
                 .build();
 
-        log.info("[LLM] DashScope client initialized with model: {}", llmConfig.getModel());
+        log.info("[LLM] DashScope 客户端已初始换 模型名称: {}", llmConfig.getModel());
     }
 }

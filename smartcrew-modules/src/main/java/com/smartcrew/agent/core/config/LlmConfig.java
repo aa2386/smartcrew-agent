@@ -1,6 +1,7 @@
 package com.smartcrew.agent.core.config;
 
 import com.smartcrew.agent.common.config.SmartCrewProperties;
+import com.smartcrew.agent.common.util.StringUtils;
 import com.smartcrew.agent.core.llm.DashScopeLlmClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +24,12 @@ public class LlmConfig {
 
     @PostConstruct
     public void initializeLlmClients() {
-        String provider = properties.getLlm().getProvider();
-        log.info("[LLM] 开始初始化大模型客户端，供应商: {}", provider);
+        SmartCrewProperties.Llm llmConfig = properties.getLlm();
+        String provider = llmConfig.getProvider();
+
+        log.info("[LLM] 开始初始化大模型客户端");
+        log.info("[LLM] 供应商: {}", provider);
+        log.info("[LLM] 基础 URL: {}", StringUtils.isBlank(llmConfig.getBaseUrl()) ? "未配置" : llmConfig.getBaseUrl());
 
         if ("dashscope".equalsIgnoreCase(provider)) {
             dashScopeLlmClient.initializeModel();
