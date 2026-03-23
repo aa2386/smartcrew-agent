@@ -12,8 +12,8 @@
         </processorPath>
         <module name="smartcrew-common" />
         <module name="smartcrew-admin" />
-        <module name="smartcrew-modules" />
         <module name="smartcrew-modules-api" />
+        <module name="smartcrew-modules" />
       </profile>
     </annotationProcessing>
   </component>
