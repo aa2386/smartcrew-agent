@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS llm_conversation_message;
+DROP TABLE IF EXISTS llm_conversation_session;
 DROP TABLE IF EXISTS agent_tool_binding;
 DROP TABLE IF EXISTS tool_definition;
 DROP TABLE IF EXISTS agent_definition;
@@ -100,3 +102,42 @@ CREATE TABLE agent_tool_binding (
     remark VARCHAR(255) NULL,
     CONSTRAINT uk_agent_tool UNIQUE (agent_code, tool_code)
 );
+
+CREATE TABLE llm_conversation_session (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    session_id VARCHAR(128) NOT NULL,
+    last_message_at TIMESTAMP NULL,
+    message_count INT NOT NULL DEFAULT 0,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL,
+    CONSTRAINT uk_user_session UNIQUE (user_id, session_id)
+);
+
+CREATE TABLE llm_conversation_message (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    session_id VARCHAR(128) NOT NULL,
+    message_seq BIGINT NOT NULL,
+    role VARCHAR(32) NOT NULL,
+    content CLOB NOT NULL,
+    trace_id VARCHAR(64) NULL,
+    model VARCHAR(128) NULL,
+    prompt_tokens INT NULL,
+    completion_tokens INT NULL,
+    total_tokens INT NULL,
+    status VARCHAR(32) NOT NULL,
+    error_message VARCHAR(512) NULL,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL
+);
+
+CREATE INDEX idx_user_session_seq ON llm_conversation_message (user_id, session_id, message_seq);

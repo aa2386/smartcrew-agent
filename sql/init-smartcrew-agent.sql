@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS llm_conversation_message;
+DROP TABLE IF EXISTS llm_conversation_session;
 DROP TABLE IF EXISTS agent_tool_binding;
 DROP TABLE IF EXISTS tool_definition;
 DROP TABLE IF EXISTS agent_definition;
@@ -25,7 +27,7 @@ CREATE TABLE mcp_info (
     command VARCHAR(255) NULL COMMENT '启动命令',
     arguments TEXT NULL COMMENT '启动参数',
     env TEXT NULL COMMENT '环境变量配置',
-    status TINYINT(1) NOT NULL DEFAULT 1 COMMENT '启用状态',
+    status TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用',
     description VARCHAR(255) NULL COMMENT '描述信息',
     create_dept BIGINT NULL COMMENT '创建部门',
     create_by BIGINT NULL COMMENT '创建人',
@@ -53,9 +55,9 @@ CREATE TABLE user_preference (
 
 CREATE TABLE agent_definition (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
-    agent_code VARCHAR(64) NOT NULL COMMENT '代理编码',
-    agent_name VARCHAR(128) NOT NULL COMMENT '代理名称',
-    agent_type VARCHAR(64) NOT NULL COMMENT '代理类型',
+    agent_code VARCHAR(64) NOT NULL COMMENT 'Agent 编码',
+    agent_name VARCHAR(128) NOT NULL COMMENT 'Agent 名称',
+    agent_type VARCHAR(64) NOT NULL COMMENT 'Agent 类型',
     description VARCHAR(255) NULL COMMENT '描述信息',
     strategy_type VARCHAR(64) NULL COMMENT '策略类型',
     system_prompt TEXT NULL COMMENT '系统提示词',
@@ -68,7 +70,7 @@ CREATE TABLE agent_definition (
     update_time DATETIME NULL COMMENT '更新时间',
     remark VARCHAR(255) NULL COMMENT '备注信息',
     CONSTRAINT uk_agent_code UNIQUE (agent_code)
-) COMMENT='代理定义表';
+) COMMENT='Agent 定义表';
 
 CREATE TABLE tool_definition (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
@@ -90,7 +92,7 @@ CREATE TABLE tool_definition (
 
 CREATE TABLE agent_tool_binding (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
-    agent_code VARCHAR(64) NOT NULL COMMENT '代理编码',
+    agent_code VARCHAR(64) NOT NULL COMMENT 'Agent 编码',
     tool_code VARCHAR(64) NOT NULL COMMENT '工具编码',
     create_dept BIGINT NULL COMMENT '创建部门',
     create_by BIGINT NULL COMMENT '创建人',
@@ -99,4 +101,42 @@ CREATE TABLE agent_tool_binding (
     update_time DATETIME NULL COMMENT '更新时间',
     remark VARCHAR(255) NULL COMMENT '备注信息',
     CONSTRAINT uk_agent_tool UNIQUE (agent_code, tool_code)
-) COMMENT='代理工具绑定表';
+) COMMENT='Agent 工具绑定表';
+
+CREATE TABLE llm_conversation_session (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    user_id BIGINT NOT NULL COMMENT '用户 ID',
+    session_id VARCHAR(128) NOT NULL COMMENT '会话 ID',
+    last_message_at DATETIME NULL COMMENT '最近一次消息时间',
+    message_count INT NOT NULL DEFAULT 0 COMMENT '消息总数',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
+    CONSTRAINT uk_user_session UNIQUE (user_id, session_id)
+) COMMENT='大模型会话表';
+
+CREATE TABLE llm_conversation_message (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    user_id BIGINT NOT NULL COMMENT '用户 ID',
+    session_id VARCHAR(128) NOT NULL COMMENT '会话 ID',
+    message_seq BIGINT NOT NULL COMMENT '消息顺序号',
+    role VARCHAR(32) NOT NULL COMMENT '消息角色',
+    content TEXT NOT NULL COMMENT '消息内容',
+    trace_id VARCHAR(64) NULL COMMENT '追踪 ID',
+    model VARCHAR(128) NULL COMMENT '模型名称',
+    prompt_tokens INT NULL COMMENT '输入 Token 数',
+    completion_tokens INT NULL COMMENT '输出 Token 数',
+    total_tokens INT NULL COMMENT '总 Token 数',
+    status VARCHAR(32) NOT NULL COMMENT '处理状态',
+    error_message VARCHAR(512) NULL COMMENT '错误信息',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
+    INDEX idx_user_session_seq (user_id, session_id, message_seq)
+) COMMENT='大模型会话消息表';
