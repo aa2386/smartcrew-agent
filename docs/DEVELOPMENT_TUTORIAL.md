@@ -329,7 +329,7 @@ public class DashScopeLlmClient implements LlmClient {
 package com.smartcrew.agent.core.config;
 
 import com.smartcrew.agent.common.config.SmartCrewProperties;
-import com.smartcrew.agent.core.llm.DashScopeLlmClient;
+import com.smartcrew.agent.core.llm.client.DashScopeLlmClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

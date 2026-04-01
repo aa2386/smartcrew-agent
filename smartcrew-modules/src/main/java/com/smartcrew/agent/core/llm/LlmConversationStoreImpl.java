@@ -4,6 +4,7 @@ import com.smartcrew.agent.api.llm.domain.entity.LlmConversationMessage;
 import com.smartcrew.agent.api.llm.domain.entity.LlmConversationSession;
 import com.smartcrew.agent.api.llm.mapper.LlmConversationMessageMapper;
 import com.smartcrew.agent.api.llm.mapper.LlmConversationSessionMapper;
+import com.smartcrew.agent.api.llm.service.LlmConversationStore;
 import com.smartcrew.agent.common.enums.ConversationHistoryEnum;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

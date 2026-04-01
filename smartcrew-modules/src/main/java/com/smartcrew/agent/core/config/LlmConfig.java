@@ -2,7 +2,7 @@ package com.smartcrew.agent.core.config;
 
 import com.smartcrew.agent.common.config.SmartCrewProperties;
 import com.smartcrew.agent.common.util.StringUtils;
-import com.smartcrew.agent.core.llm.DashScopeLlmClient;
+import com.smartcrew.agent.core.llm.client.DashScopeLlmClient;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
