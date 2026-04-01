@@ -62,7 +62,8 @@ public class DashScopeLlmClient implements LlmClient {
         String validationMessage = LlmClientUtils.validateRequest(request);
         if (validationMessage != null) {
             log.warn("大模型请求参数无效，traceId: {}，原因: {}", traceId, validationMessage);
-            return buildFailureResponse(validationMessage, traceId, startTime);
+            return LlmClientUtils.buildFailureResponse(
+                    validationMessage, startTime, properties.getLlm().getModel(), traceId);
         }
 
         String conversationKey = LlmClientUtils.buildConversationKey(request.getUserId(), request.getSessionId());// 构建会话key
@@ -86,15 +87,15 @@ public class DashScopeLlmClient implements LlmClient {
             savedUserMessage = conversationStore.saveUserMessage(
                     request.getUserId(), request.getSessionId(), userMessageSeq, request.getUserMessage(), traceId);
 
-            List<ChatMessage> messages = buildChatMessages(request, historyMessages);
+            List<ChatMessage> messages = LlmClientUtils.buildChatMessages(request, historyMessages);
             ChatRequest chatRequest = ChatRequest.builder()
                     .messages(messages)
-                    .parameters(buildChatRequestParameters(request))
+                    .parameters(LlmClientUtils.buildChatRequestParameters(request, properties.getLlm().getModel()))
                     .build();
 
             ChatResponse response = chatModel.chat(chatRequest);
-            String assistantContent = extractAssistantContent(response);
-            TokenUsage tokenUsage = extractTokenUsage(response);
+            String assistantContent = LlmClientUtils.extractAssistantContent(response);
+            TokenUsage tokenUsage = LlmClientUtils.extractTokenUsage(response);
 
             conversationStore.saveAssistantMessage(
                     request.getUserId(),
@@ -194,111 +195,6 @@ public class DashScopeLlmClient implements LlmClient {
     }
 
     /**
-     * 构造发送给模型的完整消息列表。
-     */
-    private List<ChatMessage> buildChatMessages(LlmChatRequest request, List<LlmConversationMessage> historyMessages) {
-        List<ChatMessage> messages = new ArrayList<>();
-        if (!StringUtils.isBlank(request.getSystemPrompt())) {
-            messages.add(SystemMessage.from(request.getSystemPrompt()));
-        }
-
-        for (LlmConversationMessage historyMessage : historyMessages) {
-            ChatMessage chatMessage = mapPersistedMessage(historyMessage);
-            if (chatMessage != null) {
-                messages.add(chatMessage);
-            }
-        }
-
-        appendCompatibleHistory(messages, request.getConversationHistory(), request.getTraceId());
-        messages.add(UserMessage.from(request.getUserMessage()));
-        return messages;
-    }
-
-    /**
-     * 将持久化消息转换为 LangChain4j 消息对象。
-     */
-    private ChatMessage mapPersistedMessage(LlmConversationMessage message) {
-        if (message == null || StringUtils.isBlank(message.getRole()) || StringUtils.isBlank(message.getContent())) {
-            return null;
-        }
-        return mapRoleToChatMessage(message.getRole(), message.getContent(), message.getTraceId());
-    }
-
-    /**
-     * 将兼容历史消息追加到当前消息列表中。
-     */
-    private void appendCompatibleHistory(List<ChatMessage> messages,
-                                         List<Map<String, String>> conversationHistory,
-                                         String traceId) {
-        if (conversationHistory == null || conversationHistory.isEmpty()) {
-            return;
-        }
-        for (Map<String, String> historyItem : conversationHistory) {
-            if (historyItem == null || historyItem.isEmpty()) {
-                continue;
-            }
-            String role = firstNonBlank(historyItem.get("role"), historyItem.get("type"));
-            String content = firstNonBlank(historyItem.get("content"), historyItem.get("message"), historyItem.get("text"));
-            ChatMessage chatMessage = mapRoleToChatMessage(role, content, traceId);
-            if (chatMessage != null) {
-                messages.add(chatMessage);
-            }
-        }
-    }
-
-    /**
-     * 将角色和值映射为模型消息。
-     */
-    private ChatMessage mapRoleToChatMessage(String role, String content, String traceId) {
-        if (StringUtils.isBlank(role) || StringUtils.isBlank(content)) {
-            return null;
-        }
-        if (ConversationHistoryEnum.SYSTEM.getCode().equalsIgnoreCase(role)) {
-            return SystemMessage.from(content);
-        }
-        if (ConversationHistoryEnum.USER.getCode().equalsIgnoreCase(role)) {
-            return UserMessage.from(content);
-        }
-        if (ConversationHistoryEnum.ASSISTANT.getCode().equalsIgnoreCase(role)
-                || ConversationHistoryEnum.AI.getCode().equalsIgnoreCase(role)) {
-            return AiMessage.from(content);
-        }
-        log.warn("检测到未知历史消息角色，已跳过。traceId: {}，角色: {}", traceId, role);
-        return null;
-    }
-
-    /**
-     * 构造模型调用参数。
-     */
-    private ChatRequestParameters buildChatRequestParameters(LlmChatRequest request) {
-        return ChatRequestParameters.builder()
-                .modelName(properties.getLlm().getModel())
-                .temperature(request.getTemperature())
-                .maxOutputTokens(request.getMaxTokens())
-                .build();
-    }
-
-    /**
-     * 提取模型返回的文本内容。
-     */
-    private String extractAssistantContent(ChatResponse response) {
-        if (response == null || response.aiMessage() == null || response.aiMessage().text() == null) {
-            return "";
-        }
-        return response.aiMessage().text();
-    }
-
-    /**
-     * 提取 Token 使用信息。
-     */
-    private TokenUsage extractTokenUsage(ChatResponse response) {
-        if (response == null || response.metadata() == null) {
-            return null;
-        }
-        return response.metadata().tokenUsage();
-    }
-
-    /**
      * 在没有现成用户消息记录时补记失败消息，便于审计。
      */
     private void handleFailurePersistence(LlmChatRequest request, String traceId, String errorMessage) {
@@ -317,32 +213,4 @@ public class DashScopeLlmClient implements LlmClient {
         }
     }
 
-
-    /**
-     * 构建统一的失败响应。
-     */
-    private LlmChatResponse buildFailureResponse(String errorMessage, String traceId, long startTime) {
-        LlmChatResponse llmChatResponse = LlmClientUtils.buildFailureResponse(
-                errorMessage,
-                startTime,
-                properties.getLlm().getModel()
-        );
-        log.warn("大模型请求直接返回失败，traceId: {}，耗时: {}ms，原因: {}", traceId, llmChatResponse.getDurationMs(), errorMessage);
-        return llmChatResponse;
-    }
-
-    /**
-     * 返回第一个非空白字符串。
-     */
-    private String firstNonBlank(String... values) {
-        if (values == null) {
-            return null;
-        }
-        for (String value : values) {
-            if (!StringUtils.isBlank(value)) {
-                return value;
-            }
-        }
-        return null;
-    }
 }
