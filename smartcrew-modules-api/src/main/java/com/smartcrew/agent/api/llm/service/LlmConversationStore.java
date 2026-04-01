@@ -1,4 +1,4 @@
-package com.smartcrew.agent.core.llm;
+package com.smartcrew.agent.api.llm.service;
 
 import com.smartcrew.agent.api.llm.domain.entity.LlmConversationMessage;
 import com.smartcrew.agent.api.llm.domain.entity.LlmConversationSession;

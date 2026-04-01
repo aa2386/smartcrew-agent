@@ -1,4 +1,4 @@
-package com.smartcrew.agent.core.llm;
+package com.smartcrew.agent.core.llm.client;
 
 import com.smartcrew.agent.api.llm.domain.entity.LlmConversationMessage;
 import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
@@ -7,6 +7,8 @@ import com.smartcrew.agent.api.llm.service.LlmClient;
 import com.smartcrew.agent.common.config.SmartCrewProperties;
 import com.smartcrew.agent.common.enums.ConversationHistoryEnum;
 import com.smartcrew.agent.common.util.StringUtils;
+import com.smartcrew.agent.api.llm.service.LlmConversationStore;
+import com.smartcrew.agent.core.llm.util.LlmClientUtils;
 import dev.langchain4j.community.model.dashscope.QwenChatModel;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
@@ -24,7 +26,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -57,27 +58,31 @@ public class DashScopeLlmClient implements LlmClient {
     @Override
     public LlmChatResponse chat(LlmChatRequest request) {
         long startTime = System.currentTimeMillis();
-        String traceId = resolveTraceId(request);
-        String validationMessage = validateRequest(request);
+        String traceId = LlmClientUtils.resolveTraceId(request);
+        String validationMessage = LlmClientUtils.validateRequest(request);
         if (validationMessage != null) {
             log.warn("大模型请求参数无效，traceId: {}，原因: {}", traceId, validationMessage);
             return buildFailureResponse(validationMessage, traceId, startTime);
         }
 
-        String conversationKey = buildConversationKey(request.getUserId(), request.getSessionId());
-        ReentrantLock lock = conversationLocks.computeIfAbsent(conversationKey, key -> new ReentrantLock());
+        String conversationKey = LlmClientUtils.buildConversationKey(request.getUserId(), request.getSessionId());// 构建会话key
+        ReentrantLock lock = conversationLocks.computeIfAbsent(conversationKey, key -> new ReentrantLock());// 获取会话lock
         LlmConversationMessage savedUserMessage = null;
         lock.lock();
         try {
-            ensureModelInitialized();
-            conversationStore.ensureSession(request.getUserId(), request.getSessionId());
-
+            ensureModelInitialized();// 确保模型已经初始化
+            conversationStore.ensureSession(request.getUserId(), request.getSessionId());// 确保会话已创建
+            // 加载最近历史消息
             List<LlmConversationMessage> historyMessages = conversationStore.loadRecentMessages(
-                    request.getUserId(), request.getSessionId(), HISTORY_WINDOW_SIZE);
+                    request.getUserId(),
+                    request.getSessionId(),
+                    HISTORY_WINDOW_SIZE
+            );
             log.info("开始调用 DashScope 对话，用户会话: {}，traceId: {}，模型: {}", conversationKey, traceId, properties.getLlm().getModel());
             log.info("已装载最近历史消息 {} 条，用户会话: {}，traceId: {}", historyMessages.size(), conversationKey, traceId);
 
-            long userMessageSeq = conversationStore.nextMessageSeq(request.getUserId(), request.getSessionId());
+            // 持久化消息记录
+            long userMessageSeq = conversationStore.nextMessageSeq(request.getUserId(), request.getSessionId());// 信息顺序
             savedUserMessage = conversationStore.saveUserMessage(
                     request.getUserId(), request.getSessionId(), userMessageSeq, request.getUserMessage(), traceId);
 
@@ -177,25 +182,6 @@ public class DashScopeLlmClient implements LlmClient {
         this.chatModel = builder.build();
         log.info("DashScope 模型初始化完成，模型: {}，是否自定义 baseUrl: {}",
                 llmConfig.getModel(), !StringUtils.isBlank(llmConfig.getBaseUrl()));
-    }
-
-    /**
-     * 校验对话请求是否满足最小调用条件。
-     */
-    private String validateRequest(LlmChatRequest request) {
-        if (request == null) {
-            return "对话请求不能为空";
-        }
-        if (request.getUserId() == null) {
-            return "用户 ID 不能为空";
-        }
-        if (StringUtils.isBlank(request.getSessionId())) {
-            return "会话 ID 不能为空";
-        }
-        if (StringUtils.isBlank(request.getUserMessage())) {
-            return "用户消息不能为空";
-        }
-        return null;
     }
 
     /**
@@ -331,35 +317,18 @@ public class DashScopeLlmClient implements LlmClient {
         }
     }
 
-    /**
-     * 生成或补齐追踪 ID。
-     */
-    private String resolveTraceId(LlmChatRequest request) {
-        if (request != null && !StringUtils.isBlank(request.getTraceId())) {
-            return request.getTraceId();
-        }
-        return UUID.randomUUID().toString();
-    }
-
-    /**
-     * 构造统一的会话键。
-     */
-    private String buildConversationKey(Long userId, String sessionId) {
-        return userId + "::" + sessionId;
-    }
 
     /**
      * 构建统一的失败响应。
      */
     private LlmChatResponse buildFailureResponse(String errorMessage, String traceId, long startTime) {
-        long duration = System.currentTimeMillis() - startTime;
-        log.warn("大模型请求直接返回失败，traceId: {}，耗时: {}ms，原因: {}", traceId, duration, errorMessage);
-        return LlmChatResponse.builder()
-                .success(Boolean.FALSE)
-                .errorMessage(errorMessage)
-                .durationMs(duration)
-                .model(properties.getLlm().getModel())
-                .build();
+        LlmChatResponse llmChatResponse = LlmClientUtils.buildFailureResponse(
+                errorMessage,
+                startTime,
+                properties.getLlm().getModel()
+        );
+        log.warn("大模型请求直接返回失败，traceId: {}，耗时: {}ms，原因: {}", traceId, llmChatResponse.getDurationMs(), errorMessage);
+        return llmChatResponse;
     }
 
     /**
