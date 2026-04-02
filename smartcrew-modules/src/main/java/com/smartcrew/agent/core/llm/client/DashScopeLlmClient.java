@@ -6,6 +6,7 @@ import com.smartcrew.agent.api.llm.domain.vo.LlmChatResponse;
 import com.smartcrew.agent.api.llm.service.LlmClient;
 import com.smartcrew.agent.common.config.SmartCrewProperties;
 import com.smartcrew.agent.common.enums.ConversationHistoryEnum;
+import com.smartcrew.agent.common.util.LogUtils;
 import com.smartcrew.agent.common.util.StringUtils;
 import com.smartcrew.agent.api.llm.service.LlmConversationStore;
 import com.smartcrew.agent.core.llm.util.LlmClientUtils;
@@ -61,7 +62,7 @@ public class DashScopeLlmClient implements LlmClient {
         String traceId = LlmClientUtils.resolveTraceId(request);
         String validationMessage = LlmClientUtils.validateRequest(request);
         if (validationMessage != null) {
-            log.warn("大模型请求参数无效，traceId: {}，原因: {}", traceId, validationMessage);
+            LogUtils.logValidationError(log, "大模型", traceId, validationMessage);
             return LlmClientUtils.buildFailureResponse(
                     validationMessage, startTime, properties.getLlm().getModel(), traceId);
         }
@@ -79,8 +80,8 @@ public class DashScopeLlmClient implements LlmClient {
                     request.getSessionId(),
                     HISTORY_WINDOW_SIZE
             );
-            log.info("开始调用 DashScope 对话，用户会话: {}，traceId: {}，模型: {}", conversationKey, traceId, properties.getLlm().getModel());
-            log.info("已装载最近历史消息 {} 条，用户会话: {}，traceId: {}", historyMessages.size(), conversationKey, traceId);
+            LogUtils.logStartCall(log, "DashScope", conversationKey, traceId, properties.getLlm().getModel());
+            LogUtils.logLoadHistory(log, historyMessages.size(), conversationKey, traceId);
 
             // 持久化消息记录
             long userMessageSeq = conversationStore.nextMessageSeq(request.getUserId(), request.getSessionId());// 信息顺序
@@ -109,11 +110,7 @@ public class DashScopeLlmClient implements LlmClient {
                     tokenUsage != null ? tokenUsage.totalTokenCount() : null);
 
             long duration = System.currentTimeMillis() - startTime;
-            log.info(
-                    "DashScope 对话完成，用户会话: {}，traceId: {}，耗时: {}ms，总 Token: {}",
-                    conversationKey,
-                    traceId,
-                    duration,
+            LogUtils.logCallSuccess(log, "DashScope", conversationKey, traceId, duration, 
                     tokenUsage != null ? tokenUsage.totalTokenCount() : null);
 
             return LlmChatResponse.builder()
@@ -128,8 +125,7 @@ public class DashScopeLlmClient implements LlmClient {
         } catch (Exception ex) {
             long duration = System.currentTimeMillis() - startTime;
             String errorMessage = ex.getMessage() == null ? "调用 DashScope 时发生未知异常" : ex.getMessage();
-            log.error("DashScope 对话失败，用户会话: {}，traceId: {}，耗时: {}ms，原因: {}",
-                    conversationKey, traceId, duration, errorMessage, ex);
+            LogUtils.logCallError(log, "DashScope", conversationKey, traceId, duration, errorMessage, ex);
 
             if (savedUserMessage != null && savedUserMessage.getId() != null) {
                 conversationStore.markUserMessageFailed(savedUserMessage.getId(), errorMessage);
@@ -158,11 +154,11 @@ public class DashScopeLlmClient implements LlmClient {
     public void initializeModel() {
         SmartCrewProperties.Llm llmConfig = properties.getLlm();
         if (!llmConfig.isEnabled()) {
-            log.warn("检测到大模型能力未启用，跳过 DashScope 模型初始化");
+            LogUtils.logModelNotEnabled(log, "大模型");
             return;
         }
         if (!"dashscope".equalsIgnoreCase(llmConfig.getProvider())) {
-            log.warn("当前大模型提供商不是 DashScope，跳过模型初始化，provider: {}", llmConfig.getProvider());
+            LogUtils.logProviderMismatch(log, "DashScope", llmConfig.getProvider());
             return;
         }
         if (StringUtils.isBlank(llmConfig.getApiKey())) {
@@ -181,8 +177,7 @@ public class DashScopeLlmClient implements LlmClient {
             builder.baseUrl(llmConfig.getBaseUrl());
         }
         this.chatModel = builder.build();
-        log.info("DashScope 模型初始化完成，模型: {}，是否自定义 baseUrl: {}",
-                llmConfig.getModel(), !StringUtils.isBlank(llmConfig.getBaseUrl()));
+        LogUtils.logModelInit(log, "DashScope", llmConfig.getModel(), !StringUtils.isBlank(llmConfig.getBaseUrl()));
     }
 
     /**
@@ -209,7 +204,7 @@ public class DashScopeLlmClient implements LlmClient {
                     request.getUserId(), request.getSessionId(), messageSeq, request.getUserMessage(), traceId);
             conversationStore.markUserMessageFailed(userMessage.getId(), errorMessage);
         } catch (Exception persistenceException) {
-            log.error("记录失败消息时发生异常，traceId: {}，原因: {}", traceId, persistenceException.getMessage(), persistenceException);
+            LogUtils.logPersistenceError(log, traceId, persistenceException.getMessage(), persistenceException);
         }
     }
 

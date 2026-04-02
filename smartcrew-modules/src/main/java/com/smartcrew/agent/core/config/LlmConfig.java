@@ -1,6 +1,7 @@
 package com.smartcrew.agent.core.config;
 
 import com.smartcrew.agent.common.config.SmartCrewProperties;
+import com.smartcrew.agent.common.util.LogUtils;
 import com.smartcrew.agent.common.util.StringUtils;
 import com.smartcrew.agent.core.llm.client.DashScopeLlmClient;
 import jakarta.annotation.PostConstruct;
@@ -29,15 +30,15 @@ public class LlmConfig {
         SmartCrewProperties.Llm llmConfig = properties.getLlm();
         String provider = llmConfig.getProvider();
 
-        log.info("开始初始化大模型客户端，provider: {}", provider);
-        log.info("当前配置的基础地址: {}", StringUtils.isBlank(llmConfig.getBaseUrl()) ? "未配置" : llmConfig.getBaseUrl());
+        LogUtils.info(log, "开始初始化大模型客户端，provider: {}", provider);
+        LogUtils.info(log, "当前配置的基础地址: {}", StringUtils.isBlank(llmConfig.getBaseUrl()) ? "未配置" : llmConfig.getBaseUrl());
 
         if ("dashscope".equalsIgnoreCase(provider)) {
             dashScopeLlmClient.initializeModel();
-            log.info("DashScope 客户端初始化成功");
+            LogUtils.info(log, "DashScope 客户端初始化成功");
             return;
         }
 
-        log.warn("暂不支持当前大模型提供商，provider: {}", provider);
+        LogUtils.warn(log, "暂不支持当前大模型提供商，provider: {}", provider);
     }
 }
