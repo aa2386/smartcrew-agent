@@ -1,17 +1,17 @@
 package com.smartcrew.agent.core.config;
 
 import com.smartcrew.agent.common.config.SmartCrewProperties;
+import com.smartcrew.agent.common.util.LogUtils;
 import com.smartcrew.agent.common.util.StringUtils;
-import com.smartcrew.agent.core.llm.DashScopeLlmClient;
+import com.smartcrew.agent.core.llm.client.DashScopeLlmClient;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 
-import jakarta.annotation.PostConstruct;
-
 /**
- * LLM 配置类，负责初始化大模型客户端。
+ * 大模型配置类，负责在应用启动后初始化对应的客户端。
  */
 @Slf4j
 @Configuration
@@ -22,20 +22,23 @@ public class LlmConfig {
     private final SmartCrewProperties properties;
     private final DashScopeLlmClient dashScopeLlmClient;
 
+    /**
+     * 根据当前配置初始化大模型客户端。
+     */
     @PostConstruct
     public void initializeLlmClients() {
         SmartCrewProperties.Llm llmConfig = properties.getLlm();
         String provider = llmConfig.getProvider();
 
-        log.info("[LLM] 开始初始化大模型客户端");
-        log.info("[LLM] 供应商: {}", provider);
-        log.info("[LLM] 基础 URL: {}", StringUtils.isBlank(llmConfig.getBaseUrl()) ? "未配置" : llmConfig.getBaseUrl());
+        LogUtils.info(log, "开始初始化大模型客户端，provider: {}", provider);
+        LogUtils.info(log, "当前配置的基础地址: {}", StringUtils.isBlank(llmConfig.getBaseUrl()) ? "未配置" : llmConfig.getBaseUrl());
 
         if ("dashscope".equalsIgnoreCase(provider)) {
             dashScopeLlmClient.initializeModel();
-            log.info("[LLM] 千问（DashScope）客户端初始化成功");
-        } else {
-            log.warn("[LLM] 不支持的大模型供应商: {}", provider);
+            LogUtils.info(log, "DashScope 客户端初始化成功");
+            return;
         }
+
+        LogUtils.warn(log, "暂不支持当前大模型提供商，provider: {}", provider);
     }
 }

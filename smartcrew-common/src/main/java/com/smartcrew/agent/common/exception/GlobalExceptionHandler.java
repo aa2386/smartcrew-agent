@@ -1,6 +1,7 @@
 package com.smartcrew.agent.common.exception;
 
 import com.smartcrew.agent.common.domain.R;
+import com.smartcrew.agent.common.util.LogUtils;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -42,7 +43,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public R<Void> handleException(Exception exception) {
-        log.error("Unhandled exception", exception);
+        LogUtils.error(log, "未处理的异常", exception);
         return R.fail(500, exception.getMessage());
     }
 }
