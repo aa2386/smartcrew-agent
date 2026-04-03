@@ -4,6 +4,7 @@ import com.smartcrew.agent.api.llm.domain.entity.LlmConversationMessage;
 import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
 import com.smartcrew.agent.api.llm.domain.vo.LlmChatResponse;
 import com.smartcrew.agent.api.llm.mapper.LlmConversationMessageMapper;
+import com.smartcrew.agent.api.llm.service.LlmStreamingCallback;
 import com.smartcrew.agent.common.config.SmartCrewProperties;
 import com.smartcrew.agent.common.util.StringUtils;
 import com.smartcrew.agent.core.llm.client.DashScopeLlmClient;
@@ -12,6 +13,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -33,7 +38,7 @@ class DashScopeLlmClientTest {
     private LlmConversationMessageMapper conversationMessageMapper;
 
     /**
-     * 验证基本对话能够成功返回。
+     * 验证同步 chat 方法在 DashScope 配置可用时能够正常返回内容。
      */
     @Test
     void shouldChatSuccessfully() {
@@ -56,7 +61,7 @@ class DashScopeLlmClientTest {
     }
 
     /**
-     * 验证同一会话下的多轮对话能够自动带上历史上下文。
+     * 验证同一个 userId 和 sessionId 下，多轮对话会自动带上已保存的历史消息。
      */
     @Test
     void shouldHandleMultiTurnConversation() {
@@ -86,7 +91,45 @@ class DashScopeLlmClientTest {
     }
 
     /**
-     * 验证同一用户的不同会话之间不会串上下文。
+     * 验证流式 chat 方法会持续回调 onNext，并在结束时通过 onComplete 返回最终响应。
+     */
+    @Test
+    void shouldStreamChatSuccessfully() throws InterruptedException {
+        assumeDashScopeConfigured();
+
+        AtomicReference<StringBuilder> streamedContentRef = new AtomicReference<>(new StringBuilder());
+        AtomicReference<LlmChatResponse> responseRef = new AtomicReference<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        dashScopeLlmClient.chat(LlmChatRequest.builder()
+                .userId(2101L)
+                .sessionId("stream-chat-success-session")
+                .userMessage("现在回答我，我是谁？")
+                .traceId("test-trace-002-stream")
+                .build(), new LlmStreamingCallback() {
+            @Override
+            public void onNext(String content) {
+                streamedContentRef.get().append(content);
+                System.out.println("onNext: " + content);
+            }
+
+            @Override
+            public void onComplete(LlmChatResponse response) {
+                responseRef.set(response);
+                System.out.println("onComplete: " + response);
+                latch.countDown();
+            }
+        });
+
+        assertThat(latch.await(60, TimeUnit.SECONDS)).isTrue();
+        assertThat(responseRef.get()).isNotNull();
+        assertThat(responseRef.get().getSuccess()).isTrue();
+        assertThat(responseRef.get().getContent()).isNotBlank();
+        assertThat(streamedContentRef.get().toString()).isNotBlank();
+    }
+
+    /**
+     * 验证同一用户的不同 sessionId 之间彼此隔离，不会串用历史上下文。
      */
     @Test
     void shouldIsolateDifferentSessions() {
@@ -113,7 +156,7 @@ class DashScopeLlmClientTest {
     }
 
     /**
-     * 验证缺少必要字段时会直接返回失败响应。
+     * 验证同步 chat 方法在缺少必要参数时会直接返回失败结果，而不是继续调用模型。
      */
     @Test
     void shouldRejectInvalidRequest() {
@@ -129,7 +172,37 @@ class DashScopeLlmClientTest {
     }
 
     /**
-     * 验证模型不可用时会记录失败消息，便于后续审计。
+     * 验证流式 chat 方法在缺少必要参数时也会走失败回调，并返回失败响应。
+     */
+    @Test
+    void shouldRejectInvalidStreamingRequest() throws InterruptedException {
+        AtomicReference<LlmChatResponse> responseRef = new AtomicReference<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        dashScopeLlmClient.chat(LlmChatRequest.builder()
+                .sessionId("invalid-stream-session")
+                .userMessage("这条流式请求缺少用户 ID")
+                .traceId("test-trace-004-stream")
+                .build(), new LlmStreamingCallback() {
+            @Override
+            public void onNext(String content) {
+            }
+
+            @Override
+            public void onComplete(LlmChatResponse response) {
+                responseRef.set(response);
+                latch.countDown();
+            }
+        });
+
+        assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+        assertThat(responseRef.get()).isNotNull();
+        assertThat(responseRef.get().getSuccess()).isFalse();
+        assertThat(responseRef.get().getErrorMessage()).contains("用户 ID");
+    }
+
+    /**
+     * 验证同步模型不可用时会把当前用户消息标记为 FAILED，便于排查和审计。
      */
     @Test
     void shouldRecordFailedMessageWhenModelUnavailable() {
@@ -159,8 +232,49 @@ class DashScopeLlmClientTest {
     }
 
     /**
-     * 仅在配置了 DashScope API Key 时执行集成测试。
+     * 验证流式模型不可用时同样会记录失败消息，并把消息状态更新为 FAILED。
      */
+    @Test
+    void shouldRecordFailedStreamingMessageWhenModelUnavailable() throws InterruptedException {
+        assumeDashScopeConfigured();
+
+        ReflectionTestUtils.setField(dashScopeLlmClient, "streamingChatModel", null);
+        try {
+            Long userId = 5001L;
+            String sessionId = "stream-failure-record-session";
+            AtomicReference<LlmChatResponse> responseRef = new AtomicReference<>();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            dashScopeLlmClient.chat(LlmChatRequest.builder()
+                    .userId(userId)
+                    .sessionId(sessionId)
+                    .userMessage("这是一条流式故障回放测试消息")
+                    .traceId("test-trace-006")
+                    .build(), new LlmStreamingCallback() {
+                @Override
+                public void onNext(String content) {
+                }
+
+                @Override
+                public void onComplete(LlmChatResponse response) {
+                    responseRef.set(response);
+                    latch.countDown();
+                }
+            });
+
+            assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+            assertThat(responseRef.get()).isNotNull();
+            assertThat(responseRef.get().getSuccess()).isFalse();
+
+            LlmConversationMessage latestMessage = conversationMessageMapper.selectLatestMessage(userId, sessionId);
+            assertThat(latestMessage).isNotNull();
+            assertThat(latestMessage.getStatus()).isEqualTo("FAILED");
+            assertThat(latestMessage.getContent()).isEqualTo("这是一条流式故障回放测试消息");
+        } finally {
+            dashScopeLlmClient.initializeModel();
+        }
+    }
+
     private void assumeDashScopeConfigured() {
         assumeTrue(StringUtils.isNotBlank(properties.getLlm().getApiKey()), "未配置 DashScope API Key，跳过集成测试");
     }
