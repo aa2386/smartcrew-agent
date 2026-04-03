@@ -2,6 +2,8 @@ package com.smartcrew.agent.api.llm.service;
 
 import com.smartcrew.agent.api.llm.domain.entity.LlmConversationMessage;
 import com.smartcrew.agent.api.llm.domain.entity.LlmConversationSession;
+import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
+import org.slf4j.Logger;
 
 import java.util.List;
 
@@ -85,4 +87,9 @@ public interface LlmConversationStore {
      * @param errorMessage 错误信息
      */
     void markUserMessageFailed(Long messageId, String errorMessage);
+
+    /**
+     * 在没有现成用户消息记录时补记失败消息，便于审计。
+     */
+    void handleFailurePersistence(LlmChatRequest request, String traceId, String errorMessage, Logger logger);
 }

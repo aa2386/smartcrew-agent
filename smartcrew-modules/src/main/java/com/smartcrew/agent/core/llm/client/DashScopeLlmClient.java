@@ -5,28 +5,21 @@ import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
 import com.smartcrew.agent.api.llm.domain.vo.LlmChatResponse;
 import com.smartcrew.agent.api.llm.service.LlmClient;
 import com.smartcrew.agent.common.config.SmartCrewProperties;
-import com.smartcrew.agent.common.enums.ConversationHistoryEnum;
 import com.smartcrew.agent.common.util.LogUtils;
 import com.smartcrew.agent.common.util.StringUtils;
 import com.smartcrew.agent.api.llm.service.LlmConversationStore;
 import com.smartcrew.agent.core.llm.util.LlmClientUtils;
 import dev.langchain4j.community.model.dashscope.QwenChatModel;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.SystemMessage;
-import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
-import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.TokenUsage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -110,7 +103,7 @@ public class DashScopeLlmClient implements LlmClient {
                     tokenUsage != null ? tokenUsage.totalTokenCount() : null);
 
             long duration = System.currentTimeMillis() - startTime;
-            LogUtils.logCallSuccess(log, "DashScope", conversationKey, traceId, duration, 
+            LogUtils.logCallSuccess(log, "DashScope", conversationKey, traceId, duration,
                     tokenUsage != null ? tokenUsage.totalTokenCount() : null);
 
             return LlmChatResponse.builder()
@@ -130,7 +123,7 @@ public class DashScopeLlmClient implements LlmClient {
             if (savedUserMessage != null && savedUserMessage.getId() != null) {
                 conversationStore.markUserMessageFailed(savedUserMessage.getId(), errorMessage);
             } else {
-                handleFailurePersistence(request, traceId, errorMessage);
+                conversationStore.handleFailurePersistence(request, traceId, errorMessage, log);
             }
             return LlmChatResponse.builder()
                     .success(Boolean.FALSE)
@@ -186,25 +179,6 @@ public class DashScopeLlmClient implements LlmClient {
     private void ensureModelInitialized() {
         if (chatModel == null) {
             throw new IllegalStateException("DashScope 模型尚未初始化，请先检查配置并完成初始化");
-        }
-    }
-
-    /**
-     * 在没有现成用户消息记录时补记失败消息，便于审计。
-     */
-    private void handleFailurePersistence(LlmChatRequest request, String traceId, String errorMessage) {
-        if (request == null || request.getUserId() == null || StringUtils.isBlank(request.getSessionId())
-                || StringUtils.isBlank(request.getUserMessage())) {
-            return;
-        }
-        try {
-            conversationStore.ensureSession(request.getUserId(), request.getSessionId());
-            long messageSeq = conversationStore.nextMessageSeq(request.getUserId(), request.getSessionId());
-            LlmConversationMessage userMessage = conversationStore.saveUserMessage(
-                    request.getUserId(), request.getSessionId(), messageSeq, request.getUserMessage(), traceId);
-            conversationStore.markUserMessageFailed(userMessage.getId(), errorMessage);
-        } catch (Exception persistenceException) {
-            LogUtils.logPersistenceError(log, traceId, persistenceException.getMessage(), persistenceException);
         }
     }
 

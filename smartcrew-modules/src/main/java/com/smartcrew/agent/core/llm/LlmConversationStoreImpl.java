@@ -2,11 +2,16 @@ package com.smartcrew.agent.core.llm;
 
 import com.smartcrew.agent.api.llm.domain.entity.LlmConversationMessage;
 import com.smartcrew.agent.api.llm.domain.entity.LlmConversationSession;
+import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
 import com.smartcrew.agent.api.llm.mapper.LlmConversationMessageMapper;
 import com.smartcrew.agent.api.llm.mapper.LlmConversationSessionMapper;
 import com.smartcrew.agent.api.llm.service.LlmConversationStore;
 import com.smartcrew.agent.common.enums.ConversationHistoryEnum;
+import com.smartcrew.agent.common.util.LogUtils;
+import com.smartcrew.agent.common.util.StringUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -109,6 +114,26 @@ public class LlmConversationStoreImpl implements LlmConversationStore {
     @Transactional(rollbackFor = Exception.class)
     public void markUserMessageFailed(Long messageId, String errorMessage) {
         messageMapper.markMessageFailed(messageId, errorMessage);
+    }
+
+    /**
+     * 在没有现成用户消息记录时补记失败消息，便于审计。
+     */
+    @Override
+    public void handleFailurePersistence(LlmChatRequest request, String traceId, String errorMessage, Logger logger) {
+        if (request == null || request.getUserId() == null || StringUtils.isBlank(request.getSessionId())
+                || StringUtils.isBlank(request.getUserMessage())) {
+            return;
+        }
+        try {
+            ensureSession(request.getUserId(), request.getSessionId());
+            long messageSeq = nextMessageSeq(request.getUserId(), request.getSessionId());
+            LlmConversationMessage userMessage = saveUserMessage(
+                    request.getUserId(), request.getSessionId(), messageSeq, request.getUserMessage(), traceId);
+            markUserMessageFailed(userMessage.getId(), errorMessage);
+        } catch (Exception persistenceException) {
+            LogUtils.logPersistenceError(logger, traceId, persistenceException.getMessage(), persistenceException);
+        }
     }
 
     /**
