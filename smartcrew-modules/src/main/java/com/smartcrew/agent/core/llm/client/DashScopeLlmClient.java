@@ -4,16 +4,19 @@ import com.smartcrew.agent.api.llm.domain.entity.LlmConversationMessage;
 import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
 import com.smartcrew.agent.api.llm.domain.vo.LlmChatResponse;
 import com.smartcrew.agent.api.llm.service.LlmClient;
+import com.smartcrew.agent.api.llm.service.LlmConversationStore;
+import com.smartcrew.agent.api.llm.service.LlmStreamingCallback;
 import com.smartcrew.agent.common.config.SmartCrewProperties;
 import com.smartcrew.agent.common.util.LogUtils;
 import com.smartcrew.agent.common.util.StringUtils;
-import com.smartcrew.agent.api.llm.service.LlmConversationStore;
 import com.smartcrew.agent.core.llm.util.LlmClientUtils;
 import dev.langchain4j.community.model.dashscope.QwenChatModel;
-import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.community.model.dashscope.QwenStreamingChatModel;
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.output.TokenUsage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,23 +34,14 @@ import java.util.concurrent.locks.ReentrantLock;
 @RequiredArgsConstructor
 public class DashScopeLlmClient implements LlmClient {
 
-    /**
-     * 最近上下文窗口大小。
-     */
     private static final int HISTORY_WINDOW_SIZE = 20;
 
     private final SmartCrewProperties properties;
     private final LlmConversationStore conversationStore;
-
-    /**
-     * 会话级串行锁，避免同一会话下消息顺序错乱。
-     */
     private final ConcurrentHashMap<String, ReentrantLock> conversationLocks = new ConcurrentHashMap<>();
 
-    /**
-     * DashScope 聊天模型实例。
-     */
     private ChatLanguageModel chatModel;
+    private StreamingChatLanguageModel streamingChatModel;
 
     @Override
     public LlmChatResponse chat(LlmChatRequest request) {
@@ -60,14 +54,13 @@ public class DashScopeLlmClient implements LlmClient {
                     validationMessage, startTime, properties.getLlm().getModel(), traceId);
         }
 
-        String conversationKey = LlmClientUtils.buildConversationKey(request.getUserId(), request.getSessionId());// 构建会话key
-        ReentrantLock lock = conversationLocks.computeIfAbsent(conversationKey, key -> new ReentrantLock());// 获取会话lock
+        String conversationKey = LlmClientUtils.buildConversationKey(request.getUserId(), request.getSessionId());
+        ReentrantLock lock = conversationLocks.computeIfAbsent(conversationKey, key -> new ReentrantLock());
         LlmConversationMessage savedUserMessage = null;
         lock.lock();
         try {
-            ensureModelInitialized();// 确保模型已经初始化
-            conversationStore.ensureSession(request.getUserId(), request.getSessionId());// 确保会话已创建
-            // 加载最近历史消息
+            ensureModelInitialized();
+            conversationStore.ensureSession(request.getUserId(), request.getSessionId());
             List<LlmConversationMessage> historyMessages = conversationStore.loadRecentMessages(
                     request.getUserId(),
                     request.getSessionId(),
@@ -76,17 +69,12 @@ public class DashScopeLlmClient implements LlmClient {
             LogUtils.logStartCall(log, "DashScope", conversationKey, traceId, properties.getLlm().getModel());
             LogUtils.logLoadHistory(log, historyMessages.size(), conversationKey, traceId);
 
-            // 持久化消息记录
-            long userMessageSeq = conversationStore.nextMessageSeq(request.getUserId(), request.getSessionId());// 信息顺序
+            long userMessageSeq = conversationStore.nextMessageSeq(request.getUserId(), request.getSessionId());
             savedUserMessage = conversationStore.saveUserMessage(
                     request.getUserId(), request.getSessionId(), userMessageSeq, request.getUserMessage(), traceId);
 
-            List<ChatMessage> messages = LlmClientUtils.buildChatMessages(request, historyMessages);
-            ChatRequest chatRequest = ChatRequest.builder()
-                    .messages(messages)
-                    .parameters(LlmClientUtils.buildChatRequestParameters(request, properties.getLlm().getModel()))
-                    .build();
-
+            ChatRequest chatRequest = LlmClientUtils.buildChatRequest(
+                    request, historyMessages, properties.getLlm().getModel());
             ChatResponse response = chatModel.chat(chatRequest);
             String assistantContent = LlmClientUtils.extractAssistantContent(response);
             TokenUsage tokenUsage = LlmClientUtils.extractTokenUsage(response);
@@ -105,34 +93,118 @@ public class DashScopeLlmClient implements LlmClient {
             long duration = System.currentTimeMillis() - startTime;
             LogUtils.logCallSuccess(log, "DashScope", conversationKey, traceId, duration,
                     tokenUsage != null ? tokenUsage.totalTokenCount() : null);
-
-            return LlmChatResponse.builder()
-                    .content(assistantContent)
-                    .model(properties.getLlm().getModel())
-                    .success(Boolean.TRUE)
-                    .durationMs(duration)
-                    .totalTokens(tokenUsage != null ? tokenUsage.totalTokenCount() : null)
-                    .promptTokens(tokenUsage != null ? tokenUsage.inputTokenCount() : null)
-                    .completionTokens(tokenUsage != null ? tokenUsage.outputTokenCount() : null)
-                    .build();
+            return LlmClientUtils.buildSuccessResponse(
+                    assistantContent, tokenUsage, duration, properties.getLlm().getModel());
         } catch (Exception ex) {
-            long duration = System.currentTimeMillis() - startTime;
-            String errorMessage = ex.getMessage() == null ? "调用 DashScope 时发生未知异常" : ex.getMessage();
-            LogUtils.logCallError(log, "DashScope", conversationKey, traceId, duration, errorMessage, ex);
-
-            if (savedUserMessage != null && savedUserMessage.getId() != null) {
-                conversationStore.markUserMessageFailed(savedUserMessage.getId(), errorMessage);
-            } else {
-                conversationStore.handleFailurePersistence(request, traceId, errorMessage, log);
-            }
-            return LlmChatResponse.builder()
-                    .success(Boolean.FALSE)
-                    .errorMessage(errorMessage)
-                    .durationMs(duration)
-                    .model(properties.getLlm().getModel())
-                    .build();
+            return handleFailure(request, traceId, startTime, conversationKey, savedUserMessage, ex);
         } finally {
             lock.unlock();
+        }
+    }
+
+    @Override
+    public void chat(LlmChatRequest request, LlmStreamingCallback callback) {
+        long startTime = System.currentTimeMillis();
+        String traceId = LlmClientUtils.resolveTraceId(request);
+        String validationMessage = LlmClientUtils.validateRequest(request);
+        if (validationMessage != null) {
+            LogUtils.logValidationError(log, "大模型", traceId, validationMessage);
+            safelyComplete(callback, LlmClientUtils.buildFailureResponse(
+                    validationMessage, startTime, properties.getLlm().getModel(), traceId));
+            return;
+        }
+
+        String conversationKey = LlmClientUtils.buildConversationKey(request.getUserId(), request.getSessionId());
+        ReentrantLock lock = conversationLocks.computeIfAbsent(conversationKey, key -> new ReentrantLock());
+        final LlmConversationMessage[] savedUserMessageHolder = new LlmConversationMessage[1];
+        lock.lock();
+
+        boolean releaseLock = true;
+        try {
+            ensureStreamingModelInitialized();
+            conversationStore.ensureSession(request.getUserId(), request.getSessionId());
+            List<LlmConversationMessage> historyMessages = conversationStore.loadRecentMessages(
+                    request.getUserId(),
+                    request.getSessionId(),
+                    HISTORY_WINDOW_SIZE
+            );
+            LogUtils.logStartCall(log, "DashScope", conversationKey, traceId, properties.getLlm().getModel());
+            LogUtils.logLoadHistory(log, historyMessages.size(), conversationKey, traceId);
+
+            long userMessageSeq = conversationStore.nextMessageSeq(request.getUserId(), request.getSessionId());
+            savedUserMessageHolder[0] = conversationStore.saveUserMessage(
+                    request.getUserId(), request.getSessionId(), userMessageSeq, request.getUserMessage(), traceId);
+
+            ChatRequest chatRequest = LlmClientUtils.buildChatRequest(
+                    request, historyMessages, properties.getLlm().getModel());
+            StringBuilder assistantContentBuilder = new StringBuilder();// 接收响应内容
+
+            releaseLock = false;
+            streamingChatModel.chat(chatRequest, new StreamingChatResponseHandler() {
+                // 每次收到一部分响应内容时触发
+                @Override
+                public void onPartialResponse(String partialResponse) {
+                    assistantContentBuilder.append(partialResponse);
+                    try {
+                        callback.onNext(partialResponse);
+                    } catch (Exception callbackException) {
+                        log.warn("DashScope 流式回调处理片段失败，traceId: {}", traceId, callbackException);
+                    }
+                }
+
+                // 流式传输完全结束时触发
+                @Override
+                public void onCompleteResponse(ChatResponse response) {
+                    try {
+                        String assistantContent = assistantContentBuilder.length() > 0
+                                ? assistantContentBuilder.toString()
+                                : LlmClientUtils.extractAssistantContent(response);
+                        TokenUsage tokenUsage = LlmClientUtils.extractTokenUsage(response);
+
+                        conversationStore.saveAssistantMessage(
+                                request.getUserId(),
+                                request.getSessionId(),
+                                userMessageSeq + 1,
+                                assistantContent,
+                                traceId,
+                                properties.getLlm().getModel(),
+                                tokenUsage != null ? tokenUsage.inputTokenCount() : null,
+                                tokenUsage != null ? tokenUsage.outputTokenCount() : null,
+                                tokenUsage != null ? tokenUsage.totalTokenCount() : null);
+
+                        long duration = System.currentTimeMillis() - startTime;
+                        LogUtils.logCallSuccess(log, "DashScope", conversationKey, traceId, duration,
+                                tokenUsage != null ? tokenUsage.totalTokenCount() : null);
+                        safelyComplete(callback, LlmClientUtils.buildSuccessResponse(
+                                assistantContent, tokenUsage, duration, properties.getLlm().getModel()));
+                    } catch (Exception ex) {
+                        safelyComplete(callback, handleFailure(
+                                request, traceId, startTime, conversationKey, savedUserMessageHolder[0], ex));
+                    } finally {
+                        lock.unlock();
+                    }
+                }
+
+                // 流式传输过程中发生异常时触发
+                @Override
+                public void onError(Throwable error) {
+                    try {
+                        Exception ex = error instanceof Exception
+                                ? (Exception) error
+                                : new RuntimeException(error);
+                        safelyComplete(callback, handleFailure(
+                                request, traceId, startTime, conversationKey, savedUserMessageHolder[0], ex));
+                    } finally {
+                        lock.unlock();
+                    }
+                }
+            });
+        } catch (Exception ex) {
+            safelyComplete(callback, handleFailure(request, traceId, startTime, conversationKey, savedUserMessageHolder[0], ex));
+        } finally {
+            if (releaseLock && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
     }
 
@@ -141,9 +213,6 @@ public class DashScopeLlmClient implements LlmClient {
         return "dashscope-client";
     }
 
-    /**
-     * 初始化 DashScope 模型。
-     */
     public void initializeModel() {
         SmartCrewProperties.Llm llmConfig = properties.getLlm();
         if (!llmConfig.isEnabled()) {
@@ -166,20 +235,60 @@ public class DashScopeLlmClient implements LlmClient {
                 .modelName(llmConfig.getModel())
                 .temperature(0.7F)
                 .maxTokens(2048);
+        QwenStreamingChatModel.QwenStreamingChatModelBuilder streamingBuilder = QwenStreamingChatModel.builder()
+                .apiKey(llmConfig.getApiKey())
+                .modelName(llmConfig.getModel())
+                .temperature(0.7F)
+                .maxTokens(2048);
         if (!StringUtils.isBlank(llmConfig.getBaseUrl())) {
             builder.baseUrl(llmConfig.getBaseUrl());
+            streamingBuilder.baseUrl(llmConfig.getBaseUrl());
         }
         this.chatModel = builder.build();
+        this.streamingChatModel = streamingBuilder.build();
         LogUtils.logModelInit(log, "DashScope", llmConfig.getModel(), !StringUtils.isBlank(llmConfig.getBaseUrl()));
     }
 
-    /**
-     * 确保模型已初始化完成。
-     */
     private void ensureModelInitialized() {
         if (chatModel == null) {
             throw new IllegalStateException("DashScope 模型尚未初始化，请先检查配置并完成初始化");
         }
     }
 
+    private void ensureStreamingModelInitialized() {
+        if (streamingChatModel == null) {
+            throw new IllegalStateException("DashScope 流式模型尚未初始化，请先检查配置并完成初始化");
+        }
+    }
+
+    private LlmChatResponse handleFailure(LlmChatRequest request,
+                                          String traceId,
+                                          long startTime,
+                                          String conversationKey,
+                                          LlmConversationMessage savedUserMessage,
+                                          Exception ex) {
+        long duration = System.currentTimeMillis() - startTime;
+        String errorMessage = ex.getMessage() == null ? "调用 DashScope 时发生未知异常" : ex.getMessage();
+        LogUtils.logCallError(log, "DashScope", conversationKey, traceId, duration, errorMessage, ex);
+
+        if (savedUserMessage != null && savedUserMessage.getId() != null) {
+            conversationStore.markUserMessageFailed(savedUserMessage.getId(), errorMessage);
+        } else {
+            conversationStore.handleFailurePersistence(request, traceId, errorMessage, log);
+        }
+        return LlmChatResponse.builder()
+                .success(Boolean.FALSE)
+                .errorMessage(errorMessage)
+                .durationMs(duration)
+                .model(properties.getLlm().getModel())
+                .build();
+    }
+
+    private void safelyComplete(LlmStreamingCallback callback, LlmChatResponse response) {
+        try {
+            callback.onComplete(response);
+        } catch (Exception callbackException) {
+            log.warn("DashScope 流式回调返回结果失败", callbackException);
+        }
+    }
 }

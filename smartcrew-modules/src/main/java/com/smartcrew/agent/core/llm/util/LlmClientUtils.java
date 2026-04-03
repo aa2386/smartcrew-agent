@@ -9,6 +9,7 @@ import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.TokenUsage;
@@ -21,6 +22,10 @@ import java.util.UUID;
 
 @Slf4j
 public final class LlmClientUtils {
+
+    private LlmClientUtils() {
+    }
+
     /**
      * 生成或补齐追踪 ID。
      */
@@ -92,8 +97,8 @@ public final class LlmClientUtils {
      * 将兼容历史消息追加到当前消息列表中。
      */
     public static void appendCompatibleHistory(List<ChatMessage> messages,
-                                         List<Map<String, String>> conversationHistory,
-                                         String traceId) {
+                                               List<Map<String, String>> conversationHistory,
+                                               String traceId) {
         if (conversationHistory == null || conversationHistory.isEmpty()) {
             return;
         }
@@ -111,7 +116,7 @@ public final class LlmClientUtils {
     }
 
     /**
-     * 将角色和值映射为模型消息。
+     * 将角色和内容映射为模型消息。
      */
     public static ChatMessage mapRoleToChatMessage(String role, String content, String traceId) {
         if (StringUtils.isBlank(role) || StringUtils.isBlank(content)) {
@@ -157,6 +162,18 @@ public final class LlmClientUtils {
     }
 
     /**
+     * 构造完整的模型对话请求。
+     */
+    public static ChatRequest buildChatRequest(LlmChatRequest request,
+                                               List<LlmConversationMessage> historyMessages,
+                                               String model) {
+        return ChatRequest.builder()
+                .messages(buildChatMessages(request, historyMessages))
+                .parameters(buildChatRequestParameters(request, model))
+                .build();
+    }
+
+    /**
      * 提取模型返回的文本内容。
      */
     public static String extractAssistantContent(ChatResponse response) {
@@ -177,6 +194,24 @@ public final class LlmClientUtils {
     }
 
     /**
+     * 构建统一的成功响应。
+     */
+    public static LlmChatResponse buildSuccessResponse(String content,
+                                                       TokenUsage tokenUsage,
+                                                       long duration,
+                                                       String model) {
+        return LlmChatResponse.builder()
+                .content(content)
+                .totalTokens(tokenUsage != null ? tokenUsage.totalTokenCount() : null)
+                .promptTokens(tokenUsage != null ? tokenUsage.inputTokenCount() : null)
+                .completionTokens(tokenUsage != null ? tokenUsage.outputTokenCount() : null)
+                .model(model)
+                .success(Boolean.TRUE)
+                .durationMs(duration)
+                .build();
+    }
+
+    /**
      * 返回第一个非空白字符串。
      */
     public static String firstNonBlank(String... values) {
@@ -190,5 +225,4 @@ public final class LlmClientUtils {
         }
         return null;
     }
-
 }
