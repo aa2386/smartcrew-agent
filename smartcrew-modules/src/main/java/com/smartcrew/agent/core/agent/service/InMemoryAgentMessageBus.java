@@ -1,4 +1,4 @@
-package com.smartcrew.agent.core.agent;
+package com.smartcrew.agent.core.agent.service;
 
 import com.smartcrew.agent.api.agent.domain.model.MessageEnvelope;
 import com.smartcrew.agent.api.agent.service.AgentMessageBus;

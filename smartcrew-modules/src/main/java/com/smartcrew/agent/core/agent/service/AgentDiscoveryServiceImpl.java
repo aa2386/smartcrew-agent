@@ -1,10 +1,11 @@
-package com.smartcrew.agent.core.agent;
+package com.smartcrew.agent.core.agent.service;
 
 import com.smartcrew.agent.api.agent.domain.entity.AgentDefinition;
 import com.smartcrew.agent.api.agent.service.Agent;
 import com.smartcrew.agent.api.agent.service.AgentDefinitionService;
 import com.smartcrew.agent.api.agent.service.AgentDiscoveryService;
 import com.smartcrew.agent.api.agent.service.AgentRegistry;
+import com.smartcrew.agent.core.agent.StubAgent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
