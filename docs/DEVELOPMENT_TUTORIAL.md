@@ -853,72 +853,69 @@ String systemPrompt = basePrompt + "\n"
 - 检索增强本质上先是回答前的准备动作
 - 等检索链够复杂时，再拆成子 Agent 更合理
 
-### 9.2 当前仓库没有哪些 RAG 能力
+### 9.2 RAG 详细教程
 
-你需要自己补：
+由于 RAG 内容较多，涉及概念讲解、数据库设计、完整代码实现等，已单独编写详细教程文档：
 
-- 文档入库
-- 文档切片
-- 向量化
-- 检索服务
-- 检索结果拼装服务
+**请参阅：[RAG_TUTORIAL.md](./RAG_TUTORIAL.md)**
 
-### 9.3 建议新增接口
+该教程包含：
 
-```java
-public interface RetrievalService {
+1. **RAG 基础概念**：什么是 RAG、为什么需要 RAG、核心流程
+2. **核心组件详解**：文档加载器、分割器、嵌入模型、向量存储、检索器
+3. **数据库表设计**：知识库表、文档表、切片表、绑定表
+4. **项目依赖配置**：Maven 依赖、配置文件
+5. **完整代码实现**：文档加载、分割、向量化、存储、检索服务
+6. **集成到 InitialAgent**：修改 Agent 代码、提示词模板
+7. **使用示例**：创建知识库、上传文档、查询测试
+8. **进阶优化**：混合检索、重排序、引用来源、增量更新
 
-    List<String> retrieve(String query, int topK);
-}
-```
+### 9.3 快速接入示例
 
-```java
-public interface RagAugmentationService {
-
-    String buildRagContext(String query);
-}
-```
-
-### 9.4 `RagAugmentationService` 示例实现
+在 `InitialAgent` 中接入 RAG 的核心代码：
 
 ```java
-package com.smartcrew.agent.core.rag;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-
-@Service
+@Component
 @RequiredArgsConstructor
-public class RagAugmentationServiceImpl implements RagAugmentationService {
+public class InitialAgent implements Agent {
 
-    private final RetrievalService retrievalService;
+    private final LlmClient llmClient;
+    private final RagAugmentationService ragAugmentationService;
+    private final InitialAgentPromptService promptService;
 
     @Override
-    public String buildRagContext(String query) {
-        List<String> documents = retrievalService.retrieve(query, 3);
-        if (documents.isEmpty()) {
-            return "";
+    public AgentDispatchResponse handle(AgentDispatchCommand command) {
+        String llmSessionId = code() + "::" + command.getSessionId();
+
+        String basePrompt = promptService.buildSystemPrompt(command.getUserId(), "default");
+        
+        String ragContext = ragAugmentationService.buildRagContext(command.getMessage());
+        
+        String systemPrompt = basePrompt;
+        if (ragContext != null && !ragContext.isBlank()) {
+            systemPrompt = systemPrompt + "\n\n" + ragContext;
         }
-        return "以下是可参考资料：\n" + String.join("\n---\n", documents);
+
+        LlmChatRequest request = LlmChatRequest.builder()
+                .userId(command.getUserId())
+                .sessionId(llmSessionId)
+                .userMessage(command.getMessage())
+                .systemPrompt(systemPrompt)
+                .traceId(command.getTraceId())
+                .build();
+
+        LlmChatResponse response = llmClient.chat(request);
+        return AgentDispatchResponse.builder()
+                .traceId(command.getTraceId())
+                .agentCode(code())
+                .accepted(Boolean.TRUE.equals(response.getSuccess()))
+                .message(response.getContent())
+                .build();
     }
 }
 ```
 
-### 9.5 在 `InitialAgent` 中接入 RAG
-
-```java
-private final RagAugmentationService ragAugmentationService;
-
-String ragContext = ragAugmentationService.buildRagContext(command.getMessage());
-String systemPrompt = basePrompt;
-if (!ragContext.isBlank()) {
-    systemPrompt = systemPrompt + "\n" + ragContext;
-}
-```
-
-### 9.6 为什么检索结果不要直接当最终答案返回
+### 9.4 为什么检索结果不要直接当最终答案返回
 
 因为检索只负责“找材料”，不是“替你组织语言”。
 
