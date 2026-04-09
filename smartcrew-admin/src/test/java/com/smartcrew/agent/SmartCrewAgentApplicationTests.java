@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartcrew.agent.api.tool.service.ToolExecutor;
 import com.smartcrew.agent.common.exception.ServiceException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,6 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class SmartCrewAgentApplicationTests {
 
     @Autowired
@@ -266,5 +270,90 @@ class SmartCrewAgentApplicationTests {
                         .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    /**
+     * 验证后台 Agent 管理页能够识别代码 Agent，并返回统一来源视图。
+     */
+    @Test
+    @Order(1)
+    void shouldExposeCodeOnlyAgentInAdminView() throws Exception {
+        MvcResult listResult = mockMvc.perform(get("/api/admin/agents"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode listRoot = objectMapper.readTree(listResult.getResponse().getContentAsString());
+        JsonNode initialAgentNode = null;
+        for (JsonNode node : listRoot.path("rows")) {
+            if ("initial-agent".equals(node.path("agentCode").asText())) {
+                initialAgentNode = node;
+                break;
+            }
+        }
+
+        assertThat(initialAgentNode).isNotNull();
+        assertThat(initialAgentNode.path("sourceStatus").asText()).isEqualTo("CODE_ONLY");
+        assertThat(initialAgentNode.path("hasCodeBean").asBoolean()).isTrue();
+        assertThat(initialAgentNode.path("hasDatabaseConfig").asBoolean()).isFalse();
+
+        mockMvc.perform(get("/api/admin/agents/initial-agent"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.agentCode").value("initial-agent"))
+                .andExpect(jsonPath("$.data.sourceStatus").value("CODE_ONLY"))
+                .andExpect(jsonPath("$.data.hasCodeBean").value(true))
+                .andExpect(jsonPath("$.data.hasDatabaseConfig").value(false));
+    }
+
+    /**
+     * 验证可以直接新增数据库 Agent，也可以为代码 Agent 创建数据库信息。
+     */
+    @Test
+    @Order(2)
+    void shouldCreateDatabaseAgentAndLinkCodeAgent() throws Exception {
+        String createDatabaseOnlyBody = objectMapper.writeValueAsString(Map.of(
+                "agentCode", "ops-agent",
+                "agentName", "运营占位 Agent",
+                "agentType", "STUB",
+                "description", "仅数据库存在的运营 Agent",
+                "strategyType", "REACT",
+                "systemPrompt", "请协助处理运营问题",
+                "enabled", true,
+                "configJson", "{\"channel\":\"admin\"}"
+        ));
+
+        mockMvc.perform(post("/api/admin/agents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createDatabaseOnlyBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.agentCode").value("ops-agent"))
+                .andExpect(jsonPath("$.data.sourceStatus").value("DB_ONLY"))
+                .andExpect(jsonPath("$.data.hasCodeBean").value(false))
+                .andExpect(jsonPath("$.data.hasDatabaseConfig").value(true));
+
+        String createLinkedBody = objectMapper.writeValueAsString(Map.of(
+                "agentCode", "initial-agent",
+                "agentName", "初始智能体数据库配置",
+                "agentType", "BUILTIN",
+                "description", "为代码 Agent 创建数据库配置",
+                "strategyType", "REACT",
+                "systemPrompt", "请优先使用数据库配置",
+                "enabled", true,
+                "configJson", "{\"scene\":\"web\"}"
+        ));
+
+        mockMvc.perform(post("/api/admin/agents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createLinkedBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.agentCode").value("initial-agent"))
+                .andExpect(jsonPath("$.data.sourceStatus").value("LINKED"))
+                .andExpect(jsonPath("$.data.hasCodeBean").value(true))
+                .andExpect(jsonPath("$.data.hasDatabaseConfig").value(true));
+
+        mockMvc.perform(get("/api/admin/agents/initial-agent"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sourceStatus").value("LINKED"))
+                .andExpect(jsonPath("$.data.hasCodeBean").value(true))
+                .andExpect(jsonPath("$.data.hasDatabaseConfig").value(true));
     }
 }

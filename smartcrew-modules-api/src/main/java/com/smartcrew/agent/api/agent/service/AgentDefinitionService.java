@@ -21,17 +21,25 @@ public interface AgentDefinitionService {
     AgentDefinition register(AgentRegisterRequest request);
 
     /**
-     * 查询并返回全部记录。
+     * 查询并返回全部视图记录。
      *
      * @return 结果列表。
      */
     List<AgentDefinitionVo> listAll();
 
     /**
-     * 按编码查询 Agent 定义。
+     * 按编码查询 Agent 视图数据。
      *
      * @param agentCode Agent 编码。
-     * @return 匹配结果；未找到时返回空 `Optional`。
+     * @return 匹配结果；未找到时返回空 Optional。
+     */
+    Optional<AgentDefinitionVo> findViewByCode(String agentCode);
+
+    /**
+     * 按编码查询 Agent 数据库定义。
+     *
+     * @param agentCode Agent 编码。
+     * @return 匹配结果；未找到时返回空 Optional。
      */
     Optional<AgentDefinition> findByCode(String agentCode);
 }

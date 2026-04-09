@@ -20,6 +20,30 @@ mybatis-plus:
 smartcrew:
   name: smartcrew-agent
   version: 0.0.1-SNAPSHOT
+  api:
+    v1:
+      enabled: true
+    web:
+      enabled: true
+    admin:
+      enabled: true
+  auth:
+    mode: LOCAL_JWT
+    require-web-login: true
+    require-admin-login: true
+    token-secret: ${SMARTCREW_TOKEN_SECRET:}
+    token-expire-minutes: 720
+    bootstrap-admin:
+      enabled: true
+      username: admin
+      password: ${SMARTCREW_BOOTSTRAP_ADMIN_PASSWORD:}
+      display-name: 系统管理员
+  cors:
+    allowed-origins:
+      - http://localhost:8080
+      - http://localhost:8081
+    allow-credentials: true
+    max-age: 3600
   llm:
     enabled: true
     provider: dashscope

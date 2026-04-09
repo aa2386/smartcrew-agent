@@ -10,7 +10,11 @@ spring:
       schema-locations: classpath:sql/test-schema.sql
 
 smartcrew:
+  auth:
+    require-admin-login: false
+    require-web-login: false
   llm:
+    enabled: false
     api-key: ${DASHSCOPE_API_KEY:}
   tooling:
     tavily:

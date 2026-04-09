@@ -1,6 +1,9 @@
 DROP TABLE IF EXISTS llm_conversation_message;
 DROP TABLE IF EXISTS llm_conversation_session;
+DROP TABLE IF EXISTS sc_user_identity;
+DROP TABLE IF EXISTS sc_user;
 DROP TABLE IF EXISTS agent_tool_binding;
+DROP TABLE IF EXISTS agent_prompt_binding;
 DROP TABLE IF EXISTS tool_definition;
 DROP TABLE IF EXISTS agent_definition;
 DROP TABLE IF EXISTS user_preference;
@@ -53,6 +56,40 @@ CREATE TABLE user_preference (
     CONSTRAINT uk_user_pref UNIQUE (user_id, pref_key)
 );
 
+CREATE TABLE sc_user (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(64) NOT NULL,
+    password_hash VARCHAR(255) NULL,
+    display_name VARCHAR(128) NOT NULL,
+    avatar_url VARCHAR(255) NULL,
+    role VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    last_login_at TIMESTAMP NULL,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL,
+    CONSTRAINT uk_sc_user_username UNIQUE (username)
+);
+
+CREATE TABLE sc_user_identity (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    provider VARCHAR(32) NOT NULL,
+    provider_user_id VARCHAR(128) NOT NULL,
+    tenant_key VARCHAR(128) NOT NULL DEFAULT '',
+    profile_snapshot_json CLOB NULL,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL,
+    CONSTRAINT uk_sc_user_identity UNIQUE (provider, provider_user_id, tenant_key)
+);
+
 CREATE TABLE agent_definition (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     agent_code VARCHAR(64) NOT NULL,
@@ -103,6 +140,20 @@ CREATE TABLE agent_tool_binding (
     CONSTRAINT uk_agent_tool UNIQUE (agent_code, tool_code)
 );
 
+CREATE TABLE agent_prompt_binding (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    agent_code VARCHAR(64) NOT NULL,
+    prompt_template_id BIGINT NOT NULL,
+    sort_order INT NOT NULL,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL,
+    CONSTRAINT uk_agent_prompt UNIQUE (agent_code, prompt_template_id)
+);
+
 CREATE TABLE llm_conversation_session (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -141,3 +192,4 @@ CREATE TABLE llm_conversation_message (
 );
 
 CREATE INDEX idx_user_session_seq ON llm_conversation_message (user_id, session_id, message_seq);
+CREATE INDEX idx_agent_prompt_order ON agent_prompt_binding (agent_code, sort_order);

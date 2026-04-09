@@ -1,6 +1,9 @@
 DROP TABLE IF EXISTS llm_conversation_message;
 DROP TABLE IF EXISTS llm_conversation_session;
+DROP TABLE IF EXISTS sc_user_identity;
+DROP TABLE IF EXISTS sc_user;
 DROP TABLE IF EXISTS agent_tool_binding;
+DROP TABLE IF EXISTS agent_prompt_binding;
 DROP TABLE IF EXISTS tool_definition;
 DROP TABLE IF EXISTS agent_definition;
 DROP TABLE IF EXISTS user_preference;
@@ -53,6 +56,40 @@ CREATE TABLE user_preference (
     CONSTRAINT uk_user_pref UNIQUE (user_id, pref_key)
 ) COMMENT='用户偏好表';
 
+CREATE TABLE sc_user (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    username VARCHAR(64) NOT NULL COMMENT '用户名',
+    password_hash VARCHAR(255) NULL COMMENT '密码哈希',
+    display_name VARCHAR(128) NOT NULL COMMENT '显示名称',
+    avatar_url VARCHAR(255) NULL COMMENT '头像地址',
+    role VARCHAR(32) NOT NULL COMMENT '角色',
+    status VARCHAR(32) NOT NULL COMMENT '状态',
+    last_login_at DATETIME NULL COMMENT '最后登录时间',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
+    CONSTRAINT uk_sc_user_username UNIQUE (username)
+) COMMENT='系统用户表';
+
+CREATE TABLE sc_user_identity (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    user_id BIGINT NOT NULL COMMENT '系统用户 ID',
+    provider VARCHAR(32) NOT NULL COMMENT '身份提供方',
+    provider_user_id VARCHAR(128) NOT NULL COMMENT '第三方用户标识',
+    tenant_key VARCHAR(128) NOT NULL DEFAULT '' COMMENT '租户标识',
+    profile_snapshot_json TEXT NULL COMMENT '身份快照',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
+    CONSTRAINT uk_sc_user_identity UNIQUE (provider, provider_user_id, tenant_key)
+) COMMENT='用户身份映射表';
+
 CREATE TABLE agent_definition (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
     agent_code VARCHAR(64) NOT NULL COMMENT 'Agent 编码',
@@ -102,6 +139,21 @@ CREATE TABLE agent_tool_binding (
     remark VARCHAR(255) NULL COMMENT '备注信息',
     CONSTRAINT uk_agent_tool UNIQUE (agent_code, tool_code)
 ) COMMENT='Agent 工具绑定表';
+
+CREATE TABLE agent_prompt_binding (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'ID',
+    agent_code VARCHAR(64) NOT NULL COMMENT 'Agent code',
+    prompt_template_id BIGINT NOT NULL COMMENT 'Prompt template id',
+    sort_order INT NOT NULL COMMENT 'Sort order',
+    create_dept BIGINT NULL COMMENT 'Create dept',
+    create_by BIGINT NULL COMMENT 'Create by',
+    create_time DATETIME NULL COMMENT 'Create time',
+    update_by BIGINT NULL COMMENT 'Update by',
+    update_time DATETIME NULL COMMENT 'Update time',
+    remark VARCHAR(255) NULL COMMENT 'Remark',
+    CONSTRAINT uk_agent_prompt UNIQUE (agent_code, prompt_template_id),
+    INDEX idx_agent_prompt_order (agent_code, sort_order)
+) COMMENT='Agent prompt binding';
 
 CREATE TABLE llm_conversation_session (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',

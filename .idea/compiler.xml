@@ -10,10 +10,10 @@
         <processorPath useClasspath="false">
           <entry name="$PROJECT_DIR$/../../Software/Maven/DevSoft/maven/apache-maven-3.6.1/mvn_resp/org/projectlombok/lombok/1.18.26/lombok-1.18.26.jar" />
         </processorPath>
-        <module name="smartcrew-admin" />
         <module name="smartcrew-common" />
-        <module name="smartcrew-modules" />
+        <module name="smartcrew-admin" />
         <module name="smartcrew-modules-api" />
+        <module name="smartcrew-modules" />
       </profile>
     </annotationProcessing>
   </component>
