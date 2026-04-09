@@ -168,7 +168,9 @@ function formatDate(value?: string) {
 .timeline-card {
   padding: 16px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.58);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.14)),
+    rgba(255, 255, 255, 0.08);
 
   p {
     margin: 12px 0 0;

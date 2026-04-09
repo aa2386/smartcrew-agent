@@ -123,7 +123,11 @@ async function logout() {
   padding: 8px 14px;
   border-radius: 999px;
   color: var(--sc-primary-deep);
-  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.18)),
+    rgba(126, 190, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
   font-weight: 700;
 }
 
@@ -179,7 +183,10 @@ async function logout() {
   place-items: center;
   color: white;
   font-family: var(--sc-font-title);
-  background: linear-gradient(135deg, var(--sc-primary), var(--sc-accent));
+  box-shadow:
+    0 14px 26px rgba(21, 59, 120, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.96), rgba(255, 123, 84, 0.82));
 }
 
 .admin-content {

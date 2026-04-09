@@ -334,7 +334,9 @@ function formatDate(value?: string) {
   gap: 6px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.52);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.14)),
+    rgba(255, 255, 255, 0.08);
 
   span {
     color: var(--sc-text-soft);

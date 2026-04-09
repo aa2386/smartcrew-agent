@@ -280,7 +280,9 @@ function formatTime(value?: string) {
   align-items: center;
   padding: 16px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.52);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.14)),
+    rgba(255, 255, 255, 0.08);
 
   p {
     margin: 6px 0 0;
@@ -298,11 +300,14 @@ function formatTime(value?: string) {
   color: white;
   font-family: var(--sc-font-title);
   font-size: 1.1rem;
-  background: linear-gradient(135deg, var(--sc-primary), var(--sc-accent));
+  box-shadow:
+    0 14px 26px rgba(21, 59, 120, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.96), rgba(255, 123, 84, 0.82));
 }
 
 .avatar.guest {
-  background: linear-gradient(135deg, #64748b, #94a3b8);
+  background: linear-gradient(135deg, rgba(89, 107, 137, 0.96), rgba(148, 163, 184, 0.78));
 }
 
 .sidebar-actions {
@@ -332,12 +337,17 @@ function formatTime(value?: string) {
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 6px;
   min-height: 110px;
-  border: 1px solid transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 18px;
   padding: 14px;
   text-align: left;
-  background: rgba(255, 255, 255, 0.48);
-  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.14)),
+    rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 12px 30px rgba(7, 18, 34, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 
   strong,
   span,
@@ -373,8 +383,13 @@ function formatTime(value?: string) {
 
 .conversation-item:hover,
 .conversation-item.active {
-  border-color: rgba(14, 165, 233, 0.4);
-  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(163, 213, 255, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.22)),
+    rgba(152, 198, 255, 0.1);
+  box-shadow:
+    0 16px 34px rgba(10, 24, 44, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
   transform: translateY(-1px);
 }
 
@@ -418,7 +433,11 @@ function formatTime(value?: string) {
   padding: 8px 14px;
   border-radius: 999px;
   color: var(--sc-primary-deep);
-  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.18)),
+    rgba(126, 190, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
   font-weight: 700;
 }
 
@@ -435,8 +454,8 @@ function formatTime(value?: string) {
   padding: 26px;
   border-radius: 28px;
   background:
-    linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(249, 115, 22, 0.12)),
-    rgba(255, 255, 255, 0.56);
+    linear-gradient(135deg, rgba(130, 196, 255, 0.22), rgba(255, 123, 84, 0.12) 58%, rgba(255, 255, 255, 0.12)),
+    rgba(255, 255, 255, 0.12);
 
   h2 {
     margin: 0 0 12px;
@@ -519,13 +538,18 @@ function formatTime(value?: string) {
 
 .message-item.assistant .message-bubble {
   border-top-left-radius: 10px;
-  background: rgba(255, 255, 255, 0.74);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.16)),
+    rgba(255, 255, 255, 0.08);
 }
 
 .message-item.user .message-bubble {
   color: white;
   border-top-right-radius: 10px;
-  background: linear-gradient(135deg, var(--sc-primary), var(--sc-accent));
+  box-shadow:
+    0 16px 34px rgba(30, 64, 175, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.96), rgba(108, 92, 255, 0.9), rgba(255, 123, 84, 0.86));
 }
 
 .composer {
