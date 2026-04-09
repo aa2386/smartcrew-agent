@@ -9,7 +9,8 @@
         <el-input v-model="keyword" placeholder="按用户名、显示名称或角色筛选" clearable style="max-width: 320px" />
       </div>
 
-      <el-table :data="filteredUsers" stripe>
+      <div class="table-shell">
+        <el-table :data="filteredUsers" stripe height="100%">
         <el-table-column prop="displayName" label="显示名称" min-width="160" />
         <el-table-column prop="username" label="用户名" min-width="160" />
         <el-table-column prop="role" label="角色" width="100" />
@@ -36,7 +37,8 @@
             </el-space>
           </template>
         </el-table-column>
-      </el-table>
+        </el-table>
+      </div>
     </GlassPanel>
 
     <el-drawer v-model="detailVisible" title="用户详情与偏好" size="560px">
@@ -295,6 +297,16 @@ function formatDate(value?: string) {
 </script>
 
 <style scoped lang="scss">
+.page-grid {
+  height: 100%;
+  min-height: 0;
+}
+
+.admin-card {
+  display: flex;
+  flex-direction: column;
+}
+
 .card-head {
   display: flex;
   align-items: center;

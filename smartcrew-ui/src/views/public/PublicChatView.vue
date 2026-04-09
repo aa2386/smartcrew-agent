@@ -11,21 +11,16 @@
             </div>
           </template>
           <template v-else>
-            <div class="avatar guest">未</div>
+            <div class="avatar guest">访</div>
             <div>
-              <strong>点击登录 / 注册</strong>
+              <strong>点击此处登录 / 注册</strong>
               <p>登录后保存会话与偏好</p>
             </div>
           </template>
         </div>
 
         <div class="sidebar-actions">
-          <el-button
-            v-if="authStore.isWebLoggedIn"
-            type="primary"
-            plain
-            @click="chatStore.createDraftSession()"
-          >
+          <el-button v-if="authStore.isWebLoggedIn" type="primary" plain @click="chatStore.createDraftSession()">
             新建对话
           </el-button>
           <el-button v-else type="primary" @click="authDialogVisible = true">登录 / 注册</el-button>
@@ -156,7 +151,7 @@ const quickPrompts = [
   {
     title: '平台功能梳理',
     description: '快速了解系统现有能力与接入结构',
-    prompt: '请帮我梳理当前平台已有的核心功能与后续扩展方向。'
+    prompt: '请帮我梳理当前平台已具备的核心功能与后续扩展方向。'
   },
   {
     title: 'Agent 规划建议',
@@ -261,13 +256,16 @@ function formatTime(value?: string) {
   display: grid;
   grid-template-columns: minmax(280px, 16.7vw) minmax(0, 1fr);
   gap: 20px;
-  min-height: calc(100vh - 48px);
+  height: 100%;
+  min-height: 0;
 }
 
 .public-sidebar {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .sidebar-top {
@@ -320,15 +318,20 @@ function formatTime(value?: string) {
 }
 
 .conversation-list {
+  min-height: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 0;
-  overflow: auto;
+  padding-right: 6px;
 }
 
 .conversation-item {
   cursor: pointer;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  min-height: 110px;
   border: 1px solid transparent;
   border-radius: 18px;
   padding: 14px;
@@ -342,10 +345,29 @@ function formatTime(value?: string) {
     display: block;
   }
 
+  strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   span,
   small {
-    margin-top: 6px;
     color: var(--sc-text-soft);
+  }
+
+  span {
+    overflow: hidden;
+    line-height: 1.65;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  small {
+    margin-top: auto;
+    white-space: nowrap;
   }
 }
 
@@ -366,6 +388,7 @@ function formatTime(value?: string) {
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 20px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .public-header {
@@ -400,9 +423,12 @@ function formatTime(value?: string) {
 }
 
 .hero-state {
+  min-height: 0;
+  overflow: auto;
   display: grid;
   align-content: start;
   gap: 22px;
+  padding-right: 6px;
 }
 
 .hero-copy {
@@ -519,6 +545,7 @@ function formatTime(value?: string) {
 @media (max-width: 1100px) {
   .public-grid {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   .quick-grid {
@@ -527,6 +554,11 @@ function formatTime(value?: string) {
 
   .public-header {
     flex-direction: column;
+  }
+
+  .public-sidebar,
+  .public-main {
+    overflow: visible;
   }
 }
 </style>

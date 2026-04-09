@@ -1,6 +1,6 @@
 <template>
   <div class="conversation-grid">
-    <GlassPanel panel-class="admin-card">
+    <GlassPanel panel-class="admin-card session-card">
       <div class="card-head">
         <div>
           <h3>会话检索</h3>
@@ -19,18 +19,20 @@
         <el-button type="primary" @click="loadSessions">查询</el-button>
       </div>
 
-      <el-table :data="sessions" stripe highlight-current-row @current-change="handleCurrentChange">
-        <el-table-column prop="title" label="标题" min-width="180" />
-        <el-table-column prop="sessionId" label="Session ID" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="source" label="来源" width="100" />
-        <el-table-column prop="messageCount" label="消息数" width="100" />
-        <el-table-column label="最近时间" min-width="180">
-          <template #default="{ row }">{{ formatDate(row.lastMessageAt) }}</template>
-        </el-table-column>
-      </el-table>
+      <div class="table-shell">
+        <el-table :data="sessions" stripe highlight-current-row height="100%" @current-change="handleCurrentChange">
+          <el-table-column prop="title" label="标题" min-width="180" />
+          <el-table-column prop="sessionId" label="Session ID" min-width="220" show-overflow-tooltip />
+          <el-table-column prop="source" label="来源" width="100" />
+          <el-table-column prop="messageCount" label="消息数" width="100" />
+          <el-table-column label="最近时间" min-width="180">
+            <template #default="{ row }">{{ formatDate(row.lastMessageAt) }}</template>
+          </el-table-column>
+        </el-table>
+      </div>
     </GlassPanel>
 
-    <GlassPanel panel-class="admin-card">
+    <GlassPanel panel-class="admin-card message-card">
       <div class="card-head">
         <div>
           <h3>消息详情</h3>
@@ -39,7 +41,11 @@
       </div>
 
       <div v-if="messages.length" class="message-list">
-        <article v-for="(item, index) in messages" :key="`${item.role}-${index}-${item.createTime}`" class="timeline-card">
+        <article
+          v-for="(item, index) in messages"
+          :key="`${item.role}-${index}-${item.createTime}`"
+          class="timeline-card"
+        >
           <div class="timeline-head">
             <strong>{{ item.role === 'assistant' ? '智能体回复' : '用户消息' }}</strong>
             <span>{{ formatDate(item.createTime) }}</span>
@@ -116,6 +122,14 @@ function formatDate(value?: string) {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: 18px;
+  height: 100%;
+  min-height: 0;
+}
+
+.session-card,
+.message-card {
+  display: flex;
+  flex-direction: column;
 }
 
 .card-head {
@@ -143,9 +157,12 @@ function formatDate(value?: string) {
 }
 
 .message-list {
+  min-height: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding-right: 6px;
 }
 
 .timeline-card {
@@ -168,12 +185,17 @@ function formatDate(value?: string) {
 }
 
 .empty-text {
+  flex: 1;
+  display: grid;
+  place-items: center;
   padding: 16px 4px;
+  text-align: center;
 }
 
 @media (max-width: 1200px) {
   .conversation-grid {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   .filter-row {

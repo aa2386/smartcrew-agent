@@ -6,7 +6,7 @@
           <h3>平台身份映射</h3>
           <p class="muted">按系统用户查看或维护飞书、企微等第三方身份绑定。</p>
         </div>
-        <el-button type="primary" @click="dialogVisible = true" :disabled="!selectedUserId">新增绑定</el-button>
+        <el-button type="primary" :disabled="!selectedUserId" @click="dialogVisible = true">新增绑定</el-button>
       </div>
 
       <el-select
@@ -25,7 +25,7 @@
       </el-select>
     </GlassPanel>
 
-    <GlassPanel panel-class="admin-card">
+    <GlassPanel panel-class="admin-card identity-table-card">
       <div class="card-head">
         <div>
           <h3>映射明细</h3>
@@ -33,17 +33,19 @@
         </div>
       </div>
 
-      <el-table :data="identities" stripe>
-        <el-table-column prop="provider" label="平台" width="120" />
-        <el-table-column prop="providerUserId" label="平台用户 ID" min-width="180" />
-        <el-table-column prop="tenantKey" label="租户标识" min-width="160" />
-        <el-table-column prop="profileSnapshotJson" label="快照 JSON" min-width="240" show-overflow-tooltip />
-        <el-table-column label="操作" width="120">
-          <template #default="{ row }">
-            <el-button type="danger" plain size="small" @click="removeIdentity(row.id)">解绑</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-shell">
+        <el-table :data="identities" stripe height="100%">
+          <el-table-column prop="provider" label="平台" width="120" />
+          <el-table-column prop="providerUserId" label="平台用户 ID" min-width="180" />
+          <el-table-column prop="tenantKey" label="租户标识" min-width="160" />
+          <el-table-column prop="profileSnapshotJson" label="快照 JSON" min-width="240" show-overflow-tooltip />
+          <el-table-column label="操作" width="120">
+            <template #default="{ row }">
+              <el-button type="danger" plain size="small" @click="removeIdentity(row.id)">解绑</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <div v-if="selectedUserId && !identities.length" class="empty-text muted">
         当前用户还没有绑定任何第三方身份。
@@ -203,10 +205,18 @@ async function removeIdentity(identityId: number) {
 .identity-grid {
   display: grid;
   gap: 18px;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.selector-card,
+.identity-table-card {
+  display: flex;
+  flex-direction: column;
 }
 
 .selector-card {
-  display: grid;
   gap: 16px;
 }
 
@@ -228,5 +238,11 @@ async function removeIdentity(identityId: number) {
 
 .empty-text {
   padding-top: 18px;
+}
+
+@media (max-width: 1100px) {
+  .identity-grid {
+    height: auto;
+  }
 }
 </style>

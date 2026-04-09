@@ -88,7 +88,8 @@ async function logout() {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   gap: 20px;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
 }
 
 .admin-sidebar {
@@ -97,6 +98,8 @@ async function logout() {
   gap: 24px;
   border-radius: 28px;
   padding: 24px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .brand-block {
@@ -136,8 +139,11 @@ async function logout() {
 
 .admin-main {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 18px;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .admin-topbar {
@@ -178,11 +184,20 @@ async function logout() {
 
 .admin-content {
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 1100px) {
   .admin-shell {
     grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .admin-sidebar,
+  .admin-main,
+  .admin-content {
+    overflow: visible;
   }
 }
 </style>

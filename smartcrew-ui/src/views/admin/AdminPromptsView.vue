@@ -1,6 +1,6 @@
 <template>
   <div class="prompt-grid">
-    <GlassPanel panel-class="admin-card">
+    <GlassPanel panel-class="admin-card prompt-list-card">
       <div class="card-head">
         <div>
           <h3>Prompt 分类</h3>
@@ -9,14 +9,16 @@
         <el-button type="primary" @click="openCreateDialog">新增 Prompt</el-button>
       </div>
 
-      <el-table :data="latestPrompts" stripe highlight-current-row @current-change="handleCurrentChange">
-        <el-table-column prop="category" label="分类" min-width="180" />
-        <el-table-column prop="templateName" label="模板名称" min-width="180" />
-        <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip />
-      </el-table>
+      <div class="table-shell">
+        <el-table :data="latestPrompts" stripe highlight-current-row height="100%" @current-change="handleCurrentChange">
+          <el-table-column prop="category" label="分类" min-width="180" />
+          <el-table-column prop="templateName" label="模板名称" min-width="180" />
+          <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip />
+        </el-table>
+      </div>
     </GlassPanel>
 
-    <GlassPanel panel-class="admin-card">
+    <GlassPanel panel-class="admin-card prompt-detail-card">
       <div class="card-head">
         <div>
           <h3>分类详情</h3>
@@ -24,39 +26,41 @@
         </div>
       </div>
 
-      <template v-if="selectedPrompt">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="模板名称">{{ selectedPrompt.templateName }}</el-descriptions-item>
-          <el-descriptions-item label="分类">{{ selectedPrompt.category }}</el-descriptions-item>
-          <el-descriptions-item label="备注">{{ selectedPrompt.remark || '暂无' }}</el-descriptions-item>
-        </el-descriptions>
+      <div class="detail-scroll">
+        <template v-if="selectedPrompt">
+          <el-descriptions :column="1" border>
+            <el-descriptions-item label="模板名称">{{ selectedPrompt.templateName }}</el-descriptions-item>
+            <el-descriptions-item label="分类">{{ selectedPrompt.category }}</el-descriptions-item>
+            <el-descriptions-item label="备注">{{ selectedPrompt.remark || '暂无' }}</el-descriptions-item>
+          </el-descriptions>
 
-        <div class="prompt-content glass-panel">
-          <pre>{{ selectedPrompt.templateContent }}</pre>
-        </div>
+          <div class="prompt-content glass-panel">
+            <pre>{{ selectedPrompt.templateContent }}</pre>
+          </div>
 
-        <div class="latest-actions">
-          <el-button plain @click="openEditDialog(selectedPrompt)">编辑当前版本</el-button>
-          <el-button type="danger" plain @click="removePrompt(selectedPrompt)">删除当前版本</el-button>
-        </div>
+          <div class="latest-actions">
+            <el-button plain @click="openEditDialog(selectedPrompt)">编辑当前版本</el-button>
+            <el-button type="danger" plain @click="removePrompt(selectedPrompt)">删除当前版本</el-button>
+          </div>
 
-        <h4 class="history-title">同分类历史记录</h4>
-        <el-table :data="categoryHistory" stripe>
-          <el-table-column prop="id" label="ID" width="90" />
-          <el-table-column prop="templateName" label="模板名称" min-width="160" />
-          <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-          <el-table-column label="操作" width="170" fixed="right">
-            <template #default="{ row }">
-              <el-space>
-                <el-button plain size="small" @click="openEditDialog(row)">编辑</el-button>
-                <el-button type="danger" plain size="small" @click="removePrompt(row)">删除</el-button>
-              </el-space>
-            </template>
-          </el-table-column>
-        </el-table>
-      </template>
+          <h4 class="history-title">同分类历史记录</h4>
+          <el-table :data="categoryHistory" stripe max-height="280">
+            <el-table-column prop="id" label="ID" width="90" />
+            <el-table-column prop="templateName" label="模板名称" min-width="160" />
+            <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
+            <el-table-column label="操作" width="170" fixed="right">
+              <template #default="{ row }">
+                <el-space>
+                  <el-button plain size="small" @click="openEditDialog(row)">编辑</el-button>
+                  <el-button type="danger" plain size="small" @click="removePrompt(row)">删除</el-button>
+                </el-space>
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
 
-      <div v-else class="empty-text muted">请选择左侧分类后查看 Prompt 内容。</div>
+        <div v-else class="empty-text muted">请选择左侧分类后查看 Prompt 内容。</div>
+      </div>
     </GlassPanel>
 
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑 Prompt' : '新增 Prompt'" width="620px">
@@ -137,7 +141,10 @@ async function loadPrompts() {
     prompts.value = response.rows
     if (!selectedCategory.value && latestPrompts.value.length > 0) {
       selectedCategory.value = latestPrompts.value[0].category
-    } else if (selectedCategory.value && !latestPrompts.value.some((item) => item.category === selectedCategory.value)) {
+    } else if (
+      selectedCategory.value &&
+      !latestPrompts.value.some((item) => item.category === selectedCategory.value)
+    ) {
       selectedCategory.value = latestPrompts.value[0]?.category || ''
     }
   } catch (error) {
@@ -202,11 +209,9 @@ async function submitPrompt() {
 
 async function removePrompt(row: PromptRecord) {
   try {
-    await ElMessageBox.confirm(
-      `确认删除 Prompt #${row.id}（${row.templateName}）吗？`,
-      '删除确认',
-      { type: 'warning' }
-    )
+    await ElMessageBox.confirm(`确认删除 Prompt #${row.id}（${row.templateName}）吗？`, '删除确认', {
+      type: 'warning'
+    })
     await adminPortalApi.deletePrompt(authStore.adminToken, row.id)
     ElMessage.success('Prompt 已删除')
     await loadPrompts()
@@ -223,6 +228,14 @@ async function removePrompt(row: PromptRecord) {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
   gap: 18px;
+  height: 100%;
+  min-height: 0;
+}
+
+.prompt-list-card,
+.prompt-detail-card {
+  display: flex;
+  flex-direction: column;
 }
 
 .card-head {
@@ -240,6 +253,13 @@ async function removePrompt(row: PromptRecord) {
   p {
     margin: 0;
   }
+}
+
+.detail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 6px;
 }
 
 .prompt-content {
@@ -267,12 +287,17 @@ async function removePrompt(row: PromptRecord) {
 }
 
 .empty-text {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
   padding: 16px 4px;
+  text-align: center;
 }
 
 @media (max-width: 1200px) {
   .prompt-grid {
     grid-template-columns: 1fr;
+    height: auto;
   }
 }
 </style>

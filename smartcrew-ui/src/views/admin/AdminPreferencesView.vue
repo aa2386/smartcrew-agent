@@ -12,7 +12,8 @@
         </div>
       </div>
 
-      <el-table :data="preferences" stripe>
+      <div class="table-shell">
+        <el-table :data="preferences" stripe height="100%">
         <el-table-column prop="userId" label="用户 ID" width="110" />
         <el-table-column prop="prefKey" label="偏好键" min-width="180" />
         <el-table-column prop="prefValue" label="偏好值" min-width="220" show-overflow-tooltip />
@@ -26,7 +27,8 @@
             </el-space>
           </template>
         </el-table-column>
-      </el-table>
+        </el-table>
+      </div>
     </GlassPanel>
 
     <el-dialog v-model="dialogVisible" :title="editing ? '编辑偏好' : '新增偏好'" width="540px">
@@ -157,6 +159,16 @@ async function removePreference(row: PreferenceRecord) {
 </script>
 
 <style scoped lang="scss">
+.page-grid {
+  height: 100%;
+  min-height: 0;
+}
+
+.admin-card {
+  display: flex;
+  flex-direction: column;
+}
+
 .card-head {
   display: flex;
   justify-content: space-between;

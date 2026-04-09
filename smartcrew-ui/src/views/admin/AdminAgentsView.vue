@@ -1,6 +1,6 @@
 <template>
   <div class="agent-grid">
-    <GlassPanel panel-class="admin-card">
+    <GlassPanel panel-class="admin-card agent-list-card">
       <div class="card-head">
         <div>
           <h3>Agent 管理</h3>
@@ -11,60 +11,63 @@
         <el-button type="primary" @click="startCreateAgent">新增 Agent</el-button>
       </div>
 
-      <el-table
-        :data="agents"
-        stripe
-        highlight-current-row
-        row-key="agentCode"
-        @current-change="handleCurrentChange"
-      >
-        <el-table-column prop="agentName" label="名称" min-width="160" />
-        <el-table-column prop="agentCode" label="编码" min-width="180" />
-        <el-table-column prop="agentType" label="类型" width="120" />
-        <el-table-column label="来源状态" width="120">
-          <template #default="{ row }">
-            <el-tag :type="sourceStatusTagType(row.sourceStatus)">
-              {{ sourceStatusText(row.sourceStatus) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="运行态" width="110">
-          <template #default="{ row }">
-            <el-tag :type="row.runtimeMode === 'STUB' ? 'warning' : 'primary'">
-              {{ row.runtimeMode || '未知' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="启用状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.enabled ? 'success' : 'info'">
-              {{ row.enabled ? '启用' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-if="row.sourceStatus === 'CODE_ONLY'"
-              link
-              type="primary"
-              @click.stop="startCreateFromCode(row)"
-            >
-              创建数据库信息
-            </el-button>
-            <span v-else class="muted">查看 / 编辑</span>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-shell">
+        <el-table
+          :data="agents"
+          stripe
+          highlight-current-row
+          row-key="agentCode"
+          height="100%"
+          @current-change="handleCurrentChange"
+        >
+          <el-table-column prop="agentName" label="名称" min-width="160" />
+          <el-table-column prop="agentCode" label="编码" min-width="180" />
+          <el-table-column prop="agentType" label="类型" width="120" />
+          <el-table-column label="来源状态" width="120">
+            <template #default="{ row }">
+              <el-tag :type="sourceStatusTagType(row.sourceStatus)">
+                {{ sourceStatusText(row.sourceStatus) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="运行态" width="110">
+            <template #default="{ row }">
+              <el-tag :type="row.runtimeMode === 'STUB' ? 'warning' : 'primary'">
+                {{ row.runtimeMode || '未知' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="启用状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.enabled ? 'success' : 'info'">
+                {{ row.enabled ? '启用' : '停用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="150" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-if="row.sourceStatus === 'CODE_ONLY'"
+                link
+                type="primary"
+                @click.stop="startCreateFromCode(row)"
+              >
+                创建数据库信息
+              </el-button>
+              <span v-else class="muted">查看 / 编辑</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </GlassPanel>
 
-    <GlassPanel panel-class="admin-card">
+    <GlassPanel panel-class="admin-card agent-detail-card">
       <div class="card-head">
         <div>
           <h3>{{ panelTitle }}</h3>
           <p class="muted">{{ panelDescription }}</p>
         </div>
-        <div class="status-stack" v-if="form.agentCode">
+        <div v-if="form.agentCode" class="status-stack">
           <el-tag :type="sourceStatusTagType(form.sourceStatus)">
             {{ sourceStatusText(form.sourceStatus) }}
           </el-tag>
@@ -72,144 +75,152 @@
         </div>
       </div>
 
-      <el-alert
-        v-if="form.agentCode"
-        class="source-alert"
-        type="info"
-        :closable="false"
-        show-icon
-        title="提示词分层规则"
-        description="Agent 基础人格提示词用于定义角色、风格和安全边界；工作流模板按绑定顺序依次拼接，用于定义执行步骤与任务流程。"
-      />
+      <div class="detail-scroll">
+        <el-alert
+          v-if="form.agentCode"
+          class="source-alert"
+          type="info"
+          :closable="false"
+          show-icon
+          title="提示词分层规则"
+          description="Agent 基础人格提示词用于定义角色、风格和安全边界；工作流模板按绑定顺序依次拼接，用于定义执行步骤与任务流程。"
+        />
 
-      <el-form v-if="pageMode !== 'empty'" label-position="top">
-        <div class="form-row">
-          <el-form-item label="Agent 编码">
-            <el-input
-              v-model="form.agentCode"
-              :disabled="pageMode !== 'create'"
-              placeholder="例如：customer-service-agent"
-            />
-          </el-form-item>
-          <el-form-item label="Agent 名称">
-            <el-input v-model="form.agentName" placeholder="请输入 Agent 名称" />
-          </el-form-item>
-        </div>
-
-        <div class="form-row">
-          <el-form-item label="Agent 类型">
-            <el-input v-model="form.agentType" placeholder="例如：BUILTIN / WORKFLOW / STUB" />
-          </el-form-item>
-          <el-form-item label="策略类型">
-            <el-input v-model="form.strategyType" placeholder="例如：REACT" />
-          </el-form-item>
-        </div>
-
-        <el-form-item label="描述">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入 Agent 的定位与职责说明"
-          />
-        </el-form-item>
-
-        <el-form-item label="基础人格 Prompt">
-          <el-input
-            v-model="form.systemPrompt"
-            type="textarea"
-            :rows="6"
-            placeholder="用于定义 Agent 的人格、风格、安全边界等基础约束"
-          />
-        </el-form-item>
-
-        <el-form-item label="扩展配置 JSON">
-          <el-input
-            v-model="form.configJson"
-            type="textarea"
-            :rows="8"
-            placeholder="{&#10;  &quot;temperature&quot;: 0.7&#10;}"
-          />
-        </el-form-item>
-
-        <div class="form-row">
-          <el-form-item label="启用状态">
-            <el-switch v-model="form.enabled" inline-prompt active-text="启用" inactive-text="停用" />
-          </el-form-item>
-          <el-form-item label="运行时 Bean">
-            <el-input
-              :model-value="form.beanClassName || '当前仅有数据库配置或尚未接入代码实现'"
-              disabled
-            />
-          </el-form-item>
-        </div>
-
-        <div class="binding-head">
-          <div>
-            <h4>工作流 Prompt 模板</h4>
-            <p class="muted">
-              模板会按列表顺序依次拼接到基础人格 Prompt 之后。绑定的是具体模板记录，不会自动跟随同分类的新版本。
-            </p>
+        <el-form v-if="pageMode !== 'empty'" label-position="top">
+          <div class="form-row">
+            <el-form-item label="Agent 编码">
+              <el-input
+                v-model="form.agentCode"
+                :disabled="pageMode !== 'create'"
+                placeholder="例如：customer-service-agent"
+              />
+            </el-form-item>
+            <el-form-item label="Agent 名称">
+              <el-input v-model="form.agentName" placeholder="请输入 Agent 名称" />
+            </el-form-item>
           </div>
-        </div>
 
-        <div class="binding-toolbar">
-          <el-select
-            v-model="selectedPromptTemplateId"
-            class="prompt-select"
-            filterable
-            placeholder="请选择要绑定的 Prompt 模板"
-          >
-            <el-option
-              v-for="prompt in promptOptions"
-              :key="prompt.id"
-              :label="promptOptionLabel(prompt)"
-              :value="prompt.id"
+          <div class="form-row">
+            <el-form-item label="Agent 类型">
+              <el-input v-model="form.agentType" placeholder="例如：BUILTIN / WORKFLOW / STUB" />
+            </el-form-item>
+            <el-form-item label="策略类型">
+              <el-input v-model="form.strategyType" placeholder="例如：REACT" />
+            </el-form-item>
+          </div>
+
+          <el-form-item label="描述">
+            <el-input
+              v-model="form.description"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入 Agent 的定位与职责说明"
             />
-          </el-select>
-          <el-button @click="addPromptBinding">添加模板</el-button>
+          </el-form-item>
+
+          <el-form-item label="基础人格 Prompt">
+            <el-input
+              v-model="form.systemPrompt"
+              type="textarea"
+              :rows="6"
+              placeholder="用于定义 Agent 的人格、风格、安全边界等基础约束"
+            />
+          </el-form-item>
+
+          <el-form-item label="扩展配置 JSON">
+            <el-input
+              v-model="form.configJson"
+              type="textarea"
+              :rows="8"
+              placeholder="{&#10;  &quot;temperature&quot;: 0.7&#10;}"
+            />
+          </el-form-item>
+
+          <div class="form-row">
+            <el-form-item label="启用状态">
+              <el-switch v-model="form.enabled" inline-prompt active-text="启用" inactive-text="停用" />
+            </el-form-item>
+            <el-form-item label="运行时 Bean">
+              <el-input
+                :model-value="form.beanClassName || '当前仅有数据库配置或尚未接入代码实现'"
+                disabled
+              />
+            </el-form-item>
+          </div>
+
+          <div class="binding-head">
+            <div>
+              <h4>工作流 Prompt 模板</h4>
+              <p class="muted">
+                模板会按列表顺序依次拼接到基础人格 Prompt 之后。绑定的是具体模板记录，不会自动跟随同分类的新版本。
+              </p>
+            </div>
+          </div>
+
+          <div class="binding-toolbar">
+            <el-select
+              v-model="selectedPromptTemplateId"
+              class="prompt-select"
+              filterable
+              placeholder="请选择要绑定的 Prompt 模板"
+            >
+              <el-option
+                v-for="prompt in promptOptions"
+                :key="prompt.id"
+                :label="promptOptionLabel(prompt)"
+                :value="prompt.id"
+              />
+            </el-select>
+            <el-button @click="addPromptBinding">添加模板</el-button>
+          </div>
+
+          <el-table
+            v-if="promptBindings.length > 0"
+            :data="promptBindings"
+            stripe
+            class="binding-table"
+            max-height="260"
+          >
+            <el-table-column label="顺序" width="80">
+              <template #default="{ row }">{{ row.sortOrder }}</template>
+            </el-table-column>
+            <el-table-column prop="templateName" label="模板名称" min-width="180" />
+            <el-table-column prop="category" label="分类" min-width="140" />
+            <el-table-column label="操作" width="200">
+              <template #default="{ $index }">
+                <div class="binding-actions">
+                  <el-button link type="primary" :disabled="$index === 0" @click="movePromptBinding($index, -1)">
+                    上移
+                  </el-button>
+                  <el-button
+                    link
+                    type="primary"
+                    :disabled="$index === promptBindings.length - 1"
+                    @click="movePromptBinding($index, 1)"
+                  >
+                    下移
+                  </el-button>
+                  <el-button link type="danger" @click="removePromptBinding($index)">移除</el-button>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-else class="binding-empty muted">当前未绑定工作流 Prompt 模板。</div>
+
+          <div class="action-row">
+            <el-button type="primary" :loading="saving" @click="submitForm">
+              {{ submitButtonText }}
+            </el-button>
+            <el-button @click="resetToEmpty">清空当前表单</el-button>
+          </div>
+        </el-form>
+
+        <div v-else class="empty-state">
+          <h4>请选择一个 Agent 或新增数据库 Agent</h4>
+          <p class="muted">
+            代码实现与数据库配置是两套独立来源。你可以先新增数据库占位 Agent，也可以先从代码 Agent 创建数据库信息。
+          </p>
         </div>
-
-        <el-table v-if="promptBindings.length > 0" :data="promptBindings" stripe class="binding-table">
-          <el-table-column label="顺序" width="80">
-            <template #default="{ row }">{{ row.sortOrder }}</template>
-          </el-table-column>
-          <el-table-column prop="templateName" label="模板名称" min-width="180" />
-          <el-table-column prop="category" label="分类" min-width="140" />
-          <el-table-column label="操作" width="200">
-            <template #default="{ $index }">
-              <div class="binding-actions">
-                <el-button link type="primary" :disabled="$index === 0" @click="movePromptBinding($index, -1)">
-                  上移
-                </el-button>
-                <el-button
-                  link
-                  type="primary"
-                  :disabled="$index === promptBindings.length - 1"
-                  @click="movePromptBinding($index, 1)"
-                >
-                  下移
-                </el-button>
-                <el-button link type="danger" @click="removePromptBinding($index)">移除</el-button>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div v-else class="binding-empty muted">当前未绑定工作流 Prompt 模板。</div>
-
-        <div class="action-row">
-          <el-button type="primary" :loading="saving" @click="submitForm">
-            {{ submitButtonText }}
-          </el-button>
-          <el-button @click="resetToEmpty">清空当前表单</el-button>
-        </div>
-      </el-form>
-
-      <div v-else class="empty-state">
-        <h4>请选择一个 Agent 或新增数据库 Agent</h4>
-        <p class="muted">
-          代码实现与数据库配置是两套独立来源。你可以先新增数据库占位 Agent，也可以先从代码 Agent 创建数据库信息。
-        </p>
       </div>
     </GlassPanel>
   </div>
@@ -519,6 +530,14 @@ async function submitForm() {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: 18px;
+  height: 100%;
+  min-height: 0;
+}
+
+.agent-list-card,
+.agent-detail-card {
+  display: flex;
+  flex-direction: column;
 }
 
 .card-head {
@@ -544,6 +563,13 @@ async function submitForm() {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.detail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 6px;
 }
 
 .source-alert {
@@ -597,6 +623,7 @@ async function submitForm() {
 .action-row {
   display: flex;
   gap: 12px;
+  padding-bottom: 4px;
 }
 
 .empty-state {
@@ -621,6 +648,7 @@ async function submitForm() {
 @media (max-width: 1200px) {
   .agent-grid {
     grid-template-columns: 1fr;
+    height: auto;
   }
 }
 
