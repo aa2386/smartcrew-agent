@@ -4,15 +4,15 @@
       <div class="card-head">
         <div>
           <h3>Prompt 分类</h3>
-          <p class="muted">按分类查看最新 Prompt，并可继续追加新版本内容。</p>
+          <p class="muted">按分类查看最新 Prompt，并支持新增、编辑、删除。</p>
         </div>
-        <el-button type="primary" @click="dialogVisible = true">新增 Prompt</el-button>
+        <el-button type="primary" @click="openCreateDialog">新增 Prompt</el-button>
       </div>
 
       <el-table :data="latestPrompts" stripe highlight-current-row @current-change="handleCurrentChange">
         <el-table-column prop="category" label="分类" min-width="180" />
         <el-table-column prop="templateName" label="模板名称" min-width="180" />
-        <el-table-column prop="remark" label="备注" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip />
       </el-table>
     </GlassPanel>
 
@@ -35,18 +35,31 @@
           <pre>{{ selectedPrompt.templateContent }}</pre>
         </div>
 
+        <div class="latest-actions">
+          <el-button plain @click="openEditDialog(selectedPrompt)">编辑当前版本</el-button>
+          <el-button type="danger" plain @click="removePrompt(selectedPrompt)">删除当前版本</el-button>
+        </div>
+
         <h4 class="history-title">同分类历史记录</h4>
         <el-table :data="categoryHistory" stripe>
-          <el-table-column prop="id" label="ID" width="100" />
-          <el-table-column prop="templateName" label="模板名称" min-width="180" />
-          <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip />
+          <el-table-column prop="id" label="ID" width="90" />
+          <el-table-column prop="templateName" label="模板名称" min-width="160" />
+          <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
+          <el-table-column label="操作" width="170" fixed="right">
+            <template #default="{ row }">
+              <el-space>
+                <el-button plain size="small" @click="openEditDialog(row)">编辑</el-button>
+                <el-button type="danger" plain size="small" @click="removePrompt(row)">删除</el-button>
+              </el-space>
+            </template>
+          </el-table-column>
         </el-table>
       </template>
 
       <div v-else class="empty-text muted">请选择左侧分类后查看 Prompt 内容。</div>
     </GlassPanel>
 
-    <el-dialog v-model="dialogVisible" title="新增 Prompt" width="620px">
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑 Prompt' : '新增 Prompt'" width="620px">
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <el-form-item label="分类" prop="category">
           <el-input v-model="form.category" placeholder="例如：initial-agent" />
@@ -63,7 +76,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="createPrompt">保存 Prompt</el-button>
+        <el-button type="primary" @click="submitPrompt">保存 Prompt</el-button>
       </template>
     </el-dialog>
   </div>
@@ -72,7 +85,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import GlassPanel from '../../components/common/GlassPanel.vue'
 import { adminPortalApi } from '../../api/portal'
 import { useAuthStore } from '../../stores/auth'
@@ -82,6 +95,7 @@ const authStore = useAuthStore()
 const prompts = ref<PromptRecord[]>([])
 const selectedCategory = ref('')
 const dialogVisible = ref(false)
+const editingId = ref<number>()
 const formRef = ref<FormInstance>()
 
 const form = reactive({
@@ -123,6 +137,8 @@ async function loadPrompts() {
     prompts.value = response.rows
     if (!selectedCategory.value && latestPrompts.value.length > 0) {
       selectedCategory.value = latestPrompts.value[0].category
+    } else if (selectedCategory.value && !latestPrompts.value.some((item) => item.category === selectedCategory.value)) {
+      selectedCategory.value = latestPrompts.value[0]?.category || ''
     }
   } catch (error) {
     if (error instanceof Error) {
@@ -137,19 +153,65 @@ function handleCurrentChange(row?: PromptRecord) {
   }
 }
 
-async function createPrompt() {
+function resetForm() {
+  form.category = ''
+  form.templateName = ''
+  form.templateContent = ''
+  form.remark = ''
+}
+
+function openCreateDialog() {
+  editingId.value = undefined
+  resetForm()
+  dialogVisible.value = true
+}
+
+function openEditDialog(row: PromptRecord) {
+  editingId.value = row.id
+  form.category = row.category
+  form.templateName = row.templateName
+  form.templateContent = row.templateContent
+  form.remark = row.remark || ''
+  dialogVisible.value = true
+}
+
+async function submitPrompt() {
   try {
     await formRef.value?.validate()
-    await adminPortalApi.createPrompt(authStore.adminToken, form)
-    ElMessage.success('Prompt 已保存')
+    const payload = {
+      category: form.category,
+      templateName: form.templateName,
+      templateContent: form.templateContent,
+      remark: form.remark
+    }
+    if (editingId.value) {
+      await adminPortalApi.updatePrompt(authStore.adminToken, editingId.value, payload)
+      ElMessage.success('Prompt 已更新')
+    } else {
+      await adminPortalApi.createPrompt(authStore.adminToken, payload)
+      ElMessage.success('Prompt 已创建')
+    }
     dialogVisible.value = false
-    form.category = ''
-    form.templateName = ''
-    form.templateContent = ''
-    form.remark = ''
     await loadPrompts()
   } catch (error) {
     if (error instanceof Error) {
+      ElMessage.error(error.message)
+    }
+  }
+}
+
+async function removePrompt(row: PromptRecord) {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除 Prompt #${row.id}（${row.templateName}）吗？`,
+      '删除确认',
+      { type: 'warning' }
+    )
+    await adminPortalApi.deletePrompt(authStore.adminToken, row.id)
+    ElMessage.success('Prompt 已删除')
+    await loadPrompts()
+  } catch (error) {
+    if (error instanceof Error && error.message !== 'cancel') {
       ElMessage.error(error.message)
     }
   }
@@ -191,6 +253,12 @@ async function createPrompt() {
     line-height: 1.8;
     font-family: var(--sc-font-body);
   }
+}
+
+.latest-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
 }
 
 .history-title {

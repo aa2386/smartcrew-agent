@@ -20,6 +20,22 @@ public interface PromptTemplateService {
     PromptTemplateVo create(PromptTemplateRequest request);
 
     /**
+     * 按主键更新提示词模板。
+     *
+     * @param id      模板主键
+     * @param request 更新参数
+     * @return 更新后的模板信息
+     */
+    PromptTemplateVo update(Long id, PromptTemplateRequest request);
+
+    /**
+     * 按主键删除提示词模板。
+     *
+     * @param id 模板主键
+     */
+    void deleteById(Long id);
+
+    /**
      * 查询并返回全部记录。
      *
      * @return 结果列表。

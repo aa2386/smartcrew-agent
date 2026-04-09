@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -223,6 +224,124 @@ class SmartCrewAgentApplicationTests {
         mockMvc.perform(get("/api/v1/prompts/category/chat"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.templateName").value("chat-default"));
+    }
+
+    /**
+     * 验证后台 Prompt 支持按 ID 修改。
+     */
+    @Test
+    void shouldUpdatePromptByIdInAdmin() throws Exception {
+        String createRequest = """
+                {
+                  "templateName": "admin-prompt-origin",
+                  "templateContent": "origin content",
+                  "category": "admin-edit-case",
+                  "remark": "origin"
+                }
+                """;
+
+        MvcResult createResult = mockMvc.perform(post("/api/admin/prompts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn();
+
+        Long promptId = objectMapper.readTree(createResult.getResponse().getContentAsString())
+                .path("data").path("id").asLong();
+
+        String updateRequest = """
+                {
+                  "templateName": "admin-prompt-updated",
+                  "templateContent": "updated content",
+                  "category": "admin-edit-case",
+                  "remark": "updated"
+                }
+                """;
+
+        mockMvc.perform(put("/api/admin/prompts/" + promptId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(promptId))
+                .andExpect(jsonPath("$.data.templateName").value("admin-prompt-updated"))
+                .andExpect(jsonPath("$.data.templateContent").value("updated content"))
+                .andExpect(jsonPath("$.data.remark").value("updated"));
+    }
+
+    /**
+     * 验证 Prompt 删除前会校验绑定关系，存在关联时阻止删除。
+     */
+    @Test
+    void shouldBlockDeletingPromptWhenBindingsExist() throws Exception {
+        String createAgentRequest = objectMapper.writeValueAsString(Map.of(
+                "agentCode", "prompt-delete-check-agent",
+                "agentName", "Prompt 删除校验 Agent",
+                "agentType", "STUB",
+                "description", "用于测试 Prompt 删除关联校验",
+                "strategyType", "REACT",
+                "systemPrompt", "test",
+                "enabled", true,
+                "configJson", "{}"
+        ));
+
+        mockMvc.perform(post("/api/admin/agents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createAgentRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        String createPromptRequest = """
+                {
+                  "templateName": "prompt-delete-case",
+                  "templateContent": "delete me",
+                  "category": "admin-delete-case",
+                  "remark": "for binding delete check"
+                }
+                """;
+
+        MvcResult createPromptResult = mockMvc.perform(post("/api/admin/prompts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createPromptRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn();
+
+        Long promptId = objectMapper.readTree(createPromptResult.getResponse().getContentAsString())
+                .path("data").path("id").asLong();
+
+        String bindRequest = """
+                {
+                  "bindings": [
+                    {
+                      "promptTemplateId": %d
+                    }
+                  ]
+                }
+                """.formatted(promptId);
+
+        mockMvc.perform(put("/api/admin/agents/prompt-delete-check-agent/prompt-bindings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bindRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(delete("/api/admin/prompts/" + promptId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(409))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("prompt-delete-check-agent")));
+
+        mockMvc.perform(put("/api/admin/agents/prompt-delete-check-agent/prompt-bindings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bindings\":[]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(delete("/api/admin/prompts/" + promptId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     /**

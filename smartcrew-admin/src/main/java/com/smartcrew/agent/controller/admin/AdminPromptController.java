@@ -8,9 +8,11 @@ import com.smartcrew.agent.common.exception.ServiceException;
 import com.smartcrew.agent.core.page.TableDataInfo;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -40,11 +42,23 @@ public class AdminPromptController {
     @GetMapping("/category/{category}")
     public R<PromptTemplateVo> detail(@PathVariable("category") String category) {
         return R.ok(promptTemplateService.queryByCategory(category)
-                .orElseThrow(() -> new ServiceException(404, "Prompt \u5206\u7c7b\u4e0d\u5b58\u5728")));
+                .orElseThrow(() -> new ServiceException(404, "Prompt 分类不存在")));
     }
 
     @PostMapping
     public R<PromptTemplateVo> create(@Valid @RequestBody PromptTemplateRequest request) {
         return R.ok(promptTemplateService.create(request));
+    }
+
+    @PutMapping("/{id}")
+    public R<PromptTemplateVo> update(@PathVariable("id") Long id,
+                                      @Valid @RequestBody PromptTemplateRequest request) {
+        return R.ok(promptTemplateService.update(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public R<Void> delete(@PathVariable("id") Long id) {
+        promptTemplateService.deleteById(id);
+        return R.ok("删除成功", null);
     }
 }

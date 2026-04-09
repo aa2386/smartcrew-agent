@@ -170,6 +170,23 @@ export const adminPortalApi = {
       bodyJson: payload
     })
   },
+  updatePrompt(
+    token: string,
+    id: number,
+    payload: Pick<PromptRecord, 'category' | 'templateName' | 'templateContent' | 'remark'>
+  ) {
+    return request<PromptRecord>(`/api/admin/prompts/${id}`, {
+      method: 'PUT',
+      token,
+      bodyJson: payload
+    })
+  },
+  deletePrompt(token: string, id: number) {
+    return request<void>(`/api/admin/prompts/${id}`, {
+      method: 'DELETE',
+      token
+    })
+  },
   listPreferences(token: string, userId?: number) {
     const query = userId ? `?userId=${userId}` : ''
     return request<TablePayload<PreferenceRecord>>(`/api/admin/preferences${query}`, {

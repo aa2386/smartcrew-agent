@@ -26,4 +26,16 @@ public interface AgentPromptBindingMapper extends BaseMapper<AgentPromptBinding>
      */
     @Delete("delete from agent_prompt_binding where agent_code = #{agentCode}")
     int deleteByAgentCode(@Param("agentCode") String agentCode);
+
+    /**
+     * 按 Prompt 模板主键查询关联的 Agent 编码列表。
+     */
+    @Select("select distinct agent_code from agent_prompt_binding where prompt_template_id = #{promptTemplateId} order by agent_code asc")
+    List<String> selectAgentCodesByPromptTemplateId(@Param("promptTemplateId") Long promptTemplateId);
+
+    /**
+     * 统计 Prompt 模板关联数量。
+     */
+    @Select("select count(1) from agent_prompt_binding where prompt_template_id = #{promptTemplateId}")
+    long countByPromptTemplateId(@Param("promptTemplateId") Long promptTemplateId);
 }

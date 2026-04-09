@@ -4,7 +4,7 @@
       <div class="brand-block">
         <span class="brand-badge">SmartCrew</span>
         <h1>后台管理台</h1>
-        <p>统一管理用户、Agent、Prompt、长期偏好与消息审计。</p>
+        <p>统一管理用户、Agent、Prompt 与消息审计。</p>
       </div>
 
       <el-menu
@@ -53,15 +53,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import {
-  Connection,
-  Cpu,
-  DataAnalysis,
-  MessageBox,
-  Setting,
-  User,
-  UserFilled
-} from '@element-plus/icons-vue'
+import { Connection, Cpu, DataAnalysis, MessageBox, Setting, UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
@@ -74,7 +66,6 @@ const menuItems = [
   { path: '/admin/identities', label: '平台映射', icon: Connection },
   { path: '/admin/agents', label: 'Agent 管理', icon: Cpu },
   { path: '/admin/prompts', label: 'Prompt 配置', icon: Setting },
-  { path: '/admin/preferences', label: '长期偏好', icon: User },
   { path: '/admin/conversations', label: '消息记录', icon: MessageBox }
 ]
 
