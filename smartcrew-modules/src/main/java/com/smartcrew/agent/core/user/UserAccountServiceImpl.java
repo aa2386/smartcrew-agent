@@ -1,6 +1,9 @@
 package com.smartcrew.agent.core.user;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.smartcrew.agent.api.auth.domain.model.LoginSessionRecord;
 import com.smartcrew.agent.api.auth.domain.request.RegisterRequest;
 import com.smartcrew.agent.api.user.domain.entity.ScUser;
@@ -10,6 +13,7 @@ import com.smartcrew.agent.api.user.mapper.ScUserIdentityMapper;
 import com.smartcrew.agent.api.user.mapper.ScUserMapper;
 import com.smartcrew.agent.api.user.service.UserAccountService;
 import com.smartcrew.agent.common.exception.ServiceException;
+import com.smartcrew.agent.core.page.PageQuery;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -107,6 +111,26 @@ public class UserAccountServiceImpl implements UserAccountService {
                 .stream()
                 .map(this::toVo)
                 .toList();
+    }
+
+    @Override
+    public IPage<ScUserVo> listPage(PageQuery pageQuery, String keyword) {
+        String normalizedKeyword = keyword == null ? "" : keyword.trim();
+        LambdaQueryWrapper<ScUser> queryWrapper = Wrappers.lambdaQuery(ScUser.class)
+                .orderByDesc(ScUser::getId);
+        if (!normalizedKeyword.isBlank()) {
+            queryWrapper.and(wrapper -> wrapper.like(ScUser::getUsername, normalizedKeyword)
+                    .or()
+                    .like(ScUser::getDisplayName, normalizedKeyword)
+                    .or()
+                    .like(ScUser::getRole, normalizedKeyword)
+                    .or()
+                    .like(ScUser::getStatus, normalizedKeyword));
+        }
+        Page<ScUser> page = scUserMapper.selectPage(pageQuery.build(), queryWrapper);
+        Page<ScUserVo> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        result.setRecords(page.getRecords().stream().map(this::toVo).toList());
+        return result;
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.smartcrew.agent.api.prompt.domain.vo.PromptTemplateVo;
 import com.smartcrew.agent.api.prompt.service.PromptTemplateService;
 import com.smartcrew.agent.common.domain.R;
 import com.smartcrew.agent.common.exception.ServiceException;
+import com.smartcrew.agent.core.page.PageQuery;
 import com.smartcrew.agent.core.page.TableDataInfo;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -16,6 +17,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Comparator;
+import java.util.Map;
 
 /**
  * 后台 Prompt 管理控制器。
@@ -37,6 +41,24 @@ public class AdminPromptController {
     @GetMapping
     public TableDataInfo<PromptTemplateVo> list() {
         return TableDataInfo.build(promptTemplateService.listAll());
+    }
+
+    @GetMapping("/categories")
+    public TableDataInfo<PromptTemplateVo> listCategories(PageQuery pageQuery) {
+        if (pageQuery.hasPaging()) {
+            return TableDataInfo.build(promptTemplateService.listLatestCategories(pageQuery));
+        }
+        return TableDataInfo.build(promptTemplateService.listAll().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        PromptTemplateVo::getCategory,
+                        item -> item,
+                        (left, right) -> left.getId() >= right.getId() ? left : right,
+                        java.util.LinkedHashMap::new
+                ))
+                .values()
+                .stream()
+                .sorted(Comparator.comparing(PromptTemplateVo::getCategory))
+                .toList());
     }
 
     @GetMapping("/category/{category}")

@@ -1,9 +1,11 @@
 package com.smartcrew.agent.api.user.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.smartcrew.agent.api.auth.domain.model.LoginSessionRecord;
 import com.smartcrew.agent.api.auth.domain.request.RegisterRequest;
 import com.smartcrew.agent.api.user.domain.entity.ScUser;
 import com.smartcrew.agent.api.user.domain.vo.ScUserVo;
+import com.smartcrew.agent.core.page.PageQuery;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +39,11 @@ public interface UserAccountService {
      * 查询全部用户。
      */
     List<ScUserVo> listAll();
+
+    /**
+     * 按条件分页查询用户。
+     */
+    IPage<ScUserVo> listPage(PageQuery pageQuery, String keyword);
 
     /**
      * 更新用户状态。

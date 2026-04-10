@@ -4,6 +4,7 @@ import com.smartcrew.agent.api.chat.domain.vo.ChatMessageVo;
 import com.smartcrew.agent.api.chat.domain.vo.ChatSessionVo;
 import com.smartcrew.agent.api.chat.service.ConversationQueryService;
 import com.smartcrew.agent.common.domain.R;
+import com.smartcrew.agent.core.page.PageQuery;
 import com.smartcrew.agent.core.page.TableDataInfo;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,9 +30,13 @@ public class AdminConversationController {
     }
 
     @GetMapping("/sessions")
-    public TableDataInfo<ChatSessionVo> listSessions(@RequestParam(value = "userId", required = false) Long userId,
+    public TableDataInfo<ChatSessionVo> listSessions(PageQuery pageQuery,
+                                                     @RequestParam(value = "userId", required = false) Long userId,
                                                      @RequestParam(value = "provider", required = false) String provider,
                                                      @RequestParam(value = "keyword", required = false) String keyword) {
+        if (pageQuery.hasPaging()) {
+            return TableDataInfo.build(conversationQueryService.listSessionsPage(pageQuery, userId, provider, keyword));
+        }
         return TableDataInfo.build(conversationQueryService.listAllSessions(userId, provider, keyword));
     }
 

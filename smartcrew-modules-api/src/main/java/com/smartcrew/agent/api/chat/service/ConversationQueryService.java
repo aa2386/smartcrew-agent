@@ -1,7 +1,9 @@
 package com.smartcrew.agent.api.chat.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.smartcrew.agent.api.chat.domain.vo.ChatMessageVo;
 import com.smartcrew.agent.api.chat.domain.vo.ChatSessionVo;
+import com.smartcrew.agent.core.page.PageQuery;
 
 import java.util.List;
 
@@ -29,6 +31,11 @@ public interface ConversationQueryService {
      * 后台查询全部会话。
      */
     List<ChatSessionVo> listAllSessions(Long userId, String provider, String keyword);
+
+    /**
+     * 后台按条件分页查询全部会话。
+     */
+    IPage<ChatSessionVo> listSessionsPage(PageQuery pageQuery, Long userId, String provider, String keyword);
 
     /**
      * 后台查询消息记录。

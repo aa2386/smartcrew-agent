@@ -6,42 +6,57 @@
           <h3>平台用户管理</h3>
           <p class="muted">查看用户状态、最近登录时间、角色信息和长期偏好。</p>
         </div>
-        <el-input v-model="keyword" placeholder="按用户名、显示名称或角色筛选" clearable style="max-width: 320px" />
+        <el-input
+          v-model="keyword"
+          placeholder="按用户名、显示名称或角色筛选"
+          clearable
+          style="max-width: 320px"
+        />
       </div>
 
       <div class="table-shell">
-        <el-table :data="filteredUsers" stripe height="100%">
-        <el-table-column prop="displayName" label="显示名称" min-width="160" />
-        <el-table-column prop="username" label="用户名" min-width="160" />
-        <el-table-column prop="role" label="角色" width="100" />
-        <el-table-column label="状态" width="140">
-          <template #default="{ row }">
-            <el-switch
-              :model-value="row.status === 'ENABLED'"
-              inline-prompt
-              active-text="启用"
-              inactive-text="禁用"
-              @change="toggleStatus(row, $event)"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column label="最近登录" min-width="180">
-          <template #default="{ row }">{{ formatDate(row.lastLoginAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
-          <template #default="{ row }">
-            <el-space>
-              <el-button plain size="small" @click="showUserDetail(row.id)">查看详情</el-button>
-              <el-button plain size="small" @click="openPreferencePanel(row.id)">偏好设置</el-button>
-              <el-button plain size="small" @click="router.push(`/admin/identities?userId=${row.id}`)">查看映射</el-button>
-            </el-space>
-          </template>
-        </el-table-column>
+        <el-table :data="users" stripe height="100%">
+          <el-table-column prop="displayName" label="显示名称" min-width="160" />
+          <el-table-column prop="username" label="用户名" min-width="160" />
+          <el-table-column prop="role" label="角色" width="100" />
+          <el-table-column label="状态" width="140">
+            <template #default="{ row }">
+              <el-switch
+                :model-value="row.status === 'ENABLED'"
+                inline-prompt
+                active-text="启用"
+                inactive-text="禁用"
+                @change="toggleStatus(row, $event)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="最近登录" min-width="180">
+            <template #default="{ row }">{{ formatDate(row.lastLoginAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="240" fixed="right">
+            <template #default="{ row }">
+              <el-space>
+                <el-button plain size="small" @click="showUserDetail(row.id)">查看详情</el-button>
+                <el-button plain size="small" @click="openPreferencePanel(row.id)">偏好设置</el-button>
+                <el-button plain size="small" @click="router.push(`/admin/identities?userId=${row.id}`)">查看映射</el-button>
+              </el-space>
+            </template>
+          </el-table-column>
         </el-table>
       </div>
+
+      <el-pagination
+        :current-page="pager.pageNum"
+        :page-size="pager.pageSize"
+        :page-sizes="pageSizeOptions"
+        :total="pager.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @current-change="handlePageChange"
+        @size-change="handleSizeChange"
+      />
     </GlassPanel>
 
-    <el-drawer v-model="detailVisible" title="用户详情与偏好" size="560px">
+    <el-drawer v-model="detailVisible" title="用户详情与偏好" size="800px">
       <template v-if="currentUser">
         <div class="detail-panel">
           <div class="detail-item">
@@ -71,7 +86,7 @@
             <h4>长期偏好</h4>
             <p class="muted">固定管理三项偏好：语言、称呼、风格。</p>
           </div>
-          <el-button type="primary" plain @click="openPreferenceDialog()">新增偏好</el-button>
+          <el-button type="primary" @click="openPreferenceDialog()">新增偏好</el-button>
         </div>
 
         <el-table :data="preferenceRows" stripe>
@@ -121,7 +136,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -134,6 +149,8 @@ type PreferenceOption = {
   key: 'language' | 'nickname' | 'tone'
   label: string
 }
+
+const pageSizeOptions = [10, 30, 50, 100, 250]
 
 const preferenceOptions: PreferenceOption[] = [
   { key: 'language', label: '用户偏好语言' },
@@ -151,6 +168,11 @@ const preferences = ref<PreferenceRecord[]>([])
 const preferenceDialogVisible = ref(false)
 const editingPreference = ref(false)
 const formRef = ref<FormInstance>()
+const pager = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  total: 0
+})
 
 const preferenceForm = reactive({
   prefKey: 'language' as PreferenceOption['key'],
@@ -163,16 +185,6 @@ const rules: FormRules<typeof preferenceForm> = {
   prefKey: [{ required: true, message: '请选择偏好键', trigger: 'change' }],
   prefValue: [{ required: true, message: '请输入偏好值', trigger: 'blur' }]
 }
-
-const filteredUsers = computed(() => {
-  if (!keyword.value.trim()) return users.value
-  const search = keyword.value.trim().toLowerCase()
-  return users.value.filter((item) =>
-    [item.username, item.displayName, item.role, item.status].some((field) =>
-      field?.toLowerCase().includes(search)
-    )
-  )
-})
 
 const preferenceRows = computed(() => {
   const map = new Map(preferences.value.map((item) => [item.prefKey, item]))
@@ -187,17 +199,51 @@ const preferenceRows = computed(() => {
   })
 })
 
+let keywordTimer: ReturnType<typeof setTimeout> | undefined
+
 onMounted(loadUsers)
+
+watch(keyword, () => {
+  if (keywordTimer) {
+    clearTimeout(keywordTimer)
+  }
+  keywordTimer = setTimeout(async () => {
+    pager.pageNum = 1
+    await loadUsers()
+  }, 300)
+})
+
+onBeforeUnmount(() => {
+  if (keywordTimer) {
+    clearTimeout(keywordTimer)
+  }
+})
 
 async function loadUsers() {
   try {
-    const response = await adminPortalApi.listUsers(authStore.adminToken)
+    const response = await adminPortalApi.listUsers(authStore.adminToken, {
+      keyword: keyword.value.trim() || undefined,
+      pageNum: pager.pageNum,
+      pageSize: pager.pageSize
+    })
     users.value = response.rows
+    pager.total = response.total
   } catch (error) {
     if (error instanceof Error) {
       ElMessage.error(error.message)
     }
   }
+}
+
+async function handlePageChange(pageNum: number) {
+  pager.pageNum = pageNum
+  await loadUsers()
+}
+
+async function handleSizeChange(pageSize: number) {
+  pager.pageSize = pageSize
+  pager.pageNum = 1
+  await loadUsers()
 }
 
 async function showUserDetail(userId: number) {
@@ -322,6 +368,11 @@ function formatDate(value?: string) {
   p {
     margin: 0;
   }
+}
+
+.table-shell {
+  flex: 1;
+  min-height: 0;
 }
 
 .detail-panel {

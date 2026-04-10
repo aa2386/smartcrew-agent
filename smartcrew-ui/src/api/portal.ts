@@ -17,6 +17,11 @@ interface TablePayload<T> {
   total: number
 }
 
+interface PageParams {
+  pageNum?: number
+  pageSize?: number
+}
+
 export const webPortalApi = {
   register(payload: { username: string; password: string; displayName: string }) {
     return request<LoginResponse>('/api/web/auth/register', {
@@ -79,8 +84,13 @@ export const adminPortalApi = {
       token
     })
   },
-  listUsers(token: string) {
-    return request<TablePayload<UserRecord>>('/api/admin/users', {
+  listUsers(token: string, params: { keyword?: string } & PageParams = {}) {
+    const search = new URLSearchParams()
+    if (params.keyword) search.set('keyword', params.keyword)
+    if (params.pageNum) search.set('pageNum', String(params.pageNum))
+    if (params.pageSize) search.set('pageSize', String(params.pageSize))
+    const query = search.toString()
+    return request<TablePayload<UserRecord>>(`/api/admin/users${query ? `?${query}` : ''}`, {
       token
     })
   },
@@ -155,6 +165,15 @@ export const adminPortalApi = {
       token
     })
   },
+  listPromptCategories(token: string, params: PageParams) {
+    const search = new URLSearchParams()
+    if (params.pageNum) search.set('pageNum', String(params.pageNum))
+    if (params.pageSize) search.set('pageSize', String(params.pageSize))
+    const query = search.toString()
+    return request<TablePayload<PromptRecord>>(`/api/admin/prompts/categories${query ? `?${query}` : ''}`, {
+      token
+    })
+  },
   getPromptByCategory(token: string, category: string) {
     return request<PromptRecord>(`/api/admin/prompts/category/${category}`, {
       token
@@ -206,11 +225,16 @@ export const adminPortalApi = {
       token
     })
   },
-  listConversationSessions(token: string, params: { userId?: number; provider?: string; keyword?: string }) {
+  listConversationSessions(
+    token: string,
+    params: { userId?: number; provider?: string; keyword?: string } & PageParams
+  ) {
     const search = new URLSearchParams()
     if (params.userId) search.set('userId', String(params.userId))
     if (params.provider) search.set('provider', params.provider)
     if (params.keyword) search.set('keyword', params.keyword)
+    if (params.pageNum) search.set('pageNum', String(params.pageNum))
+    if (params.pageSize) search.set('pageSize', String(params.pageSize))
     const query = search.toString()
     return request<TablePayload<ChatSession>>(`/api/admin/conversations/sessions${query ? `?${query}` : ''}`, {
       token

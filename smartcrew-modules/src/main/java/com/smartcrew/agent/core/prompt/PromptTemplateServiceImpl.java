@@ -1,6 +1,8 @@
 package com.smartcrew.agent.core.prompt;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.smartcrew.agent.api.prompt.domain.entity.PromptTemplate;
 import com.smartcrew.agent.api.prompt.domain.request.PromptTemplateRequest;
 import com.smartcrew.agent.api.prompt.domain.vo.PromptTemplateVo;
@@ -8,13 +10,14 @@ import com.smartcrew.agent.api.prompt.mapper.AgentPromptBindingMapper;
 import com.smartcrew.agent.api.prompt.mapper.PromptTemplateMapper;
 import com.smartcrew.agent.api.prompt.service.PromptTemplateService;
 import com.smartcrew.agent.common.exception.ServiceException;
+import com.smartcrew.agent.core.page.PageQuery;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * 提示词模板服务实现，负责模板创建和查询。
+ * 提示词模板服务实现，负责模板创建、维护与查询。
  */
 @Service
 public class PromptTemplateServiceImpl implements PromptTemplateService {
@@ -25,18 +28,12 @@ public class PromptTemplateServiceImpl implements PromptTemplateService {
     private final PromptTemplateMapper promptTemplateMapper;
     private final AgentPromptBindingMapper agentPromptBindingMapper;
 
-    /**
-     * 构造 PromptTemplateServiceImpl 所需的依赖对象。
-     */
     public PromptTemplateServiceImpl(PromptTemplateMapper promptTemplateMapper,
                                      AgentPromptBindingMapper agentPromptBindingMapper) {
         this.promptTemplateMapper = promptTemplateMapper;
         this.agentPromptBindingMapper = agentPromptBindingMapper;
     }
 
-    /**
-     * 创建目标资源。
-     */
     @Override
     public PromptTemplateVo create(PromptTemplateRequest request) {
         PromptTemplate entity = new PromptTemplate();
@@ -48,9 +45,6 @@ public class PromptTemplateServiceImpl implements PromptTemplateService {
         return toVo(entity);
     }
 
-    /**
-     * 更新指定模板。
-     */
     @Override
     public PromptTemplateVo update(Long id, PromptTemplateRequest request) {
         PromptTemplate entity = promptTemplateMapper.selectById(id);
@@ -65,9 +59,6 @@ public class PromptTemplateServiceImpl implements PromptTemplateService {
         return toVo(entity);
     }
 
-    /**
-     * 删除指定模板。
-     */
     @Override
     public void deleteById(Long id) {
         PromptTemplate entity = promptTemplateMapper.selectById(id);
@@ -81,9 +72,6 @@ public class PromptTemplateServiceImpl implements PromptTemplateService {
         promptTemplateMapper.deleteById(id);
     }
 
-    /**
-     * 查询全部数据。
-     */
     @Override
     public List<PromptTemplateVo> listAll() {
         return promptTemplateMapper.selectList(Wrappers.emptyWrapper()).stream()
@@ -91,9 +79,14 @@ public class PromptTemplateServiceImpl implements PromptTemplateService {
                 .toList();
     }
 
-    /**
-     * 按分类查询数据。
-     */
+    @Override
+    public IPage<PromptTemplateVo> listLatestCategories(PageQuery pageQuery) {
+        IPage<PromptTemplate> page = promptTemplateMapper.selectLatestCategoryPage(pageQuery.build());
+        Page<PromptTemplateVo> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        result.setRecords(page.getRecords().stream().map(this::toVo).toList());
+        return result;
+    }
+
     @Override
     public Optional<PromptTemplateVo> queryByCategory(String category) {
         return Optional.ofNullable(promptTemplateMapper.selectLatestByCategory(category))

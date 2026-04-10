@@ -9,6 +9,7 @@ import com.smartcrew.agent.api.user.service.UserAccountService;
 import com.smartcrew.agent.api.user.service.UserIdentityService;
 import com.smartcrew.agent.common.domain.R;
 import com.smartcrew.agent.common.exception.ServiceException;
+import com.smartcrew.agent.core.page.PageQuery;
 import com.smartcrew.agent.core.page.TableDataInfo;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -46,14 +48,18 @@ public class AdminUserController {
     }
 
     @GetMapping
-    public TableDataInfo<ScUserVo> list() {
+    public TableDataInfo<ScUserVo> list(PageQuery pageQuery,
+                                        @RequestParam(value = "keyword", required = false) String keyword) {
+        if (pageQuery.hasPaging()) {
+            return TableDataInfo.build(userAccountService.listPage(pageQuery, keyword));
+        }
         return TableDataInfo.build(userAccountService.listAll());
     }
 
     @GetMapping("/{id}")
     public R<ScUserVo> detail(@PathVariable("id") Long id) {
         ScUser user = userAccountService.findById(id)
-                .orElseThrow(() -> new ServiceException(404, "\u7528\u6237\u4e0d\u5b58\u5728"));
+                .orElseThrow(() -> new ServiceException(404, "用户不存在"));
         return R.ok(toVo(user));
     }
 
@@ -77,7 +83,7 @@ public class AdminUserController {
     @DeleteMapping("/{id}/identities/{identityId}")
     public R<Void> unbindIdentity(@PathVariable("id") Long id, @PathVariable("identityId") Long identityId) {
         userIdentityService.unbind(id, identityId);
-        return R.ok("\u89e3\u7ed1\u6210\u529f", null);
+        return R.ok("解绑成功", null);
     }
 
     /**

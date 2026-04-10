@@ -20,7 +20,7 @@
         </div>
 
         <div class="sidebar-actions">
-          <el-button v-if="authStore.isWebLoggedIn" type="primary" plain @click="chatStore.createDraftSession()">
+          <el-button v-if="authStore.isWebLoggedIn" type="primary" @click="chatStore.createDraftSession()">
             新建对话
           </el-button>
           <el-button v-else type="primary" @click="authDialogVisible = true">登录 / 注册</el-button>

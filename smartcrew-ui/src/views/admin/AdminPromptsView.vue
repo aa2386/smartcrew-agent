@@ -10,12 +10,22 @@
       </div>
 
       <div class="table-shell">
-        <el-table :data="latestPrompts" stripe highlight-current-row height="100%" @current-change="handleCurrentChange">
+        <el-table :data="promptCategories" stripe highlight-current-row height="100%" @current-change="handleCurrentChange">
           <el-table-column prop="category" label="分类" min-width="180" />
           <el-table-column prop="templateName" label="模板名称" min-width="180" />
           <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip />
         </el-table>
       </div>
+
+      <el-pagination
+        :current-page="pager.pageNum"
+        :page-size="pager.pageSize"
+        :page-sizes="pageSizeOptions"
+        :total="pager.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @current-change="handlePageChange"
+        @size-change="handleSizeChange"
+      />
     </GlassPanel>
 
     <GlassPanel panel-class="admin-card prompt-detail-card">
@@ -95,12 +105,20 @@ import { adminPortalApi } from '../../api/portal'
 import { useAuthStore } from '../../stores/auth'
 import type { PromptRecord } from '../../types'
 
+const pageSizeOptions = [10, 30, 50, 100, 250]
+
 const authStore = useAuthStore()
 const prompts = ref<PromptRecord[]>([])
+const promptCategories = ref<PromptRecord[]>([])
 const selectedCategory = ref('')
 const dialogVisible = ref(false)
 const editingId = ref<number>()
 const formRef = ref<FormInstance>()
+const pager = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  total: 0
+})
 
 const form = reactive({
   category: '',
@@ -115,43 +133,67 @@ const rules: FormRules<typeof form> = {
   templateContent: [{ required: true, message: '请输入模板内容', trigger: 'blur' }]
 }
 
-const latestPrompts = computed(() => {
-  const grouped = new Map<string, PromptRecord>()
-  prompts.value.forEach((item) => {
-    const current = grouped.get(item.category)
-    if (!current || item.id > current.id) {
-      grouped.set(item.category, item)
-    }
-  })
-  return [...grouped.values()].sort((a, b) => a.category.localeCompare(b.category))
-})
-
-const selectedPrompt = computed(() => latestPrompts.value.find((item) => item.category === selectedCategory.value))
+const selectedPrompt = computed(() =>
+  prompts.value
+    .filter((item) => item.category === selectedCategory.value)
+    .sort((a, b) => b.id - a.id)[0]
+)
 const categoryHistory = computed(() =>
   prompts.value
     .filter((item) => item.category === selectedCategory.value)
     .sort((a, b) => b.id - a.id)
 )
 
-onMounted(loadPrompts)
+onMounted(async () => {
+  await Promise.all([loadPrompts(), loadPromptCategories()])
+})
 
 async function loadPrompts() {
   try {
     const response = await adminPortalApi.listPrompts(authStore.adminToken)
     prompts.value = response.rows
-    if (!selectedCategory.value && latestPrompts.value.length > 0) {
-      selectedCategory.value = latestPrompts.value[0].category
-    } else if (
-      selectedCategory.value &&
-      !latestPrompts.value.some((item) => item.category === selectedCategory.value)
-    ) {
-      selectedCategory.value = latestPrompts.value[0]?.category || ''
-    }
   } catch (error) {
     if (error instanceof Error) {
       ElMessage.error(error.message)
     }
   }
+}
+
+async function loadPromptCategories() {
+  try {
+    const response = await adminPortalApi.listPromptCategories(authStore.adminToken, {
+      pageNum: pager.pageNum,
+      pageSize: pager.pageSize
+    })
+    promptCategories.value = response.rows
+    pager.total = response.total
+    syncSelectedCategory()
+  } catch (error) {
+    if (error instanceof Error) {
+      ElMessage.error(error.message)
+    }
+  }
+}
+
+function syncSelectedCategory() {
+  if (!selectedCategory.value && promptCategories.value.length > 0) {
+    selectedCategory.value = promptCategories.value[0].category
+    return
+  }
+  if (selectedCategory.value && !promptCategories.value.some((item) => item.category === selectedCategory.value)) {
+    selectedCategory.value = promptCategories.value[0]?.category || ''
+  }
+}
+
+async function handlePageChange(pageNum: number) {
+  pager.pageNum = pageNum
+  await loadPromptCategories()
+}
+
+async function handleSizeChange(pageSize: number) {
+  pager.pageSize = pageSize
+  pager.pageNum = 1
+  await loadPromptCategories()
 }
 
 function handleCurrentChange(row?: PromptRecord) {
@@ -199,7 +241,8 @@ async function submitPrompt() {
       ElMessage.success('Prompt 已创建')
     }
     dialogVisible.value = false
-    await loadPrompts()
+    await Promise.all([loadPrompts(), loadPromptCategories()])
+    selectedCategory.value = payload.category
   } catch (error) {
     if (error instanceof Error) {
       ElMessage.error(error.message)
@@ -214,7 +257,7 @@ async function removePrompt(row: PromptRecord) {
     })
     await adminPortalApi.deletePrompt(authStore.adminToken, row.id)
     ElMessage.success('Prompt 已删除')
-    await loadPrompts()
+    await Promise.all([loadPrompts(), loadPromptCategories()])
   } catch (error) {
     if (error instanceof Error && error.message !== 'cancel') {
       ElMessage.error(error.message)
@@ -253,6 +296,11 @@ async function removePrompt(row: PromptRecord) {
   p {
     margin: 0;
   }
+}
+
+.table-shell {
+  flex: 1;
+  min-height: 0;
 }
 
 .detail-scroll {

@@ -28,13 +28,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * SmartCrew Agent 应用集成测试类
+ * SmartCrew Agent 应用集成测试类。
  * 
- * <p>测试覆盖以下功能模块：
+ * <p>测试覆盖以下核心能力：
  * <ul>
- *   <li>Agent 注册、查询和指令派发</li>
- *   <li>决策规划器功能</li>
- *   <li>工具管理和执行控制</li>
+ *   <li>Agent 注册、查询与指令派发</li>
+ *   <li>决策规划器能力</li>
+ *   <li>工具管理与执行控制</li>
  *   <li>用户偏好记忆管理</li>
  *   <li>提示词模板管理</li>
  *   <li>平台事件路由</li>
@@ -58,10 +58,10 @@ class SmartCrewAgentApplicationTests {
     private ToolExecutor toolExecutor;
 
     /**
-     * 测试 Agent 的完整生命周期：
-     * 1. 注册一个新的自定义 Agent
-     * 2. 查询 Agent 列表验证注册成功
-     * 3. 向该 Agent 发送指令并验证响应
+     * 测试 Agent 的完整生命周期：注册、查询与派发。
+     * 1. 注册一个新的自定义 Agent。
+     * 2. 查询 Agent 列表并校验注册结果。
+     * 3. 向该 Agent 发送指令并校验响应。
      */
     @Test
     void shouldRegisterListAndDispatchAgent() throws Exception {
@@ -89,7 +89,7 @@ class SmartCrewAgentApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rows[?(@.agentCode=='custom-agent')]").exists());
 
-        // 测试步骤 3：向 Agent 发送指令
+        // 测试步骤 3：向 Agent 派发指令
         String dispatchBody = """
                 {
                   "userId": 1001,
@@ -110,11 +110,11 @@ class SmartCrewAgentApplicationTests {
     }
 
     /**
-     * 测试决策规划器（Planner Agent）功能
-     * 验证系统能够根据用户输入生成决策计划，包括：
-     * - 思考过程（thought）
-     * - 执行步骤（steps）
-     * - 最终动作（finalAction）
+     * 测试决策规划器（Planner Agent）能力。
+     * 验证系统可根据用户输入生成完整决策计划。
+     * - thought：思考过程
+     * - steps：执行步骤
+     * - finalAction：最终动作
      */
     @Test
     void shouldReturnDecisionPlan() throws Exception {
@@ -139,13 +139,13 @@ class SmartCrewAgentApplicationTests {
     }
 
     /**
-     * 测试工具管理和执行控制：
-     * 1. 验证终端工具（terminal）在列表中且默认禁用
-     * 2. 验证禁用的工具无法执行
+     * 测试工具管理与执行控制能力。
+     * 1. 验证 terminal 工具默认存在且处于禁用状态。
+     * 2. 验证禁用工具无法被执行。
      */
     @Test
     void shouldExposeToolsAndRejectDisabledTerminalExecution() throws Exception {
-        // 测试步骤 1：获取工具列表并验证终端工具状态
+        // 测试步骤 1：查询工具列表并验证 terminal 状态
         MvcResult result = mockMvc.perform(get("/api/v1/tools"))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -161,16 +161,16 @@ class SmartCrewAgentApplicationTests {
         assertThat(terminalNode).isNotNull();
         assertThat(terminalNode.path("enabled").asBoolean()).isFalse();
 
-        // 测试步骤 2：验证禁用的工具无法执行
+        // 测试步骤 2：验证禁用工具无法执行
         assertThatThrownBy(() -> toolExecutor.execute("terminal", Map.of("command", "echo hi")))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("disabled");
     }
 
     /**
-     * 测试用户偏好记忆管理：
-     * 1. 为用户设置偏好（语言设置为简体中文）
-     * 2. 查询用户偏好验证设置成功
+     * 测试用户偏好记忆管理能力。
+     * 1. 为用户设置偏好（语言为简体中文）。
+     * 2. 查询用户偏好并验证写入结果。
      */
     @Test
     void shouldUpsertUserPreference() throws Exception {
@@ -183,7 +183,7 @@ class SmartCrewAgentApplicationTests {
                 }
                 """;
 
-        // 测试步骤 1：设置用户偏好
+        // 测试步骤 1：写入用户偏好
         mockMvc.perform(put("/api/v1/memory/preferences/88")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
@@ -198,9 +198,9 @@ class SmartCrewAgentApplicationTests {
     }
 
     /**
-     * 测试提示词模板管理：
-     * 1. 创建一个新的提示词模板
-     * 2. 按分类查询验证创建成功
+     * 测试提示词模板管理能力。
+     * 1. 创建新的提示词模板。
+     * 2. 按分类查询并验证返回结果。
      */
     @Test
     void shouldCreateAndQueryPromptTemplate() throws Exception {
@@ -228,7 +228,6 @@ class SmartCrewAgentApplicationTests {
 
     /**
      * 验证后台 Prompt 支持按 ID 修改。
-     */
     @Test
     void shouldUpdatePromptByIdInAdmin() throws Exception {
         String createRequest = """
@@ -271,8 +270,7 @@ class SmartCrewAgentApplicationTests {
     }
 
     /**
-     * 验证 Prompt 删除前会校验绑定关系，存在关联时阻止删除。
-     */
+     * 验证 Prompt 删除前会校验绑定关系。
     @Test
     void shouldBlockDeletingPromptWhenBindingsExist() throws Exception {
         String createAgentRequest = objectMapper.writeValueAsString(Map.of(
@@ -345,9 +343,9 @@ class SmartCrewAgentApplicationTests {
     }
 
     /**
-     * 测试企业微信平台事件路由：
-     * 1. 发送企业微信事件消息
-     * 2. 验证事件被正确路由和处理
+     * 测试平台事件路由能力。
+     * 1. 发送企业微信事件消息。
+     * 2. 验证事件被正确路由并处理。
      */
     @Test
     void shouldRoutePlatformEvent() throws Exception {
@@ -371,8 +369,8 @@ class SmartCrewAgentApplicationTests {
     }
 
     /**
-     * 测试未知平台事件处理：
-     * 验证当发送到不支持的平台时，系统能够正确拒绝处理
+     * 测试未知平台事件处理能力。
+     * 验证发送到不支持平台时会返回失败。
      */
     @Test
     void shouldRejectUnknownPlatform() throws Exception {
@@ -392,8 +390,7 @@ class SmartCrewAgentApplicationTests {
     }
 
     /**
-     * 验证后台 Agent 管理页能够识别代码 Agent，并返回统一来源视图。
-     */
+     * 验证后台 Agent 列表可识别代码 Agent 并返回统一来源视图。
     @Test
     @Order(1)
     void shouldExposeCodeOnlyAgentInAdminView() throws Exception {
@@ -424,8 +421,7 @@ class SmartCrewAgentApplicationTests {
     }
 
     /**
-     * 验证可以直接新增数据库 Agent，也可以为代码 Agent 创建数据库信息。
-     */
+     * 验证可直接新增数据库 Agent，或为代码 Agent 创建数据库信息。
     @Test
     @Order(2)
     void shouldCreateDatabaseAgentAndLinkCodeAgent() throws Exception {
@@ -474,5 +470,135 @@ class SmartCrewAgentApplicationTests {
                 .andExpect(jsonPath("$.data.sourceStatus").value("LINKED"))
                 .andExpect(jsonPath("$.data.hasCodeBean").value(true))
                 .andExpect(jsonPath("$.data.hasDatabaseConfig").value(true));
+    }
+    /**
+     * 验证后台用户列表支持分页参数。
+    @Test
+    void shouldPageAdminUsersWhenRequested() throws Exception {
+        String suffix = String.valueOf(System.currentTimeMillis());
+        String firstUser = """
+                {
+                  "username": "page_user_%s_a",
+                  "password": "123456",
+                  "displayName": "分页用户A"
+                }
+                """.formatted(suffix);
+        String secondUser = """
+                {
+                  "username": "page_user_%s_b",
+                  "password": "123456",
+                  "displayName": "分页用户B"
+                }
+                """.formatted(suffix);
+
+        mockMvc.perform(post("/api/web/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(firstUser))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/api/web/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(secondUser))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/admin/users")
+                        .param("keyword", "page_user_" + suffix)
+                        .param("pageNum", "1")
+                        .param("pageSize", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.rows.length()").value(1));
+    }
+
+    /**
+     * 验证后台 Prompt 分类列表支持分页参数。
+    @Test
+    void shouldPageAdminPromptCategoriesWhenRequested() throws Exception {
+        String suffix = String.valueOf(System.currentTimeMillis());
+        String firstPrompt = """
+                {
+                  "templateName": "prompt-category-a",
+                  "templateContent": "content-a",
+                  "category": "aa-page-category-%s",
+                  "remark": "page-test-a"
+                }
+                """.formatted(suffix);
+        String secondPrompt = """
+                {
+                  "templateName": "prompt-category-b",
+                  "templateContent": "content-b",
+                  "category": "ab-page-category-%s",
+                  "remark": "page-test-b"
+                }
+                """.formatted(suffix);
+
+        mockMvc.perform(post("/api/admin/prompts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(firstPrompt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/api/admin/prompts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(secondPrompt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/admin/prompts/categories")
+                        .param("pageNum", "1")
+                        .param("pageSize", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.rows.length()").value(1));
+    }
+
+    /**
+     * 验证后台会话列表支持分页参数。
+    @Test
+    void shouldPageAdminConversationSessionsWhenRequested() throws Exception {
+        String suffix = String.valueOf(System.currentTimeMillis());
+        String firstEvent = """
+                {
+                  "platformUserId": "page-session-%s-a",
+                  "eventType": "message",
+                  "content": "hello a",
+                  "metadata": {
+                    "tenant": "demo"
+                  }
+                }
+                """.formatted(suffix);
+        String secondEvent = """
+                {
+                  "platformUserId": "page-session-%s-b",
+                  "eventType": "message",
+                  "content": "hello b",
+                  "metadata": {
+                    "tenant": "demo"
+                  }
+                }
+                """.formatted(suffix);
+
+        mockMvc.perform(post("/api/v1/platform/wecom/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(firstEvent))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.handled").value(true));
+
+        mockMvc.perform(post("/api/v1/platform/wecom/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(secondEvent))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.handled").value(true));
+
+        mockMvc.perform(get("/api/admin/conversations/sessions")
+                        .param("provider", "WECOM")
+                        .param("keyword", "page-session-" + suffix)
+                        .param("pageNum", "1")
+                        .param("pageSize", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.rows.length()").value(1));
     }
 }

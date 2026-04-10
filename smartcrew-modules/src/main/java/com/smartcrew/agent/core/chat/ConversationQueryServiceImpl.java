@@ -1,5 +1,6 @@
 package com.smartcrew.agent.core.chat;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.smartcrew.agent.api.chat.domain.vo.ChatMessageVo;
 import com.smartcrew.agent.api.chat.domain.vo.ChatSessionVo;
@@ -8,6 +9,7 @@ import com.smartcrew.agent.api.llm.domain.entity.LlmConversationMessage;
 import com.smartcrew.agent.api.llm.domain.entity.LlmConversationSession;
 import com.smartcrew.agent.api.llm.mapper.LlmConversationMessageMapper;
 import com.smartcrew.agent.api.llm.mapper.LlmConversationSessionMapper;
+import com.smartcrew.agent.core.page.PageQuery;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -80,19 +82,17 @@ public class ConversationQueryServiceImpl implements ConversationQueryService {
 
     @Override
     public List<ChatSessionVo> listAllSessions(Long userId, String provider, String keyword) {
-        String normalizedProvider = provider == null ? "" : provider.trim().toUpperCase();
-        String normalizedKeyword = keyword == null ? "" : keyword.trim();
-        return sessionMapper.selectList(Wrappers.lambdaQuery(LlmConversationSession.class)
-                        .orderByDesc(LlmConversationSession::getLastMessageAt))
-                .stream()
-                .filter(session -> userId == null || userId.equals(session.getUserId()))
-                .map(this::toSessionVo)
-                .filter(session -> normalizedProvider.isBlank() || normalizedProvider.equalsIgnoreCase(session.getSource()))
-                .filter(session -> normalizedKeyword.isBlank()
-                        || session.getSessionId().contains(normalizedKeyword)
-                        || (session.getTitle() != null && session.getTitle().contains(normalizedKeyword))
-                        || (session.getPreview() != null && session.getPreview().contains(normalizedKeyword)))
-                .toList();
+        return sessionMapper.selectAdminSessions(userId, normalizeProvider(provider), normalizeKeyword(keyword));
+    }
+
+    @Override
+    public IPage<ChatSessionVo> listSessionsPage(PageQuery pageQuery, Long userId, String provider, String keyword) {
+        return sessionMapper.selectAdminSessionPage(
+                pageQuery.build(),
+                userId,
+                normalizeProvider(provider),
+                normalizeKeyword(keyword)
+        );
     }
 
     @Override
@@ -165,5 +165,19 @@ public class ConversationQueryServiceImpl implements ConversationQueryService {
             return "FEISHU";
         }
         return "WEB";
+    }
+
+    /**
+     * 统一标准化平台来源参数。
+     */
+    private String normalizeProvider(String provider) {
+        return provider == null ? "" : provider.trim().toUpperCase();
+    }
+
+    /**
+     * 统一标准化关键词。
+     */
+    private String normalizeKeyword(String keyword) {
+        return keyword == null ? "" : keyword.trim();
     }
 }

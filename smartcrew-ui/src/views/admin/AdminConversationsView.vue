@@ -16,7 +16,7 @@
           <el-option label="企业微信" value="WECOM" />
         </el-select>
         <el-input v-model="filters.keyword" placeholder="关键词 / Session ID" clearable />
-        <el-button type="primary" @click="loadSessions">查询</el-button>
+        <el-button type="primary" @click="handleSearch">查询</el-button>
       </div>
 
       <div class="table-shell">
@@ -30,6 +30,16 @@
           </el-table-column>
         </el-table>
       </div>
+
+      <el-pagination
+        :current-page="pager.pageNum"
+        :page-size="pager.pageSize"
+        :page-sizes="pageSizeOptions"
+        :total="pager.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @current-change="handlePageChange"
+        @size-change="handleSizeChange"
+      />
     </GlassPanel>
 
     <GlassPanel panel-class="admin-card message-card">
@@ -67,11 +77,18 @@ import { adminPortalApi } from '../../api/portal'
 import { useAuthStore } from '../../stores/auth'
 import type { ChatMessage, ChatSession } from '../../types'
 
+const pageSizeOptions = [10, 30, 50, 100, 250]
+
 const authStore = useAuthStore()
 const filters = reactive({
   userId: '',
   provider: '',
   keyword: ''
+})
+const pager = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  total: 0
 })
 const sessions = ref<ChatSession[]>([])
 const messages = ref<ChatMessage[]>([])
@@ -84,9 +101,12 @@ async function loadSessions() {
     const response = await adminPortalApi.listConversationSessions(authStore.adminToken, {
       userId: Number(filters.userId) || undefined,
       provider: filters.provider || undefined,
-      keyword: filters.keyword || undefined
+      keyword: filters.keyword || undefined,
+      pageNum: pager.pageNum,
+      pageSize: pager.pageSize
     })
     sessions.value = response.rows
+    pager.total = response.total
     messages.value = []
     activeSessionId.value = ''
   } catch (error) {
@@ -94,6 +114,22 @@ async function loadSessions() {
       ElMessage.error(error.message)
     }
   }
+}
+
+async function handleSearch() {
+  pager.pageNum = 1
+  await loadSessions()
+}
+
+async function handlePageChange(pageNum: number) {
+  pager.pageNum = pageNum
+  await loadSessions()
+}
+
+async function handleSizeChange(pageSize: number) {
+  pager.pageSize = pageSize
+  pager.pageNum = 1
+  await loadSessions()
 }
 
 async function handleCurrentChange(row?: ChatSession) {
@@ -154,6 +190,11 @@ function formatDate(value?: string) {
   grid-template-columns: 160px 180px minmax(0, 1fr) 100px;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.table-shell {
+  flex: 1;
+  min-height: 0;
 }
 
 .message-list {
