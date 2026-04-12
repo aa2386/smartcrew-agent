@@ -17,6 +17,20 @@ public class SmartCrewAgentApplication {
      */
     public static void main(String[] args) {
         SpringApplication.run(SmartCrewAgentApplication.class, args);
-        System.out.println("项目启动成功");
+        printSuccessBanner();
+    }
+
+    /**
+     * 打印启动成功横幅。
+     */
+    private static void printSuccessBanner() {
+        System.out.println();
+        System.out.println("\u001B[32m" + "╔════════════════════════════════════════════════════════════════════════════════════════════════════════╗" + "\u001B[0m");
+        System.out.println("\u001B[32m" + "║" + "\u001B[0m" + "                                                                                                        \u001B[32m" + "║" + "\u001B[0m");
+        System.out.println("\u001B[32m" + "║" + "\u001B[0m" + "     \u001B[1;32m✓ SmartCrew-Agent 启动成功！\u001B[0m" + "                                                                         \u001B[32m" + "║" + "\u001B[0m");
+        System.out.println("\u001B[32m" + "║" + "\u001B[0m" + "     \u001B[36m➜  访问地址: \u001B[1;36mhttp://localhost:8085\u001B[0m" + "                                                                  \u001B[32m" + "║" + "\u001B[0m");
+        System.out.println("\u001B[32m" + "║" + "\u001B[0m" + "                                                                                                        \u001B[32m" + "║" + "\u001B[0m");
+        System.out.println("\u001B[32m" + "╚════════════════════════════════════════════════════════════════════════════════════════════════════════╝" + "\u001B[0m");
+        System.out.println();
     }
 }
