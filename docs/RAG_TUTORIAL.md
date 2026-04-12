@@ -1,6 +1,6 @@
 # RAG（检索增强生成）教程
 
-本教程面向 RAG 初学者，从基础概念开始，逐步讲解如何在本项目中实现完整的 RAG 能力。
+本教程面向 RAG 初学者，从基础概念开始，逐步讲解如何在本项目中使用 Chroma 向量数据库实现完整的 RAG 能力。
 
 ---
 
@@ -11,7 +11,7 @@
 3. [数据库表设计](#3-数据库表设计)
 4. [项目依赖配置](#4-项目依赖配置)
 5. [文档处理实现](#5-文档处理实现)
-6. [向量存储实现](#6-向量存储实现)
+6. [向量存储实现（Chroma）](#6-向量存储实现chroma)
 7. [检索服务实现](#7-检索服务实现)
 8. [集成到 InitialAgent](#8-集成到-initialagent)
 9. [完整使用示例](#9-完整使用示例)
@@ -60,13 +60,13 @@ RAG 通过引入外部知识库，有效解决了这些问题：
 ┌─────────────────────────────────────────────────────────────────┐
 │                        离线索引阶段                              │
 ├─────────────────────────────────────────────────────────────────┤
-│  文档 ──→ 文档加载 ──→ 文档分割 ──→ 向量化 ──→ 存入向量数据库     │
+│  文档 ──→ 文档加载 ──→ 文档分割 ──→ 向量化 ──→ 存入 Chroma       │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
 │                        在线检索阶段                              │
 ├─────────────────────────────────────────────────────────────────┤
-│  用户问题 ──→ 向量化 ──→ 向量检索 ──→ 获取相关文档 ──→ 构建提示词 │
+│  用户问题 ──→ 向量化 ──→ Chroma 检索 ──→ 获取相关文档 ──→ 构建提示词 │
 │      └───────────────────────────────────────────────────────→ LLM 生成回答
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -238,34 +238,44 @@ public class EmbeddingModelExample {
 
 | 数据库 | 类型 | 特点 | 适用场景 |
 |--------|------|------|----------|
+| **Chroma** | 轻量级向量数据库 | 简单易用、开箱即用、支持持久化 | 开发测试、中小规模应用、快速原型 |
 | **Milvus** | 专用向量数据库 | 高性能、分布式 | 大规模生产环境 |
 | **PgVector** | PostgreSQL 扩展 | 易部署、SQL 友好 | 中小规模、已有 PostgreSQL |
-| **Chroma** | 轻量级向量数据库 | 简单易用 | 开发测试、小规模应用 |
 | **Elasticsearch** | 搜索引擎 | 支持混合检索 | 已有 ES 基础设施 |
-| **In-Memory** | 内存存储 | 最简单 | 测试、原型验证 |
 
 **本项目推荐方案**：
-- 开发阶段：使用内存向量存储或 Chroma
-- 生产阶段：使用 Milvus 或 PgVector
+- 开发阶段：使用 Chroma（本教程重点）
+- 生产阶段：继续使用 Chroma（支持持久化）或切换到 Milvus
 
-**LangChain4j 向量存储示例**：
+**Chroma 的优势**：
+
+| 优点 | 说明 |
+|------|------|
+| 开箱即用 | 无需复杂配置，快速启动 |
+| 轻量级 | 支持内存模式和持久化模式 |
+| 专为 LLM 设计 | API 简洁，与 LangChain 生态无缝集成 |
+| 开源免费 | Apache 2.0 许可证 |
+
+**LangChain4j Chroma 向量存储示例**：
 
 ```java
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
-import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
+import dev.langchain4j.store.embedding.chroma.ChromaEmbeddingStore;
 
 import java.util.List;
 
-public class VectorStoreExample {
+public class ChromaVectorStoreExample {
 
-    private final EmbeddingStore<TextSegment> embeddingStore;
+    private final ChromaEmbeddingStore embeddingStore;
     private final EmbeddingModel embeddingModel;
 
-    public VectorStoreExample(EmbeddingModel embeddingModel) {
-        this.embeddingStore = new InMemoryEmbeddingStore<>();
+    public ChromaVectorStoreExample(EmbeddingModel embeddingModel) {
+        this.embeddingStore = ChromaEmbeddingStore.builder()
+                .baseUrl("http://localhost:8000")
+                .collectionName("smartcrew_knowledge")
+                .build();
         this.embeddingModel = embeddingModel;
     }
 
@@ -300,7 +310,7 @@ public class ContentRetrieverExample {
 
     private final ContentRetriever contentRetriever;
 
-    public ContentRetrieverExample(EmbeddingStore<TextSegment> store, 
+    public ContentRetrieverExample(ChromaEmbeddingStore store, 
                                     EmbeddingModel model) {
         this.contentRetriever = EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(store)
@@ -333,7 +343,7 @@ CREATE TABLE IF NOT EXISTS knowledge_base (
     base_name VARCHAR(128) NOT NULL COMMENT '知识库名称',
     description VARCHAR(512) NULL COMMENT '描述信息',
     embedding_model VARCHAR(128) NOT NULL COMMENT '嵌入模型名称',
-    vector_store_type VARCHAR(32) NOT NULL COMMENT '向量存储类型',
+    collection_name VARCHAR(128) NOT NULL COMMENT 'Chroma 集合名称',
     enabled TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用',
     create_dept BIGINT NULL COMMENT '创建部门',
     create_by BIGINT NULL COMMENT '创建人',
@@ -372,7 +382,7 @@ CREATE TABLE IF NOT EXISTS document_chunk (
     document_id BIGINT NOT NULL COMMENT '文档 ID',
     chunk_index INT NOT NULL COMMENT '切片序号',
     content TEXT NOT NULL COMMENT '切片内容',
-    vector_id VARCHAR(128) NULL COMMENT '向量存储 ID',
+    vector_id VARCHAR(128) NULL COMMENT 'Chroma 向量 ID',
     token_count INT NULL COMMENT 'Token 数量',
     metadata JSON NULL COMMENT '元数据(JSON格式)',
     create_dept BIGINT NULL COMMENT '创建部门',
@@ -414,11 +424,54 @@ CREATE TABLE IF NOT EXISTS agent_knowledge_binding (
 └──────────────────────────┘     └─────────────────┘
 ```
 
+### 3.3 Chroma 与关系数据库的协作
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        数据存储架构                                  │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│   ┌─────────────────┐              ┌──────────────────────────┐    │
+│   │   MySQL/H2      │              │      Chroma              │    │
+│   │   关系数据库     │              │      向量数据库           │    │
+│   ├─────────────────┤              ├──────────────────────────┤    │
+│   │ - 知识库元数据   │              │ - 向量数据               │    │
+│   │ - 文档元数据     │◄────────────►│ - 文本片段               │    │
+│   │ - 切片内容       │   vector_id  │ - 元数据过滤             │    │
+│   │ - 用户绑定关系   │              │ - 相似性搜索             │    │
+│   └─────────────────┘              └──────────────────────────┘    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## 4. 项目依赖配置
 
 ### 4.1 添加 Maven 依赖
+
+在父 `pom.xml` 中添加版本管理：
+
+```xml
+<properties>
+    <!-- 其他版本号... -->
+    <langchain4j.version>1.0.0-beta2</langchain4j.version>
+    <langchain4j-chroma.version>1.0.0-beta2</langchain4j-chroma.version>
+</properties>
+
+<dependencyManagement>
+    <dependencies>
+        <!-- LangChain4j Chroma 向量存储 -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-chroma</artifactId>
+            <version>${langchain4j-chroma.version}</version>
+        </dependency>
+        
+        <!-- 其他依赖... -->
+    </dependencies>
+</dependencyManagement>
+```
 
 在 `smartcrew-modules/pom.xml` 中添加：
 
@@ -436,31 +489,23 @@ CREATE TABLE IF NOT EXISTS agent_knowledge_binding (
         <artifactId>langchain4j-community-dashscope</artifactId>
     </dependency>
     
+    <!-- LangChain4j Chroma 向量存储 -->
+    <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-chroma</artifactId>
+    </dependency>
+    
     <!-- LangChain4j PDF 解析 -->
     <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-parser-apache-pdfbox</artifactId>
     </dependency>
     
-    <!-- LangChain4j EasyOCR 解析（支持图片） -->
+    <!-- LangChain4j Apache Tika 解析（支持多种格式） -->
     <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-parser-apache-tika</artifactId>
     </dependency>
-    
-    <!-- 向量存储：Milvus（生产推荐） -->
-    <dependency>
-        <groupId>dev.langchain4j</groupId>
-        <artifactId>langchain4j-milvus</artifactId>
-    </dependency>
-    
-    <!-- 向量存储：PgVector（可选） -->
-    <!--
-    <dependency>
-        <groupId>dev.langchain4j</groupId>
-        <artifactId>langchain4j-pgvector</artifactId>
-    </dependency>
-    -->
 </dependencies>
 ```
 
@@ -475,20 +520,70 @@ smartcrew:
     embedding:
       provider: dashscope
       model: text-embedding-v3
+      dimension: 1024
     vector-store:
-      type: in-memory    # 开发环境使用内存存储
-      # type: milvus     # 生产环境使用 Milvus
-      milvus:
-        host: localhost
-        port: 19530
-        database: default
-        collection: smartcrew_knowledge
+      type: chroma
+      chroma:
+        base-url: http://localhost:8000
+        collection-name: smartcrew_knowledge
+        timeout-seconds: 60
     document:
       splitter:
         type: paragraph
         max-chunk-size: 200
         overlap-size: 50
       upload-path: ./uploads/knowledge
+```
+
+### 4.3 Chroma 服务安装
+
+#### 方式一：Docker 部署（推荐）
+
+```bash
+# 拉取 Chroma 镜像
+docker pull chromadb/chroma:latest
+
+# 启动 Chroma 服务（持久化存储）
+docker run -d \
+  --name chroma \
+  -p 8000:8000 \
+  -v ./chroma-data:/chroma/chroma \
+  chromadb/chroma:latest
+
+# 或者使用 Docker Compose
+# docker-compose.yml
+version: '3.8'
+services:
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./chroma-data:/chroma/chroma
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+```
+
+#### 方式二：Python 安装
+
+```bash
+# 安装 Chroma
+pip install chromadb
+
+# 启动服务端
+chroma run --host 0.0.0.0 --port 8000 --path ./chroma-data
+```
+
+#### 方式三：嵌入式模式（无需独立服务）
+
+Chroma 支持嵌入式模式，数据存储在本地文件系统中，无需启动独立服务：
+
+```java
+ChromaEmbeddingStore embeddingStore = ChromaEmbeddingStore.builder()
+        .collectionName("smartcrew_knowledge")
+        .persistToDirectory(Path.of("./chroma-data"))
+        .build();
 ```
 
 ---
@@ -517,7 +612,7 @@ public class KnowledgeBase {
     private String baseName;
     private String description;
     private String embeddingModel;
-    private String vectorStoreType;
+    private String collectionName;
     private Boolean enabled;
     
     @TableField(fill = FieldFill.INSERT)
@@ -659,7 +754,6 @@ import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -778,7 +872,7 @@ public class DocumentSplitterServiceImpl implements DocumentSplitterService {
 
 ---
 
-## 6. 向量存储实现
+## 6. 向量存储实现（Chroma）
 
 ### 6.1 嵌入模型配置
 
@@ -815,7 +909,7 @@ public class EmbeddingModelConfig {
 }
 ```
 
-### 6.2 向量存储配置
+### 6.2 向量存储服务接口
 
 ```java
 package com.smartcrew.agent.api.rag.service;
@@ -823,7 +917,6 @@ package com.smartcrew.agent.api.rag.service;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
-import dev.langchain4j.store.embedding.EmbeddingStore;
 import java.util.List;
 
 public interface VectorStoreService {
@@ -842,6 +935,8 @@ public interface VectorStoreService {
 }
 ```
 
+### 6.3 Chroma 向量存储实现
+
 ```java
 package com.smartcrew.agent.core.rag.store;
 
@@ -849,45 +944,68 @@ import com.smartcrew.agent.api.rag.service.VectorStoreService;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
-import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
+import dev.langchain4j.store.embedding.chroma.ChromaEmbeddingStore;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "smartcrew.rag.vector-store.type", havingValue = "in-memory", matchIfMissing = true)
-public class InMemoryVectorStoreServiceImpl implements VectorStoreService {
+@ConditionalOnProperty(name = "smartcrew.rag.vector-store.type", havingValue = "chroma", matchIfMissing = true)
+public class ChromaVectorStoreServiceImpl implements VectorStoreService {
 
-    private final EmbeddingStore<TextSegment> embeddingStore = new InMemoryEmbeddingStore<>();
+    @Value("${smartcrew.rag.vector-store.chroma.base-url:http://localhost:8000}")
+    private String baseUrl;
+
+    @Value("${smartcrew.rag.vector-store.chroma.collection-name:smartcrew_knowledge}")
+    private String collectionName;
+
+    @Value("${smartcrew.rag.vector-store.chroma.timeout-seconds:60}")
+    private int timeoutSeconds;
+
+    private ChromaEmbeddingStore embeddingStore;
+
+    @PostConstruct
+    public void init() {
+        log.info("初始化 Chroma 向量存储，baseUrl: {}, collection: {}", baseUrl, collectionName);
+        this.embeddingStore = ChromaEmbeddingStore.builder()
+                .baseUrl(baseUrl)
+                .collectionName(collectionName)
+                .timeout(java.time.Duration.ofSeconds(timeoutSeconds))
+                .logRequests(true)
+                .logResponses(true)
+                .build();
+        log.info("Chroma 向量存储初始化完成");
+    }
 
     @Override
     public String add(Embedding embedding, TextSegment segment) {
         String id = embeddingStore.add(embedding, segment);
-        log.debug("添加向量到内存存储，ID: {}", id);
+        log.debug("添加向量到 Chroma，ID: {}", id);
         return id;
     }
 
     @Override
     public List<String> addAll(List<Embedding> embeddings, List<TextSegment> segments) {
         List<String> ids = embeddingStore.addAll(embeddings, segments);
-        log.info("批量添加 {} 个向量到内存存储", ids.size());
+        log.info("批量添加 {} 个向量到 Chroma", ids.size());
         return ids;
     }
 
     @Override
     public void remove(String id) {
         embeddingStore.remove(id);
-        log.debug("从内存存储移除向量，ID: {}", id);
+        log.debug("从 Chroma 移除向量，ID: {}", id);
     }
 
     @Override
     public void removeAll(List<String> ids) {
         embeddingStore.removeAll(ids);
-        log.info("从内存存储批量移除 {} 个向量", ids.size());
+        log.info("从 Chroma 批量移除 {} 个向量", ids.size());
     }
 
     @Override
@@ -902,7 +1020,9 @@ public class InMemoryVectorStoreServiceImpl implements VectorStoreService {
 }
 ```
 
-### 6.3 Milvus 向量存储实现（生产环境）
+### 6.4 Chroma 嵌入式模式实现（可选）
+
+如果不想部署独立的 Chroma 服务，可以使用嵌入式模式：
 
 ```java
 package com.smartcrew.agent.core.rag.store;
@@ -911,73 +1031,64 @@ import com.smartcrew.agent.api.rag.service.VectorStoreService;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
-import dev.langchain4j.store.embedding.milvus.MilvusEmbeddingStore;
-import io.milvus.client.MilvusServiceClient;
-import io.milvus.param.ConnectParam;
+import dev.langchain4j.store.embedding.chroma.ChromaEmbeddingStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
+import java.nio.file.Path;
 import java.util.List;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "smartcrew.rag.vector-store.type", havingValue = "milvus")
-public class MilvusVectorStoreServiceImpl implements VectorStoreService {
+@ConditionalOnProperty(name = "smartcrew.rag.vector-store.type", havingValue = "chroma-embedded")
+public class ChromaEmbeddedVectorStoreServiceImpl implements VectorStoreService {
 
-    @Value("${smartcrew.rag.vector-store.milvus.host:localhost}")
-    private String host;
+    @Value("${smartcrew.rag.vector-store.chroma.collection-name:smartcrew_knowledge}")
+    private String collectionName;
 
-    @Value("${smartcrew.rag.vector-store.milvus.port:19530}")
-    private int port;
+    @Value("${smartcrew.rag.vector-store.chroma.persist-directory:./chroma-data}")
+    private String persistDirectory;
 
-    @Value("${smartcrew.rag.vector-store.milvus.database:default}")
-    private String database;
-
-    @Value("${smartcrew.rag.vector-store.milvus.collection:smartcrew_knowledge}")
-    private String collection;
-
-    private MilvusEmbeddingStore embeddingStore;
+    private ChromaEmbeddingStore embeddingStore;
 
     @PostConstruct
     public void init() {
-        log.info("初始化 Milvus 向量存储，host: {}, port: {}, collection: {}", host, port, collection);
-        this.embeddingStore = MilvusEmbeddingStore.builder()
-                .host(host)
-                .port(port)
-                .databaseName(database)
-                .collectionName(collection)
-                .dimension(1024)
+        log.info("初始化 Chroma 嵌入式向量存储，persistDirectory: {}, collection: {}", 
+                persistDirectory, collectionName);
+        this.embeddingStore = ChromaEmbeddingStore.builder()
+                .collectionName(collectionName)
+                .persistToDirectory(Path.of(persistDirectory))
                 .build();
+        log.info("Chroma 嵌入式向量存储初始化完成");
     }
 
     @Override
     public String add(Embedding embedding, TextSegment segment) {
         String id = embeddingStore.add(embedding, segment);
-        log.debug("添加向量到 Milvus，ID: {}", id);
+        log.debug("添加向量到 Chroma 嵌入式存储，ID: {}", id);
         return id;
     }
 
     @Override
     public List<String> addAll(List<Embedding> embeddings, List<TextSegment> segments) {
         List<String> ids = embeddingStore.addAll(embeddings, segments);
-        log.info("批量添加 {} 个向量到 Milvus", ids.size());
+        log.info("批量添加 {} 个向量到 Chroma 嵌入式存储", ids.size());
         return ids;
     }
 
     @Override
     public void remove(String id) {
         embeddingStore.remove(id);
-        log.debug("从 Milvus 移除向量，ID: {}", id);
+        log.debug("从 Chroma 嵌入式存储移除向量，ID: {}", id);
     }
 
     @Override
     public void removeAll(List<String> ids) {
         embeddingStore.removeAll(ids);
-        log.info("从 Milvus 批量移除 {} 个向量", ids.size());
+        log.info("从 Chroma 嵌入式存储批量移除 {} 个向量", ids.size());
     }
 
     @Override
@@ -990,6 +1101,74 @@ public class MilvusVectorStoreServiceImpl implements VectorStoreService {
         return embeddingStore.findRelevant(queryEmbedding, maxResults, minScore);
     }
 }
+```
+
+### 6.5 Chroma 配置类
+
+```java
+package com.smartcrew.agent.core.rag.config;
+
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.store.embedding.chroma.ChromaEmbeddingStore;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.time.Duration;
+
+@Slf4j
+@Configuration
+public class ChromaConfig {
+
+    @Value("${smartcrew.rag.vector-store.chroma.base-url:http://localhost:8000}")
+    private String baseUrl;
+
+    @Value("${smartcrew.rag.vector-store.chroma.collection-name:smartcrew_knowledge}")
+    private String collectionName;
+
+    @Value("${smartcrew.rag.vector-store.chroma.timeout-seconds:60}")
+    private int timeoutSeconds;
+
+    @Bean
+    @ConditionalOnProperty(name = "smartcrew.rag.vector-store.type", havingValue = "chroma", matchIfMissing = true)
+    public ChromaEmbeddingStore chromaEmbeddingStore() {
+        log.info("创建 ChromaEmbeddingStore Bean，baseUrl: {}, collection: {}", baseUrl, collectionName);
+        return ChromaEmbeddingStore.builder()
+                .baseUrl(baseUrl)
+                .collectionName(collectionName)
+                .timeout(Duration.ofSeconds(timeoutSeconds))
+                .logRequests(true)
+                .logResponses(true)
+                .build();
+    }
+}
+```
+
+### 6.6 Chroma 使用注意事项
+
+#### 元数据过滤限制
+
+Chroma 在元数据过滤方面有以下限制：
+
+1. **大于/小于过滤**：仅支持对整数和浮点数类型的元数据进行大于或小于的过滤操作
+2. **NOT 过滤的特殊行为**：当使用"key"不等于"a"进行过滤时，系统仅返回"key"值不等于"a"的记录，而不会返回未包含"key"元数据的记录
+
+```java
+// 正确的元数据过滤示例
+List<EmbeddingMatch<TextSegment>> results = embeddingStore.findRelevant(
+    queryEmbedding, 
+    maxResults,
+    Filter.metadataKey("category").isEqualTo("technical")
+);
+
+// 数值范围过滤（支持）
+List<EmbeddingMatch<TextSegment>> results = embeddingStore.findRelevant(
+    queryEmbedding, 
+    maxResults,
+    Filter.metadataKey("score").isGreaterThan(0.8)
+);
 ```
 
 ---
@@ -1456,13 +1635,14 @@ public class RagAugmentationServiceImpl implements RagAugmentationService {
 ```java
 package com.smartcrew.agent.core.agent;
 
-import com.smartcrew.agent.api.agent.domain.request.AgentDispatchCommand;
+import com.smartcrew.agent.api.agent.domain.model.AgentDispatchCommand;
 import com.smartcrew.agent.api.agent.domain.vo.AgentDispatchResponse;
 import com.smartcrew.agent.api.agent.service.Agent;
 import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
 import com.smartcrew.agent.api.llm.domain.vo.LlmChatResponse;
 import com.smartcrew.agent.api.llm.service.LlmClient;
 import com.smartcrew.agent.api.rag.service.RagAugmentationService;
+import com.smartcrew.agent.core.agent.service.InitialAgentPromptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -1483,7 +1663,7 @@ public class InitialAgent implements Agent {
 
     @Override
     public String name() {
-        return "Initial Agent";
+        return "初始智能体";
     }
 
     @Override
@@ -1497,7 +1677,7 @@ public class InitialAgent implements Agent {
     public AgentDispatchResponse handle(AgentDispatchCommand command) {
         String llmSessionId = code() + "::" + command.getSessionId();
 
-        String basePrompt = promptService.buildSystemPrompt(command.getUserId(), "default");
+        String basePrompt = promptService.buildSystemPrompt(code(), command.getUserId());
         
         String ragContext = ragAugmentationService.buildRagContext(command.getMessage());
         
@@ -1589,8 +1769,8 @@ public class InitialAgentPromptServiceImpl implements InitialAgentPromptService 
     private final PromptTemplateService promptTemplateService;
 
     @Override
-    public String buildSystemPrompt(Long userId, String scene) {
-        String category = resolveCategory(scene);
+    public String buildSystemPrompt(String agentCode, Long userId) {
+        String category = resolveCategory(agentCode);
         Optional<PromptTemplate> template = promptTemplateService.findByCategory(category);
         return template.map(PromptTemplate::getTemplateContent).orElse(DEFAULT_PROMPT);
     }
@@ -1640,7 +1820,7 @@ public class KnowledgeController {
         base.setBaseName(request.getBaseName());
         base.setDescription(request.getDescription());
         base.setEmbeddingModel("text-embedding-v3");
-        base.setVectorStoreType("in-memory");
+        base.setCollectionName("kb_" + request.getBaseCode());
         base.setEnabled(true);
         
         return Result.success(knowledgeBaseService.create(base));
@@ -1699,6 +1879,45 @@ void testRagChat() {
     assertThat(response.getMessage()).isNotEmpty();
     
     System.out.println("回答: " + response.getMessage());
+}
+```
+
+### 9.5 Chroma 直接操作示例
+
+```java
+@Test
+void testChromaDirectOperation() {
+    ChromaEmbeddingStore store = ChromaEmbeddingStore.builder()
+            .baseUrl("http://localhost:8000")
+            .collectionName("test_collection")
+            .build();
+    
+    EmbeddingModel model = QwenEmbeddingModel.builder()
+            .apiKey("your-api-key")
+            .modelName("text-embedding-v3")
+            .build();
+    
+    TextSegment segment1 = TextSegment.from("RAG 是检索增强生成技术");
+    TextSegment segment2 = TextSegment.from("Chroma 是轻量级向量数据库");
+    
+    Embedding embedding1 = model.embed(segment1).content();
+    Embedding embedding2 = model.embed(segment2).content();
+    
+    String id1 = store.add(embedding1, segment1);
+    String id2 = store.add(embedding2, segment2);
+    
+    System.out.println("添加向量 ID: " + id1 + ", " + id2);
+    
+    String query = "什么是 RAG？";
+    Embedding queryEmbedding = model.embed(query).content();
+    
+    List<EmbeddingMatch<TextSegment>> results = store.findRelevant(queryEmbedding, 3);
+    
+    for (EmbeddingMatch<TextSegment> match : results) {
+        System.out.println("相似度: " + match.score());
+        System.out.println("内容: " + match.embedded().text());
+        System.out.println("---");
+    }
 }
 ```
 
@@ -1892,6 +2111,28 @@ public class IncrementalDocumentServiceImpl {
 }
 ```
 
+### 10.5 Chroma 集合管理
+
+```java
+@Service
+public class ChromaCollectionService {
+
+    private final ChromaEmbeddingStore embeddingStore;
+    
+    public void createCollection(String collectionName) {
+        log.info("创建 Chroma 集合: {}", collectionName);
+    }
+    
+    public void deleteCollection(String collectionName) {
+        log.info("删除 Chroma 集合: {}", collectionName);
+    }
+    
+    public long getCollectionCount(String collectionName) {
+        return 0;
+    }
+}
+```
+
 ---
 
 ## 总结
@@ -1900,16 +2141,27 @@ public class IncrementalDocumentServiceImpl {
 
 1. **RAG 核心组件**：文档加载、分割、向量化、存储、检索
 2. **数据库设计**：知识库、文档、切片、绑定关系
-3. **代码实现**：完整的 Java 实现代码
-4. **项目集成**：如何将 RAG 集成到 InitialAgent
-5. **进阶优化**：混合检索、重排序、引用来源、增量更新
+3. **Chroma 集成**：完整的 Chroma 向量数据库实现
+4. **代码实现**：完整的 Java 实现代码
+5. **项目集成**：如何将 RAG 集成到 InitialAgent
+6. **进阶优化**：混合检索、重排序、引用来源、增量更新
 
 按照本教程实现后，你的 Agent 将具备：
 - 上传知识文档的能力
 - 基于知识库回答问题的能力
 - 可追溯的回答来源
 
+**Chroma 的优势总结**：
+
+| 特性 | 说明 |
+|------|------|
+| 快速启动 | Docker 一键部署，或嵌入式模式无需额外服务 |
+| 易于使用 | API 简洁，与 LangChain4j 无缝集成 |
+| 持久化支持 | 支持内存模式和文件持久化模式 |
+| 开源免费 | Apache 2.0 许可证，社区活跃 |
+
 下一步建议：
-1. 先用内存向量存储验证完整流程
-2. 再切换到 Milvus 或 PgVector 用于生产环境
+1. 使用 Docker 快速启动 Chroma 服务
+2. 验证完整的 RAG 流程
 3. 根据实际效果调整分割策略和检索参数
+4. 如需更大规模部署，可考虑切换到 Milvus
