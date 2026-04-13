@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * SmartCrew Agent 应用集成测试类。
- * 
+ *
  * <p>测试覆盖以下核心能力：
  * <ul>
  *   <li>Agent 注册、查询与指令派发</li>
@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   <li>提示词模板管理</li>
  *   <li>平台事件路由</li>
  * </ul>
- * 
+ *
  * @author SmartCrew
  */
 @ActiveProfiles("test")
@@ -391,6 +391,7 @@ class SmartCrewAgentApplicationTests {
 
     /**
      * 验证后台 Agent 列表可识别代码 Agent 并返回统一来源视图。
+     */
     @Test
     @Order(1)
     void shouldExposeCodeOnlyAgentInAdminView() throws Exception {
@@ -422,6 +423,7 @@ class SmartCrewAgentApplicationTests {
 
     /**
      * 验证可直接新增数据库 Agent，或为代码 Agent 创建数据库信息。
+     */
     @Test
     @Order(2)
     void shouldCreateDatabaseAgentAndLinkCodeAgent() throws Exception {
@@ -473,6 +475,7 @@ class SmartCrewAgentApplicationTests {
     }
     /**
      * 验证后台用户列表支持分页参数。
+     */
     @Test
     void shouldPageAdminUsersWhenRequested() throws Exception {
         String suffix = String.valueOf(System.currentTimeMillis());
@@ -514,6 +517,7 @@ class SmartCrewAgentApplicationTests {
 
     /**
      * 验证后台 Prompt 分类列表支持分页参数。
+     */
     @Test
     void shouldPageAdminPromptCategoriesWhenRequested() throws Exception {
         String suffix = String.valueOf(System.currentTimeMillis());
@@ -556,6 +560,7 @@ class SmartCrewAgentApplicationTests {
 
     /**
      * 验证后台会话列表支持分页参数。
+     */
     @Test
     void shouldPageAdminConversationSessionsWhenRequested() throws Exception {
         String suffix = String.valueOf(System.currentTimeMillis());
