@@ -3,6 +3,8 @@
 ## 导航
 
 - [开发手册](docs/DEVELOPER_MANUAL.md)
+- [项目基础 Skill](docs/skills/PROJECT_BASELINE_SKILL.md)
+- [前端风格 Skill](docs/skills/SMARTCREW_UI_STYLE_SKILL.md)
 
 ## 项目简介
 
