@@ -19,7 +19,8 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.output.TokenUsage;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,12 +30,12 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * DashScope 大模型客户端，负责多轮上下文管理、模型调用与消息持久化。
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DashScopeLlmClient implements LlmClient {
 
     private static final int HISTORY_WINDOW_SIZE = 20;
+    private static final Logger log = LoggerFactory.getLogger(DashScopeLlmClient.class);
 
     private final SmartCrewProperties properties;
     private final LlmConversationStore conversationStore;

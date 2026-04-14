@@ -6,18 +6,20 @@ import com.smartcrew.agent.common.util.StringUtils;
 import com.smartcrew.agent.core.llm.client.DashScopeLlmClient;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * 大模型配置类，负责在应用启动后初始化对应的客户端。
  */
-@Slf4j
 @Configuration
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "smartcrew.llm", name = "enabled", havingValue = "true")
 public class LlmConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(LlmConfig.class);
 
     private final SmartCrewProperties properties;
     private final DashScopeLlmClient dashScopeLlmClient;

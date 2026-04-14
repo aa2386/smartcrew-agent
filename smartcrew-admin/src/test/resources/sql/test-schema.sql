@@ -1,3 +1,7 @@
+DROP TABLE IF EXISTS agent_knowledge_binding;
+DROP TABLE IF EXISTS document_chunk;
+DROP TABLE IF EXISTS knowledge_document;
+DROP TABLE IF EXISTS knowledge_base;
 DROP TABLE IF EXISTS llm_conversation_message;
 DROP TABLE IF EXISTS llm_conversation_session;
 DROP TABLE IF EXISTS sc_user_identity;
@@ -154,6 +158,72 @@ CREATE TABLE agent_prompt_binding (
     CONSTRAINT uk_agent_prompt UNIQUE (agent_code, prompt_template_id)
 );
 
+CREATE TABLE knowledge_base (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    base_code VARCHAR(64) NOT NULL,
+    base_name VARCHAR(128) NOT NULL,
+    description VARCHAR(512) NULL,
+    embedding_model VARCHAR(128) NOT NULL,
+    collection_name VARCHAR(128) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL,
+    CONSTRAINT uk_base_code UNIQUE (base_code)
+);
+
+CREATE TABLE knowledge_document (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    base_id BIGINT NOT NULL,
+    document_code VARCHAR(64) NOT NULL,
+    document_name VARCHAR(256) NOT NULL,
+    file_path VARCHAR(512) NOT NULL,
+    file_type VARCHAR(32) NULL,
+    file_size BIGINT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    chunk_count INT NOT NULL DEFAULT 0,
+    error_message VARCHAR(512) NULL,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL,
+    CONSTRAINT uk_document_code UNIQUE (document_code)
+);
+
+CREATE TABLE document_chunk (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    document_id BIGINT NOT NULL,
+    chunk_index INT NOT NULL,
+    content CLOB NOT NULL,
+    vector_id VARCHAR(128) NULL,
+    token_count INT NULL,
+    metadata CLOB NULL,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL
+);
+
+CREATE TABLE agent_knowledge_binding (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    agent_code VARCHAR(64) NOT NULL,
+    base_code VARCHAR(64) NOT NULL,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL,
+    CONSTRAINT uk_agent_knowledge UNIQUE (agent_code, base_code)
+);
+
 CREATE TABLE llm_conversation_session (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -193,3 +263,6 @@ CREATE TABLE llm_conversation_message (
 
 CREATE INDEX idx_user_session_seq ON llm_conversation_message (user_id, session_id, message_seq);
 CREATE INDEX idx_agent_prompt_order ON agent_prompt_binding (agent_code, sort_order);
+CREATE INDEX idx_knowledge_document_base_id ON knowledge_document (base_id);
+CREATE INDEX idx_document_chunk_document_id ON document_chunk (document_id);
+CREATE INDEX idx_document_chunk_vector_id ON document_chunk (vector_id);

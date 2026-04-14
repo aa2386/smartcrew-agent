@@ -48,6 +48,22 @@ smartcrew:
     enabled: true
     provider: dashscope
     model: qwen-plus
+  rag:
+    enabled: false
+    embedding:
+      provider: dashscope
+      model: text-embedding-v3
+    vector-store:
+      type: chroma
+      chroma:
+        base-url: ${CHROMA_BASE_URL:http://localhost:8000}
+        timeout-seconds: 60
+    document:
+      upload-path: ./uploads/knowledge
+      splitter:
+        type: paragraph
+        max-chunk-size: 200
+        overlap-size: 50
   tools:
     enabled:
       basic: true

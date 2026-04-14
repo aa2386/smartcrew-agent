@@ -1,3 +1,7 @@
+DROP TABLE IF EXISTS agent_knowledge_binding;
+DROP TABLE IF EXISTS document_chunk;
+DROP TABLE IF EXISTS knowledge_document;
+DROP TABLE IF EXISTS knowledge_base;
 DROP TABLE IF EXISTS llm_conversation_message;
 DROP TABLE IF EXISTS llm_conversation_session;
 DROP TABLE IF EXISTS sc_user_identity;
@@ -154,6 +158,75 @@ CREATE TABLE agent_prompt_binding (
     CONSTRAINT uk_agent_prompt UNIQUE (agent_code, prompt_template_id),
     INDEX idx_agent_prompt_order (agent_code, sort_order)
 ) COMMENT='Agent prompt binding';
+
+CREATE TABLE knowledge_base (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '涓婚敭 ID',
+    base_code VARCHAR(64) NOT NULL COMMENT '鐭ヨ瘑搴撶紪鐮?',
+    base_name VARCHAR(128) NOT NULL COMMENT '鐭ヨ瘑搴撳悕绉?',
+    description VARCHAR(512) NULL COMMENT '鎻忚堪淇℃伅',
+    embedding_model VARCHAR(128) NOT NULL COMMENT '宓屽叆妯″瀷鍚嶇О',
+    collection_name VARCHAR(128) NOT NULL COMMENT '鍚戦噺鍛藉悕绌洪棿',
+    enabled TINYINT(1) NOT NULL DEFAULT 1 COMMENT '鏄惁鍚敤',
+    create_dept BIGINT NULL COMMENT '鍒涘缓閮ㄩ棬',
+    create_by BIGINT NULL COMMENT '鍒涘缓浜?',
+    create_time DATETIME NULL COMMENT '鍒涘缓鏃堕棿',
+    update_by BIGINT NULL COMMENT '鏇存柊浜?',
+    update_time DATETIME NULL COMMENT '鏇存柊鏃堕棿',
+    remark VARCHAR(255) NULL COMMENT '澶囨敞淇℃伅',
+    CONSTRAINT uk_base_code UNIQUE (base_code)
+) COMMENT='鐭ヨ瘑搴撹〃';
+
+CREATE TABLE knowledge_document (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '涓婚敭 ID',
+    base_id BIGINT NOT NULL COMMENT '鐭ヨ瘑搴?ID',
+    document_code VARCHAR(64) NOT NULL COMMENT '鏂囨。缂栫爜',
+    document_name VARCHAR(256) NOT NULL COMMENT '鏂囨。鍚嶇О',
+    file_path VARCHAR(512) NOT NULL COMMENT '鏂囦欢璺緞',
+    file_type VARCHAR(32) NULL COMMENT '鏂囦欢绫诲瀷',
+    file_size BIGINT NULL COMMENT '鏂囦欢澶у皬',
+    status VARCHAR(32) NOT NULL DEFAULT 'pending' COMMENT '澶勭悊鐘舵€?',
+    chunk_count INT NOT NULL DEFAULT 0 COMMENT '鍒囩墖鏁伴噺',
+    error_message VARCHAR(512) NULL COMMENT '閿欒淇℃伅',
+    create_dept BIGINT NULL COMMENT '鍒涘缓閮ㄩ棬',
+    create_by BIGINT NULL COMMENT '鍒涘缓浜?',
+    create_time DATETIME NULL COMMENT '鍒涘缓鏃堕棿',
+    update_by BIGINT NULL COMMENT '鏇存柊浜?',
+    update_time DATETIME NULL COMMENT '鏇存柊鏃堕棿',
+    remark VARCHAR(255) NULL COMMENT '澶囨敞淇℃伅',
+    CONSTRAINT uk_document_code UNIQUE (document_code),
+    INDEX idx_knowledge_document_base_id (base_id)
+) COMMENT='鐭ヨ瘑鏂囨。琛?';
+
+CREATE TABLE document_chunk (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '涓婚敭 ID',
+    document_id BIGINT NOT NULL COMMENT '鏂囨。 ID',
+    chunk_index INT NOT NULL COMMENT '鍒囩墖搴忓彿',
+    content TEXT NOT NULL COMMENT '鍒囩墖鍐呭',
+    vector_id VARCHAR(128) NULL COMMENT '鍚戦噺 ID',
+    token_count INT NULL COMMENT 'Token 鏁伴噺',
+    metadata JSON NULL COMMENT '鍏冩暟鎹?JSON',
+    create_dept BIGINT NULL COMMENT '鍒涘缓閮ㄩ棬',
+    create_by BIGINT NULL COMMENT '鍒涘缓浜?',
+    create_time DATETIME NULL COMMENT '鍒涘缓鏃堕棿',
+    update_by BIGINT NULL COMMENT '鏇存柊浜?',
+    update_time DATETIME NULL COMMENT '鏇存柊鏃堕棿',
+    remark VARCHAR(255) NULL COMMENT '澶囨敞淇℃伅',
+    INDEX idx_document_chunk_document_id (document_id),
+    INDEX idx_document_chunk_vector_id (vector_id)
+) COMMENT='鏂囨。鍒囩墖琛?';
+
+CREATE TABLE agent_knowledge_binding (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '涓婚敭 ID',
+    agent_code VARCHAR(64) NOT NULL COMMENT 'Agent 缂栫爜',
+    base_code VARCHAR(64) NOT NULL COMMENT '鐭ヨ瘑搴撶紪鐮?',
+    create_dept BIGINT NULL COMMENT '鍒涘缓閮ㄩ棬',
+    create_by BIGINT NULL COMMENT '鍒涘缓浜?',
+    create_time DATETIME NULL COMMENT '鍒涘缓鏃堕棿',
+    update_by BIGINT NULL COMMENT '鏇存柊浜?',
+    update_time DATETIME NULL COMMENT '鏇存柊鏃堕棿',
+    remark VARCHAR(255) NULL COMMENT '澶囨敞淇℃伅',
+    CONSTRAINT uk_agent_knowledge UNIQUE (agent_code, base_code)
+) COMMENT='Agent 鐭ヨ瘑搴撶粦瀹氳〃';
 
 CREATE TABLE llm_conversation_session (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',

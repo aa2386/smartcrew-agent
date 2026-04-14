@@ -10,6 +10,8 @@ spring:
       schema-locations: classpath:sql/test-schema.sql
 
 smartcrew:
+  rag:
+    enabled: false
   auth:
     require-admin-login: false
     require-web-login: false
