@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * SmartCrew 涓婚厤缃睘鎬х被锛屾槧灏?smartcrew 鍓嶇紑涓嬬殑搴旂敤閰嶇疆銆?
+ * SmartCrew 主配置属性类，映射 `smartcrew` 前缀下的应用配置。
  */
 @Data
 @Component
@@ -16,67 +16,67 @@ import java.util.Map;
 public class SmartCrewProperties {
 
     /**
-     * 搴旂敤鍚嶇О銆?
+     * 应用名称。
      */
     private String name = "smartcrew-agent";
     /**
-     * 搴旂敤鐗堟湰銆?
+     * 应用版本。
      */
     private String version = "0.0.1-SNAPSHOT";
     /**
-     * 澶фā鍨嬮厤缃€?
+     * 大模型配置。
      */
     private Llm llm = new Llm();
     /**
-     * 宸ュ叿寮€鍏抽厤缃€?
+     * 工具开关配置。
      */
     private Tools tools = new Tools();
     /**
-     * RAG 鍩虹閰嶇疆銆?
+     * RAG 基础配置。
      */
     private Rag rag = new Rag();
 
     /**
-     * 澶фā鍨嬮厤缃」锛屾弿杩版ā鍨嬪紑鍏炽€佷緵搴斿晢鍙婅闂弬鏁般€?
+     * 大模型配置项，描述模型开关、提供商及访问参数。
      */
     @Data
     public static class Llm {
 
         /**
-         * 鏄惁鍚敤銆?
+         * 是否启用。
          */
         private boolean enabled;
         /**
-         * 澶фā鍨嬩緵搴斿晢鏍囪瘑銆?
+         * 大模型提供商标识。
          */
         private String provider;
         /**
-         * 鏈嶅姟鍩虹鍦板潃銆?
+         * 服务基础地址。
          */
         private String baseUrl;
         /**
-         * 鎺ュ彛璁块棶瀵嗛挜銆?
+         * 接口访问密钥。
          */
         private String apiKey;
         /**
-         * 妯″瀷鍚嶇О銆?
+         * 模型名称。
          */
         private String model;
     }
 
     /**
-     * 宸ュ叿寮€鍏抽厤缃」锛岀淮鎶ゅ悇宸ュ叿鐨勫惎鐢ㄧ姸鎬併€?
+     * 工具开关配置项，维护各工具的启用状态。
      */
     @Data
     public static class Tools {
 
         /**
-         * 鏄惁鍚敤銆?
+         * 是否启用。
          */
         private Map<String, Boolean> enabled = new HashMap<>();
 
         /**
-         * 鍒ゆ柇鎸囧畾宸ュ叿鏄惁鍚敤銆?
+         * 判断指定工具是否启用。
          */
         public boolean isEnabled(String toolCode) {
             return enabled.getOrDefault(toolCode, true);
@@ -84,117 +84,117 @@ public class SmartCrewProperties {
     }
 
     /**
-     * RAG 閰嶇疆椤广€?
+     * RAG 配置项。
      */
     @Data
     public static class Rag {
 
         /**
-         * 鏄惁鍚敤 RAG 鍩虹鑳藉姏銆?
+         * 是否启用 RAG 基础能力。
          */
         private boolean enabled;
         /**
-         * 宓屽叆妯″瀷閰嶇疆銆?
+         * 嵌入模型配置。
          */
         private Embedding embedding = new Embedding();
         /**
-         * 鍚戦噺瀛樺偍閰嶇疆銆?
+         * 向量存储配置。
          */
         private VectorStore vectorStore = new VectorStore();
         /**
-         * 鏂囨。澶勭悊閰嶇疆銆?
+         * 文档处理配置。
          */
         private Document document = new Document();
     }
 
     /**
-     * 宓屽叆妯″瀷閰嶇疆椤广€?
+     * 嵌入模型配置项。
      */
     @Data
     public static class Embedding {
 
         /**
-         * 宓屽叆鏈嶅姟鎻愪緵鍟嗐€?
+         * 嵌入服务提供商。
          */
         private String provider = "dashscope";
         /**
-         * 宓屽叆妯″瀷鍚嶇О銆?
+         * 嵌入模型名称。
          */
         private String model = "text-embedding-v3";
         /**
-         * 宓屽叆鏈嶅姟璁块棶瀵嗛挜銆?
+         * 嵌入服务访问密钥。
          */
         private String apiKey;
         /**
-         * 宓屽叆鏈嶅姟鍩虹鍦板潃銆?
+         * 嵌入服务基础地址。
          */
         private String baseUrl;
     }
 
     /**
-     * 鍚戦噺瀛樺偍閰嶇疆椤广€?
+     * 向量存储配置项。
      */
     @Data
     public static class VectorStore {
 
         /**
-         * 鍚戦噺瀛樺偍瀹炵幇绫诲瀷銆?
+         * 向量存储实现类型。
          */
         private String type = "chroma";
         /**
-         * Chroma 閰嶇疆銆?
+         * Chroma 配置。
          */
         private Chroma chroma = new Chroma();
     }
 
     /**
-     * Chroma 閰嶇疆椤广€?
+     * Chroma 配置项。
      */
     @Data
     public static class Chroma {
 
         /**
-         * Chroma 杩滅▼鏈嶅姟鍦板潃銆?
+         * Chroma 远程服务地址。
          */
         private String baseUrl = "http://localhost:8000";
         /**
-         * 璇锋眰瓒呮椂绉掓暟銆?
+         * 请求超时秒数。
          */
         private int timeoutSeconds = 60;
     }
 
     /**
-     * 鏂囨。澶勭悊閰嶇疆椤广€?
+     * 文档处理配置项。
      */
     @Data
     public static class Document {
 
         /**
-         * 鏂囨。涓婁紶鐩綍銆?
+         * 文档上传目录。
          */
         private String uploadPath = "./uploads/knowledge";
         /**
-         * 鏂囨。鍒嗗壊閰嶇疆銆?
+         * 文档分割配置。
          */
         private Splitter splitter = new Splitter();
     }
 
     /**
-     * 鏂囨。鍒嗗壊閰嶇疆椤广€?
+     * 文档分割配置项。
      */
     @Data
     public static class Splitter {
 
         /**
-         * 鍒嗗壊绛栫暐銆?
+         * 分割策略。
          */
         private String type = "paragraph";
         /**
-         * 鍗曚釜鍒囩墖鏈€澶уぇ灏忋€?
+         * 单个切片最大大小。
          */
         private int maxChunkSize = 200;
         /**
-         * 鍒囩墖閲嶅彔澶у皬銆?
+         * 切片重叠大小。
          */
         private int overlapSize = 50;
     }

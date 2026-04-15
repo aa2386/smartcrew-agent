@@ -15,7 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * RAG 鍏抽棴鏃剁殑瀹瑰櫒琛屼负娴嬭瘯銆?
+ * RAG 关闭时的容器行为测试。
  */
 @ActiveProfiles("test")
 @SpringBootTest

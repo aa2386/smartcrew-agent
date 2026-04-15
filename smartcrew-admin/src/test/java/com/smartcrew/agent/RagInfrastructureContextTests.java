@@ -20,7 +20,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * RAG 鍩虹缁勪欢涓婁笅鏂囦笌鍩烘湰鑳藉姏娴嬭瘯銆?
+ * RAG 基础组件上下文与基本能力测试。
  */
 @ActiveProfiles("test")
 @SpringBootTest(properties = {

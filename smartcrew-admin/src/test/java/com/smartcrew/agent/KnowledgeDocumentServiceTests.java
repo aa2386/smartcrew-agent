@@ -35,7 +35,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 /**
- * 鐭ヨ瘑鏂囨。鏈嶅姟缂栨帓娴嬭瘯銆?
+ * 知识文档服务编排测试。
  */
 @ActiveProfiles("test")
 @SpringBootTest(properties = {
@@ -82,7 +82,7 @@ class KnowledgeDocumentServiceTests {
                         try {
                             Files.deleteIfExists(path);
                         } catch (Exception ignored) {
-                            // 娴嬭瘯娓呯悊澶辫触涓嶅奖鍝嶄笅娆¤繍琛岋紝鐣欑粰鍚庣画鏂█澶勭悊銆?
+                            // 测试清理失败不影响下次运行，留给后续断言处理。
                         }
                     });
         }
