@@ -105,6 +105,10 @@ public class SmartCrewProperties {
          * 文档处理配置。
          */
         private Document document = new Document();
+        /**
+         * 运行时检索增强配置。
+         */
+        private Retrieval retrieval = new Retrieval();
     }
 
     /**
@@ -210,5 +214,37 @@ public class SmartCrewProperties {
          * 切片重叠大小。
          */
         private int overlapSize = 50;
+    }
+
+    /**
+     * 运行时检索增强配置项。
+     */
+    @Data
+    public static class Retrieval {
+
+        /**
+         * 是否启用检索增强。
+         */
+        private boolean enabled = true;
+        /**
+         * 全局返回切片数量上限。
+         */
+        private int topK = 6;
+        /**
+         * 单个知识库召回切片数量上限。
+         */
+        private int perKnowledgeBaseTopK = 4;
+        /**
+         * 最低相关度阈值。
+         */
+        private double minScore = 0.35D;
+        /**
+         * 允许拼接到上下文中的最大切片数。
+         */
+        private int maxContextChunks = 6;
+        /**
+         * 允许拼接到上下文中的最大字符数。
+         */
+        private int maxContextChars = 4000;
     }
 }

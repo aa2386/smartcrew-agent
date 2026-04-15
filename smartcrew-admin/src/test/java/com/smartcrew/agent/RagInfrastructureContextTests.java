@@ -3,6 +3,7 @@ package com.smartcrew.agent;
 import com.smartcrew.agent.api.rag.service.DocumentLoaderService;
 import com.smartcrew.agent.api.rag.service.DocumentSplitterService;
 import com.smartcrew.agent.api.rag.service.EmbeddingService;
+import com.smartcrew.agent.api.rag.service.RagAugmentationService;
 import com.smartcrew.agent.api.rag.service.VectorStoreService;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.segment.TextSegment;
@@ -43,6 +44,9 @@ class RagInfrastructureContextTests {
     @Autowired
     private VectorStoreService vectorStoreService;
 
+    @Autowired
+    private RagAugmentationService ragAugmentationService;
+
     @TempDir
     Path tempDir;
 
@@ -52,6 +56,7 @@ class RagInfrastructureContextTests {
         assertThat(documentSplitterService).isNotNull();
         assertThat(embeddingService).isNotNull();
         assertThat(vectorStoreService).isNotNull();
+        assertThat(ragAugmentationService).isNotNull();
         assertThat(embeddingService.modelName()).isEqualTo("text-embedding-v3");
     }
 

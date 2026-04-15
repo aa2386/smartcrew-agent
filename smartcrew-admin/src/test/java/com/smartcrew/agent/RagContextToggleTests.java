@@ -5,6 +5,7 @@ import com.smartcrew.agent.api.rag.service.DocumentSplitterService;
 import com.smartcrew.agent.api.rag.service.EmbeddingService;
 import com.smartcrew.agent.api.rag.service.KnowledgeBaseService;
 import com.smartcrew.agent.api.rag.service.KnowledgeDocumentService;
+import com.smartcrew.agent.api.rag.service.RagAugmentationService;
 import com.smartcrew.agent.api.rag.service.VectorStoreService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,5 +33,6 @@ class RagContextToggleTests {
         assertThat(applicationContext.getBeansOfType(VectorStoreService.class)).isEmpty();
         assertThat(applicationContext.getBeansOfType(KnowledgeBaseService.class)).isEmpty();
         assertThat(applicationContext.getBeansOfType(KnowledgeDocumentService.class)).isEmpty();
+        assertThat(applicationContext.getBeansOfType(RagAugmentationService.class)).isEmpty();
     }
 }

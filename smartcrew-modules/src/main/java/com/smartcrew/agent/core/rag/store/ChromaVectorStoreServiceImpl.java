@@ -81,6 +81,7 @@ public class ChromaVectorStoreServiceImpl implements VectorStoreService {
     /* 获取指定命名空间对应的向量存储实例。 */
     private ChromaEmbeddingStore getStore(String namespace) {
         String normalizedNamespace = normalizeNamespace(namespace);
+        // 存在键则返回，不存在则创建并返回
         return storeCache.computeIfAbsent(normalizedNamespace, this::createStore);
     }
 
@@ -88,11 +89,11 @@ public class ChromaVectorStoreServiceImpl implements VectorStoreService {
     private ChromaEmbeddingStore createStore(String namespace) {
         SmartCrewProperties.Chroma chroma = properties.getRag().getVectorStore().getChroma();
         log.info("初始化 Chroma 向量命名空间: {}, API版本: {}", namespace, chroma.getApiVersion());
-        
-        ChromaApiVersion apiVersion = "V1".equalsIgnoreCase(chroma.getApiVersion()) 
-                ? ChromaApiVersion.V1 
+
+        ChromaApiVersion apiVersion = "V1".equalsIgnoreCase(chroma.getApiVersion())
+                ? ChromaApiVersion.V1
                 : ChromaApiVersion.V2;
-        
+
         return ChromaEmbeddingStore.builder()
                 .baseUrl(chroma.getBaseUrl())
                 .collectionName(namespace)

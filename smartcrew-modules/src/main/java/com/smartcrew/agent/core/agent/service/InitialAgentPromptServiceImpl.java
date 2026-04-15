@@ -50,17 +50,14 @@ public class InitialAgentPromptServiceImpl implements InitialAgentPromptService 
     public String buildSystemPrompt(String agentCode, Long userId) {
         StringBuilder builder = new StringBuilder();
 
-        // 第一层：Agent 自身的人格、风格与安全边界配置。
         agentRegistry.getDefinition(agentCode)
                 .map(AgentDefinition::getSystemPrompt)
                 .ifPresent(systemPrompt -> appendSection(builder, systemPrompt));
 
-        // 第二层：按顺序拼接后台绑定的工作流 Prompt 模板。
         agentPromptBindingService.listResolvedByAgentCode(agentCode).stream()
                 .map(AgentPromptBindingVo::getTemplateContent)
                 .forEach(templateContent -> appendSection(builder, templateContent));
 
-        // 第三层：用户长期偏好。
         appendPreference(builder, userId, "language", "用户偏好语言：");
         appendPreference(builder, userId, "nickname", "用户偏好称呼：");
         appendPreference(builder, userId, "tone", "用户偏好风格：");
@@ -68,9 +65,18 @@ public class InitialAgentPromptServiceImpl implements InitialAgentPromptService 
         return builder.length() == 0 ? DEFAULT_PROMPT : builder.toString();
     }
 
-    /**
-     * 拼接文本段落。
-     */
+    @Override
+    public String buildSystemPrompt(String agentCode, Long userId, String ragPromptBlock) {
+        String basePrompt = buildSystemPrompt(agentCode, userId);
+        if (ragPromptBlock == null || ragPromptBlock.isBlank()) {
+            return basePrompt;
+        }
+        StringBuilder builder = new StringBuilder(basePrompt);
+        appendSection(builder, ragPromptBlock);
+        return builder.toString();
+    }
+
+    /* 拼接文本段落。 */
     private void appendSection(StringBuilder builder, String content) {
         if (content == null || content.isBlank()) {
             return;
@@ -81,9 +87,7 @@ public class InitialAgentPromptServiceImpl implements InitialAgentPromptService 
         builder.append(content.trim());
     }
 
-    /**
-     * 拼接用户偏好信息。
-     */
+    /* 拼接用户偏好信息。 */
     private void appendPreference(StringBuilder builder, Long userId, String key, String prefix) {
         userPreferenceService.getByUserIdAndKey(userId, key)
                 .map(UserPreferenceVo::getPrefValue)
