@@ -1204,22 +1204,19 @@ function handleError(error: unknown) {
 }
 
 .agent-transfer {
+  display: flex !important;
+  flex-direction: row;
+  flex-wrap: nowrap !important;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
   min-width: 0;
-
-  :deep(.el-transfer) {
-    display: flex !important;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: start;
-    gap: 12px;
-    width: 100%;
-    min-width: 0;
-  }
 
   :deep(.el-transfer-panel) {
     flex: 1 1 0;
-    width: 100%;
+    width: auto;
     min-width: 0;
+    max-width: none;
     border-radius: 18px;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.52)),
@@ -1238,6 +1235,7 @@ function handleError(error: unknown) {
     display: flex;
     flex: 0 0 auto;
     flex-direction: column;
+    align-self: center;
     gap: 10px;
     padding: 0 4px;
   }
