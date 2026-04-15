@@ -10,32 +10,44 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 鏂囨。鍒囩墖鏁版嵁璁块棶鎺ュ彛銆?
+ * 文档切片数据访问接口。
  */
 @Mapper
 public interface DocumentChunkMapper extends BaseMapper<DocumentChunk> {
 
     /**
-     * 鎸夋枃妗?ID 鏌ヨ鍒囩墖鍒楄〃銆?     *
-     * @param documentId 鏂囨。 ID銆?     * @return 鍒囩墖鍒楄〃銆?     */
+     * 按文档 ID 查询切片列表。
+     *
+     * @param documentId 文档 ID。
+     * @return 切片列表。
+     */
     @Select("select * from document_chunk where document_id = #{documentId} order by chunk_index asc")
     List<DocumentChunk> selectByDocumentId(@Param("documentId") Long documentId);
 
     /**
-     * 鎸夊悜閲?ID 鏌ヨ鍒囩墖銆?     *
-     * @param vectorId 鍚戦噺 ID銆?     * @return 鍖归厤鍒扮殑鍒囩墖锛屾湭鍛戒腑鏃惰繑鍥?null銆?     */
+     * 按向量 ID 查询切片。
+     *
+     * @param vectorId 向量 ID。
+     * @return 匹配到的切片，未命中时返回 null。
+     */
     @Select("select * from document_chunk where vector_id = #{vectorId} limit 1")
     DocumentChunk selectByVectorId(@Param("vectorId") String vectorId);
 
     /**
-     * 鎸夋枃妗?ID 鍒犻櫎鍒囩墖銆?     *
-     * @param documentId 鏂囨。 ID銆?     * @return 褰卞搷琛屾暟銆?     */
+     * 按文档 ID 删除切片。
+     *
+     * @param documentId 文档 ID。
+     * @return 影响行数。
+     */
     @Delete("delete from document_chunk where document_id = #{documentId}")
     int deleteByDocumentId(@Param("documentId") Long documentId);
 
     /**
-     * 鎸夊悜閲?ID 鍒犻櫎鍒囩墖銆?     *
-     * @param vectorId 鍚戦噺 ID銆?     * @return 褰卞搷琛屾暟銆?     */
+     * 按向量 ID 删除切片。
+     *
+     * @param vectorId 向量 ID。
+     * @return 影响行数。
+     */
     @Delete("delete from document_chunk where vector_id = #{vectorId}")
     int deleteByVectorId(@Param("vectorId") String vectorId);
 }

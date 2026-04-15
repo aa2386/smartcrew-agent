@@ -8,3 +8,4 @@ target/
 smartcrew-ui/node_modules/
 smartcrew-ui/dist/
 smartcrew-ui/.env
+uploads/

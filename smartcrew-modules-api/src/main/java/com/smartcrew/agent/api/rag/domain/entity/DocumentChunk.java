@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 鏂囨。鍒囩墖瀹炰綋锛岀敤浜庝繚瀛樺垏鐗囧唴瀹瑰拰鍚戦噺鍏宠仈銆?
+ * 文档切片实体，用于保存切片内容和向量关联。
  */
 @Data
 @TableName("document_chunk")
@@ -16,32 +16,32 @@ import lombok.EqualsAndHashCode;
 public class DocumentChunk extends BaseEntity {
 
     /**
-     * 涓婚敭 ID銆?
+     * 主键 ID。
      */
     @TableId(type = IdType.AUTO)
     private Long id;
     /**
-     * 鏂囨。 ID銆?
+     * 文档 ID。
      */
     private Long documentId;
     /**
-     * 鍒囩墖搴忓彿銆?
+     * 切片序号。
      */
     private Integer chunkIndex;
     /**
-     * 鍒囩墖鍐呭銆?
+     * 切片内容。
      */
     private String content;
     /**
-     * 鍚戦噺 ID銆?
+     * 向量 ID。
      */
     private String vectorId;
     /**
-     * Token 鏁伴噺銆?
+     * Token 数量。
      */
     private Integer tokenCount;
     /**
-     * 鍏冩暟鎹甝SON銆?
+     * 元数据 JSON。
      */
     private String metadata;
 }

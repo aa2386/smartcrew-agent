@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * Agent 涓庣煡璇嗗簱缁戝畾瀹炰綋銆?
+ * Agent 与知识库绑定实体。
  */
 @Data
 @TableName("agent_knowledge_binding")
@@ -16,16 +16,16 @@ import lombok.EqualsAndHashCode;
 public class AgentKnowledgeBinding extends BaseEntity {
 
     /**
-     * 涓婚敭 ID銆?
+     * 主键 ID。
      */
     @TableId(type = IdType.AUTO)
     private Long id;
     /**
-     * Agent 缂栫爜銆?
+     * Agent 编码。
      */
     private String agentCode;
     /**
-     * 鐭ヨ瘑搴撶紪鐮併€?
+     * 知识库编码。
      */
     private String baseCode;
 }

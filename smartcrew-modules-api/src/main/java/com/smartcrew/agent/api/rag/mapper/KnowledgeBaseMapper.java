@@ -9,20 +9,26 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 鐭ヨ瘑搴撴暟鎹闂帴鍙ｃ€?
+ * 知识库数据访问接口。
  */
 @Mapper
 public interface KnowledgeBaseMapper extends BaseMapper<KnowledgeBase> {
 
     /**
-     * 鎸夌紪鐮佹煡璇㈢煡璇嗗簱銆?     *
-     * @param baseCode 鐭ヨ瘑搴撶紪鐮併€?     * @return 鍖归厤璁板綍锛屾湭鍛戒腑鏃惰繑鍥?null銆?     */
+     * 按编码查询知识库。
+     *
+     * @param baseCode 知识库编码。
+     * @return 匹配记录，未命中时返回 null。
+     */
     @Select("select * from knowledge_base where base_code = #{baseCode} limit 1")
     KnowledgeBase selectByBaseCode(@Param("baseCode") String baseCode);
 
     /**
-     * 鎸?Agent 缂栫爜鏌ヨ缁戝畾鐨勭煡璇嗗簱銆?     *
-     * @param agentCode Agent 缂栫爜銆?     * @return 鐭ヨ瘑搴撳垪琛ㄣ€?     */
+     * 按 Agent 编码查询已绑定的知识库。
+     *
+     * @param agentCode Agent 编码。
+     * @return 知识库列表。
+     */
     @Select("""
             select kb.*
             from knowledge_base kb

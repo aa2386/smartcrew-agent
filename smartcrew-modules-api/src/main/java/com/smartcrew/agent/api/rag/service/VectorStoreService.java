@@ -7,37 +7,64 @@ import dev.langchain4j.store.embedding.EmbeddingMatch;
 import java.util.List;
 
 /**
- * 鍚戦噺瀛樺偍鏈嶅姟鎺ュ彛銆?
+ * 向量存储服务接口。
  */
 public interface VectorStoreService {
 
     /**
-     * 鍚戞寚瀹氬懡鍚嶇┖闂存坊鍔犲崟鏉″悜閲忋€?     *
-     * @param namespace 鍛藉悕绌洪棿銆?     * @param embedding 鍚戦噺鏁版嵁銆?     * @param segment 鍘熷鍒囩墖銆?     * @return 鍚戦噺 ID銆?     */
+     * 向指定命名空间添加单条向量。
+     *
+     * @param namespace 命名空间。
+     * @param embedding 向量数据。
+     * @param segment 原始切片。
+     * @return 向量 ID。
+     */
     String add(String namespace, Embedding embedding, TextSegment segment);
 
     /**
-     * 鍚戞寚瀹氬懡鍚嶇┖闂存壒閲忔坊鍔犲悜閲忋€?     *
-     * @param namespace 鍛藉悕绌洪棿銆?     * @param embeddings 鍚戦噺鍒楄〃銆?     * @param segments 鍘熷鍒囩墖鍒楄〃銆?     * @return 鍚戦噺 ID 鍒楄〃銆?     */
+     * 向指定命名空间批量添加向量。
+     *
+     * @param namespace 命名空间。
+     * @param embeddings 向量列表。
+     * @param segments 原始切片列表。
+     * @return 向量 ID 列表。
+     */
     List<String> addAll(String namespace, List<Embedding> embeddings, List<TextSegment> segments);
 
     /**
-     * 浠庢寚瀹氬懡鍚嶇┖闂寸Щ闄ゅ崟鏉″悜閲忋€?     *
-     * @param namespace 鍛藉悕绌洪棿銆?     * @param id 鍚戦噺 ID銆?     */
+     * 从指定命名空间移除单条向量。
+     *
+     * @param namespace 命名空间。
+     * @param id 向量 ID。
+     */
     void remove(String namespace, String id);
 
     /**
-     * 浠庢寚瀹氬懡鍚嶇┖闂存壒閲忕Щ闄ゅ悜閲忋€?     *
-     * @param namespace 鍛藉悕绌洪棿銆?     * @param ids 鍚戦噺 ID 鍒楄〃銆?     */
+     * 从指定命名空间批量移除向量。
+     *
+     * @param namespace 命名空间。
+     * @param ids 向量 ID 列表。
+     */
     void removeAll(String namespace, List<String> ids);
 
     /**
-     * 鍦ㄦ寚瀹氬懡鍚嶇┖闂翠腑鎼滅储鐩稿叧鍒囩墖銆?     *
-     * @param namespace 鍛藉悕绌洪棿銆?     * @param queryEmbedding 鏌ヨ鍚戦噺銆?     * @param maxResults 杩斿洖鏁伴噺銆?     * @return 鎼滅储缁撴灉銆?     */
+     * 在指定命名空间中搜索相关切片。
+     *
+     * @param namespace 命名空间。
+     * @param queryEmbedding 查询向量。
+     * @param maxResults 返回数量。
+     * @return 搜索结果。
+     */
     List<EmbeddingMatch<TextSegment>> search(String namespace, Embedding queryEmbedding, int maxResults);
 
     /**
-     * 鍦ㄦ寚瀹氬懡鍚嶇┖闂翠腑鎸夐槇鍊兼悳绱㈢浉鍏冲垏鐗囥€?     *
-     * @param namespace 鍛藉悕绌洪棿銆?     * @param queryEmbedding 鏌ヨ鍚戦噺銆?     * @param maxResults 杩斿洖鏁伴噺銆?     * @param minScore 鏈€浣庣浉浼煎害銆?     * @return 鎼滅储缁撴灉銆?     */
+     * 在指定命名空间中按阈值搜索相关切片。
+     *
+     * @param namespace 命名空间。
+     * @param queryEmbedding 查询向量。
+     * @param maxResults 返回数量。
+     * @param minScore 最低相似度。
+     * @return 搜索结果。
+     */
     List<EmbeddingMatch<TextSegment>> search(String namespace, Embedding queryEmbedding, int maxResults, double minScore);
 }

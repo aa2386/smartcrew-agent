@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 鐭ヨ瘑鏂囨。瀹炰綋锛岀敤浜庤拷韪枃妗ｅ勭悊鐘舵€佷笌鍏冩暟鎹€?
+ * 知识文档实体，用于追踪文档处理状态与元数据。
  */
 @Data
 @TableName("knowledge_document")
@@ -16,44 +16,44 @@ import lombok.EqualsAndHashCode;
 public class KnowledgeDocument extends BaseEntity {
 
     /**
-     * 涓婚敭 ID銆?
+     * 主键 ID。
      */
     @TableId(type = IdType.AUTO)
     private Long id;
     /**
-     * 鐭ヨ瘑搴?ID銆?
+     * 知识库 ID。
      */
     private Long baseId;
     /**
-     * 鏂囨。缂栫爜銆?
+     * 文档编码。
      */
     private String documentCode;
     /**
-     * 鏂囨。鍚嶇О銆?
+     * 文档名称。
      */
     private String documentName;
     /**
-     * 瀛樺偍璺緞銆?
+     * 存储路径。
      */
     private String filePath;
     /**
-     * 鏂囦欢绫诲瀷銆?
+     * 文件类型。
      */
     private String fileType;
     /**
-     * 鏂囦欢澶у皬銆?
+     * 文件大小。
      */
     private Long fileSize;
     /**
-     * 澶勭悊鐘舵€併€?
+     * 处理状态。
      */
     private String status;
     /**
-     * 鍒囩墖鏁伴噺銆?
+     * 切片数量。
      */
     private Integer chunkCount;
     /**
-     * 閿欒淇℃伅銆?
+     * 错误信息。
      */
     private String errorMessage;
 }

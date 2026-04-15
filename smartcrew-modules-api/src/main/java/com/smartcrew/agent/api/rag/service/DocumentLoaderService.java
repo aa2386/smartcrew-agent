@@ -5,22 +5,32 @@ import dev.langchain4j.data.document.Document;
 import java.nio.file.Path;
 
 /**
- * 鏂囨。鍔犺浇鏈嶅姟鎺ュ彛銆?
+ * 文档加载服务接口。
  */
 public interface DocumentLoaderService {
 
     /**
-     * 鎸夋枃浠惰矾寰勫姞杞芥枃妗ｃ€?     *
-     * @param filePath 鏂囦欢璺緞銆?     * @return 鏂囨。瀵硅薄銆?     */
+     * 按文件路径加载文档。
+     *
+     * @param filePath 文件路径。
+     * @return 文档对象。
+     */
     Document loadDocument(Path filePath);
 
     /**
-     * 鎸囧畾鏂囦欢绫诲瀷鍔犺浇鏂囨。銆?     *
-     * @param filePath 鏂囦欢璺緞銆?     * @param fileType 鏂囦欢绫诲瀷銆?     * @return 鏂囨。瀵硅薄銆?     */
+     * 指定文件类型加载文档。
+     *
+     * @param filePath 文件路径。
+     * @param fileType 文件类型。
+     * @return 文档对象。
+     */
     Document loadDocument(Path filePath, String fileType);
 
     /**
-     * 鍒ゆ柇鏄惁鏄庣‘鏀寔褰撳墠鏂囦欢绫诲瀷銆?     *
-     * @param fileType 鏂囦欢绫诲瀷銆?     * @return 鏀寔缁撴灉銆?     */
+     * 判断是否明确支持当前文件类型。
+     *
+     * @param fileType 文件类型。
+     * @return 支持结果。
+     */
     boolean supports(String fileType);
 }

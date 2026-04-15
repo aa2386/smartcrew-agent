@@ -6,22 +6,30 @@ import dev.langchain4j.data.segment.TextSegment;
 import java.util.List;
 
 /**
- * 宓屽叆鏈嶅姟鎺ュ彛銆?
+ * 嵌入服务接口。
  */
 public interface EmbeddingService {
 
     /**
-     * 瀵瑰崟鏉℃枃鏈繘琛屽悜閲忓寲銆?     *
-     * @param text 鏂囨湰鍐呭銆?     * @return 鍚戦噺缁撴灉銆?     */
+     * 对单条文本进行向量化。
+     *
+     * @param text 文本内容。
+     * @return 向量结果。
+     */
     Embedding embed(String text);
 
     /**
-     * 瀵规壒閲忓垏鐗囪繘琛屽悜閲忓寲銆?     *
-     * @param segments 鍒囩墖鍒楄〃銆?     * @return 鍚戦噺鍒楄〃銆?     */
+     * 对批量切片进行向量化。
+     *
+     * @param segments 切片列表。
+     * @return 向量列表。
+     */
     List<Embedding> embedAll(List<TextSegment> segments);
 
     /**
-     * 杩斿洖褰撳墠浣跨敤鐨勫祵鍏ユā鍨嬪悕绉般€?     *
-     * @return 妯″瀷鍚嶇О銆?     */
+     * 返回当前使用的嵌入模型名称。
+     *
+     * @return 模型名称。
+     */
     String modelName();
 }

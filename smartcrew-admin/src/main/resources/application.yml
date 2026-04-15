@@ -49,7 +49,7 @@ smartcrew:
     provider: dashscope
     model: qwen-plus
   rag:
-    enabled: false
+    enabled: true
     embedding:
       provider: dashscope
       model: text-embedding-v3

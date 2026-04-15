@@ -10,20 +10,26 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * Agent 鐭ヨ瘑搴撶粦瀹氭暟鎹闂帴鍙ｃ€?
+ * Agent 知识库绑定数据访问接口。
  */
 @Mapper
 public interface AgentKnowledgeBindingMapper extends BaseMapper<AgentKnowledgeBinding> {
 
     /**
-     * 鎸?Agent 缂栫爜鏌ヨ缁戝畾璁板綍銆?     *
-     * @param agentCode Agent 缂栫爜銆?     * @return 缁戝畾鍒楄〃銆?     */
+     * 按 Agent 编码查询绑定记录。
+     *
+     * @param agentCode Agent 编码。
+     * @return 绑定列表。
+     */
     @Select("select * from agent_knowledge_binding where agent_code = #{agentCode} order by id asc")
     List<AgentKnowledgeBinding> selectByAgentCode(@Param("agentCode") String agentCode);
 
     /**
-     * 鎸?Agent 缂栫爜鍒犻櫎缁戝畾璁板綍銆?     *
-     * @param agentCode Agent 缂栫爜銆?     * @return 褰卞搷琛屾暟銆?     */
+     * 按 Agent 编码删除绑定记录。
+     *
+     * @param agentCode Agent 编码。
+     * @return 影响行数。
+     */
     @Delete("delete from agent_knowledge_binding where agent_code = #{agentCode}")
     int deleteByAgentCode(@Param("agentCode") String agentCode);
 }

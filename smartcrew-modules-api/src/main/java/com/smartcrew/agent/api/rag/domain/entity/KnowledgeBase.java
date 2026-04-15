@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 鐭ヨ瘑搴撳疄浣擄紝鎻忚堪 RAG 鐭ヨ瘑搴撶殑鍏冩暟鎹€?
+ * 知识库实体，描述 RAG 知识库的元数据。
  */
 @Data
 @TableName("knowledge_base")
@@ -16,32 +16,32 @@ import lombok.EqualsAndHashCode;
 public class KnowledgeBase extends BaseEntity {
 
     /**
-     * 涓婚敭 ID銆?
+     * 主键 ID。
      */
     @TableId(type = IdType.AUTO)
     private Long id;
     /**
-     * 鐭ヨ瘑搴撶紪鐮併€?
+     * 知识库编码。
      */
     private String baseCode;
     /**
-     * 鐭ヨ瘑搴撳悕绉般€?
+     * 知识库名称。
      */
     private String baseName;
     /**
-     * 鎻忚堪淇℃伅銆?
+     * 描述信息。
      */
     private String description;
     /**
-     * 宓屽叆妯″瀷鍚嶇О銆?
+     * 嵌入模型名称。
      */
     private String embeddingModel;
     /**
-     * 鍚戦噺鍛藉悕绌洪棿銆?
+     * 向量命名空间。
      */
     private String collectionName;
     /**
-     * 鏄惁鍚敤銆?
+     * 是否启用。
      */
     private Boolean enabled;
 }

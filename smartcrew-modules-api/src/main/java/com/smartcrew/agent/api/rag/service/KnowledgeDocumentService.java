@@ -7,37 +7,56 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 鐭ヨ瘑鏂囨。鏈嶅姟鎺ュ彛銆?
+ * 知识文档服务接口。
  */
 public interface KnowledgeDocumentService {
 
     /**
-     * 涓婁紶鐭ヨ瘑鏂囨。銆?     *
-     * @param baseId 鐭ヨ瘑搴?ID銆?     * @param originalFilename 鍘熷鏂囦欢鍚嶃€?     * @param inputStream 鏂囦欢杈撳叆娴併€?     * @param fileSize 鏂囦欢澶у皬銆?     * @return 鏂囨。璁板綍銆?     */
+     * 上传知识文档。
+     *
+     * @param baseId 知识库 ID。
+     * @param originalFilename 原始文件名。
+     * @param inputStream 文件输入流。
+     * @param fileSize 文件大小。
+     * @return 文档记录。
+     */
     KnowledgeDocument upload(Long baseId, String originalFilename, InputStream inputStream, long fileSize);
 
     /**
-     * 鎸夋枃妗?ID 鎵ц鏂囨。澶勭悊銆?     *
-     * @param documentId 鏂囨。 ID銆?     * @return 澶勭悊鍚庣殑鏂囨。璁板綍銆?     */
+     * 按文档 ID 执行文档处理。
+     *
+     * @param documentId 文档 ID。
+     * @return 处理后的文档记录。
+     */
     KnowledgeDocument processDocument(Long documentId);
 
     /**
-     * 鍒犻櫎鏂囨。鍜屽叧鑱斿垏鐗囥€?     *
-     * @param documentId 鏂囨。 ID銆?     */
+     * 删除文档和关联切片。
+     *
+     * @param documentId 文档 ID。
+     */
     void deleteDocument(Long documentId);
 
     /**
-     * 鎸?ID 鏌ヨ鏂囨。銆?     *
-     * @param documentId 鏂囨。 ID銆?     * @return 鍖归厤缁撴灉銆?     */
+     * 按 ID 查询文档。
+     *
+     * @param documentId 文档 ID。
+     * @return 匹配结果。
+     */
     Optional<KnowledgeDocument> findById(Long documentId);
 
     /**
-     * 鎸夌煡璇嗗簱 ID 鏌ヨ鏂囨。鍒楄〃銆?     *
-     * @param baseId 鐭ヨ瘑搴?ID銆?     * @return 鏂囨。鍒楄〃銆?     */
+     * 按知识库 ID 查询文档列表。
+     *
+     * @param baseId 知识库 ID。
+     * @return 文档列表。
+     */
     List<KnowledgeDocument> findByBaseId(Long baseId);
 
     /**
-     * 鏌ヨ寰呭鐞嗘枃妗ｅ垪琛ㄣ€?     *
-     * @return 鏂囨。鍒楄〃銆?     */
+     * 查询待处理文档列表。
+     *
+     * @return 文档列表。
+     */
     List<KnowledgeDocument> findPendingDocuments();
 }
