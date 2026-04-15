@@ -209,7 +209,7 @@
                 type="info"
                 :closable="false"
                 show-icon
-                title="上传文档后会自动异步处理，页面会在存在 pending / processing 文档时自动刷新。"
+                title="上传文档后会自动异步处理，页面可通过“刷新”按钮手动查看最新状态。"
               />
 
               <div class="upload-shell">
@@ -719,29 +719,31 @@ function syncSelectedDocument() {
 }
 
 function syncDocumentPolling() {
-  const hasActive = documents.value.some((item) => item.status === 'pending' || item.status === 'processing')
-  if (!hasActive) {
-    stopDocumentPolling()
-    return
-  }
-  if (pollingTimer.value) {
-    return
-  }
-  pollingTimer.value = window.setInterval(async () => {
-    if (pollingInFlight.value || !selectedBase.value?.baseCode) {
-      return
-    }
-    pollingInFlight.value = true
-    try {
-      await loadDocuments()
-      if (activeTab.value === 'chunks' && selectedDocumentCode.value) {
-        await loadChunks()
-      }
-      await loadKnowledgeBases(selectedBase.value.baseCode)
-    } finally {
-      pollingInFlight.value = false
-    }
-  }, 3000)
+  // const hasActive = documents.value.some((item) => item.status === 'pending' || item.status === 'processing')
+  // if (!hasActive) {
+  //   stopDocumentPolling()
+  //   return
+  // }
+  // if (pollingTimer.value) {
+  //   return
+  // }
+  // pollingTimer.value = window.setInterval(async () => {
+  //   if (pollingInFlight.value || !selectedBase.value?.baseCode) {
+  //     return
+  //   }
+  //   pollingInFlight.value = true
+  //   try {
+  //     await loadDocuments()
+  //     if (activeTab.value === 'chunks' && selectedDocumentCode.value) {
+  //       await loadChunks()
+  //     }
+  //     await loadKnowledgeBases(selectedBase.value.baseCode)
+  //   } finally {
+  //     pollingInFlight.value = false
+  //   }
+  // }, 3000)
+  // 暂时关闭自动轮询，保留方法供后续恢复。
+  stopDocumentPolling()
 }
 
 function stopDocumentPolling() {
