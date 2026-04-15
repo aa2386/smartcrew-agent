@@ -93,7 +93,8 @@
       <template v-else>
         <el-tabs v-model="activeTab" class="knowledge-tabs">
           <el-tab-pane label="基础信息" name="basic">
-            <div class="detail-scroll">
+            <div class="tab-pane-layout">
+              <div class="detail-scroll">
               <div class="stats-grid">
                 <div class="stat-card glass-panel">
                   <span class="muted">文档数</span>
@@ -199,18 +200,20 @@
                   </el-button>
                 </div>
               </el-form>
+              </div>
             </div>
           </el-tab-pane>
 
           <el-tab-pane label="文档管理" name="documents">
-            <div class="detail-scroll">
-              <el-alert
-                class="document-alert"
-                type="info"
-                :closable="false"
-                show-icon
-                title="上传文档后会自动异步处理，页面可通过“刷新”按钮手动查看最新状态。"
-              />
+            <div class="tab-pane-layout">
+              <div class="detail-scroll">
+                <el-alert
+                  class="document-alert"
+                  type="info"
+                  :closable="false"
+                  show-icon
+                  title="上传文档后会自动异步处理，页面可通过“刷新”按钮手动查看最新状态。"
+                />
 
               <div class="upload-shell">
                 <el-upload
@@ -290,46 +293,51 @@
                 </el-table>
               </div>
 
-              <div class="document-foot">
-                <el-pagination
-                  :current-page="documentPager.pageNum"
-                  :page-size="documentPager.pageSize"
-                  :page-sizes="pageSizeOptions"
-                  :total="documentPager.total"
-                  layout="total, sizes, prev, pager, next, jumper"
-                  @current-change="handleDocumentPageChange"
-                  @size-change="handleDocumentSizeChange"
-                />
-                <p v-if="currentDocumentError" class="error-text">最近失败原因：{{ currentDocumentError }}</p>
+              </div>
+
+              <div class="detail-footer">
+                <div class="document-foot">
+                  <el-pagination
+                    :current-page="documentPager.pageNum"
+                    :page-size="documentPager.pageSize"
+                    :page-sizes="pageSizeOptions"
+                    :total="documentPager.total"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    @current-change="handleDocumentPageChange"
+                    @size-change="handleDocumentSizeChange"
+                  />
+                  <p v-if="currentDocumentError" class="error-text">最近失败原因：{{ currentDocumentError }}</p>
+                </div>
               </div>
             </div>
           </el-tab-pane>
 
           <el-tab-pane label="切片查看" name="chunks">
-            <div class="detail-scroll">
-              <div class="chunk-toolbar">
-                <el-select
-                  v-model="selectedDocumentCode"
-                  filterable
-                  placeholder="请选择文档"
-                  @change="handleChunkDocumentChange"
-                >
-                  <el-option
-                    v-for="item in documents"
-                    :key="item.documentCode"
-                    :label="`${item.documentName} / ${item.documentCode}`"
-                    :value="item.documentCode"
+            <div class="tab-pane-layout">
+              <div class="detail-scroll">
+                <div class="chunk-toolbar">
+                  <el-select
+                    v-model="selectedDocumentCode"
+                    filterable
+                    placeholder="请选择文档"
+                    @change="handleChunkDocumentChange"
+                  >
+                    <el-option
+                      v-for="item in documents"
+                      :key="item.documentCode"
+                      :label="`${item.documentName} / ${item.documentCode}`"
+                      :value="item.documentCode"
+                    />
+                  </el-select>
+                  <el-input
+                    v-model="chunkFilters.keyword"
+                    clearable
+                    placeholder="按内容、向量 ID 或 metadata 搜索"
+                    @keyup.enter="handleChunkQuery"
                   />
-                </el-select>
-                <el-input
-                  v-model="chunkFilters.keyword"
-                  clearable
-                  placeholder="按内容、向量 ID 或 metadata 搜索"
-                  @keyup.enter="handleChunkQuery"
-                />
-                <el-button :disabled="!selectedDocumentCode" @click="handleChunkQuery">查询</el-button>
-                <el-button plain :disabled="!selectedDocumentCode" @click="resetChunkFilters">重置</el-button>
-              </div>
+                  <el-button :disabled="!selectedDocumentCode" @click="handleChunkQuery">查询</el-button>
+                  <el-button plain :disabled="!selectedDocumentCode" @click="resetChunkFilters">重置</el-button>
+                </div>
 
               <div class="table-shell">
                 <el-table :data="chunks" stripe height="100%">
@@ -345,37 +353,43 @@
                 </el-table>
               </div>
 
-              <el-pagination
-                :current-page="chunkPager.pageNum"
-                :page-size="chunkPager.pageSize"
-                :page-sizes="pageSizeOptions"
-                :total="chunkPager.total"
-                layout="total, sizes, prev, pager, next, jumper"
-                @current-change="handleChunkPageChange"
-                @size-change="handleChunkSizeChange"
-              />
+              </div>
+
+              <div class="detail-footer">
+                <el-pagination
+                  :current-page="chunkPager.pageNum"
+                  :page-size="chunkPager.pageSize"
+                  :page-sizes="pageSizeOptions"
+                  :total="chunkPager.total"
+                  layout="total, sizes, prev, pager, next, jumper"
+                  @current-change="handleChunkPageChange"
+                  @size-change="handleChunkSizeChange"
+                />
+              </div>
             </div>
           </el-tab-pane>
 
           <el-tab-pane label="接入 Agent" name="agents">
-            <div class="detail-scroll">
-              <div class="binding-head">
-                <div>
-                  <h4>管理当前知识库可接入的 Agent</h4>
-                  <p class="muted">右侧为已绑定 Agent，保存后会整体替换绑定关系。</p>
+            <div class="tab-pane-layout">
+              <div class="detail-scroll">
+                <div class="binding-head">
+                  <div>
+                    <h4>管理当前知识库可接入的 Agent</h4>
+                    <p class="muted">右侧为已绑定 Agent，保存后会整体替换绑定关系。</p>
+                  </div>
+                  <el-button type="primary" :loading="savingBindings" @click="saveAgentBindings">保存绑定</el-button>
                 </div>
-                <el-button type="primary" :loading="savingBindings" @click="saveAgentBindings">保存绑定</el-button>
-              </div>
 
-              <el-transfer
-                v-model="bindingTargetKeys"
-                class="agent-transfer"
-                filterable
-                :data="transferData"
-                :titles="['可选 Agent', '已绑定 Agent']"
-                :props="{ key: 'key', label: 'label', disabled: 'disabled' }"
-                filter-placeholder="搜索 Agent"
-              />
+                <el-transfer
+                  v-model="bindingTargetKeys"
+                  class="agent-transfer"
+                  filterable
+                  :data="transferData"
+                  :titles="['可选 Agent', '已绑定 Agent']"
+                  :props="{ key: 'key', label: 'label', disabled: 'disabled' }"
+                  filter-placeholder="搜索 Agent"
+                />
+              </div>
             </div>
           </el-tab-pane>
         </el-tabs>
@@ -1073,6 +1087,24 @@ function handleError(error: unknown) {
   padding-right: 6px;
 }
 
+.tab-pane-layout {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.detail-footer {
+  flex-shrink: 0;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.44);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.18)),
+    transparent;
+}
+
 .filter-bar,
 .chunk-toolbar {
   display: grid;
@@ -1172,8 +1204,22 @@ function handleError(error: unknown) {
 }
 
 .agent-transfer {
+  min-width: 0;
+
+  :deep(.el-transfer) {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: start;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+  }
+
   :deep(.el-transfer-panel) {
-    width: min(100%, 360px);
+    flex: 1 1 0;
+    width: 100%;
+    min-width: 0;
     border-radius: 18px;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.52)),
@@ -1187,6 +1233,18 @@ function handleError(error: unknown) {
   :deep(.el-transfer-panel__body) {
     height: 380px;
   }
+
+  :deep(.el-transfer__buttons) {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 4px;
+  }
+
+  :deep(.el-transfer__buttons .el-button) {
+    margin: 0;
+  }
 }
 
 .knowledge-tabs {
@@ -1194,15 +1252,20 @@ function handleError(error: unknown) {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 
   :deep(.el-tabs__content) {
     flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
 
   :deep(.el-tab-pane) {
-    height: 100%;
+    display: flex;
+    flex: 1;
     min-height: 0;
+    height: 100%;
+    overflow: hidden;
   }
 }
 
@@ -1268,15 +1331,5 @@ function handleError(error: unknown) {
     align-items: stretch;
   }
 
-  .agent-transfer {
-    :deep(.el-transfer) {
-      display: grid;
-      gap: 12px;
-    }
-
-    :deep(.el-transfer-panel) {
-      width: 100%;
-    }
-  }
 }
 </style>

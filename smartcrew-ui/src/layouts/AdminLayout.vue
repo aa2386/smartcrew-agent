@@ -1,25 +1,29 @@
 <template>
   <div class="page-shell admin-shell">
     <aside class="glass-panel admin-sidebar">
-      <div class="brand-block">
-        <span class="brand-badge">SmartCrew</span>
-        <h1>后台管理台</h1>
-        <p>统一管理用户、Agent、Prompt 与消息审计。</p>
-      </div>
+      <div class="admin-sidebar-main">
+        <div class="brand-block">
+          <span class="brand-badge">SmartCrew</span>
+          <h1>后台管理台</h1>
+          <p>统一管理用户、Agent、Prompt 与消息审计。</p>
+        </div>
 
-      <el-menu
-        class="admin-menu"
-        :default-active="route.path"
-        router
-        background-color="transparent"
-        text-color="#0f172a"
-        active-text-color="#0369a1"
-      >
-        <el-menu-item v-for="item in menuItems" :key="item.path" :index="item.path">
-          <el-icon><component :is="item.icon" /></el-icon>
-          <span>{{ item.label }}</span>
-        </el-menu-item>
-      </el-menu>
+        <div class="admin-menu-scroll">
+          <el-menu
+            class="admin-menu"
+            :default-active="route.path"
+            router
+            background-color="transparent"
+            text-color="#0f172a"
+            active-text-color="#0369a1"
+          >
+            <el-menu-item v-for="item in menuItems" :key="item.path" :index="item.path">
+              <el-icon><component :is="item.icon" /></el-icon>
+              <span>{{ item.label }}</span>
+            </el-menu-item>
+          </el-menu>
+        </div>
+      </div>
 
       <div class="sidebar-footer">
         <el-button plain @click="router.push('/')">返回公众页</el-button>
@@ -96,11 +100,18 @@ async function logout() {
 .admin-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 24px;
   border-radius: 28px;
   padding: 24px;
   min-height: 0;
   overflow: hidden;
+}
+
+.admin-sidebar-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 0;
 }
 
 .brand-block {
@@ -133,13 +144,26 @@ async function logout() {
 }
 
 .admin-menu {
+  min-height: min-content;
   border-right: none;
 }
 
+.admin-menu-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 6px;
+}
+
 .sidebar-footer {
-  margin-top: auto;
   display: grid;
   gap: 12px;
+  flex-shrink: 0;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.24)),
+    transparent;
 }
 
 .admin-main {
@@ -206,6 +230,11 @@ async function logout() {
   .admin-main,
   .admin-content {
     overflow: visible;
+  }
+
+  .admin-menu-scroll {
+    overflow: visible;
+    padding-right: 0;
   }
 }
 </style>
