@@ -159,74 +159,74 @@ CREATE TABLE agent_prompt_binding (
     INDEX idx_agent_prompt_order (agent_code, sort_order)
 ) COMMENT='Agent prompt binding';
 
-CREATE TABLE knowledge_base (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '涓婚敭 ID',
-    base_code VARCHAR(64) NOT NULL COMMENT '鐭ヨ瘑搴撶紪鐮?',
-    base_name VARCHAR(128) NOT NULL COMMENT '鐭ヨ瘑搴撳悕绉?',
-    description VARCHAR(512) NULL COMMENT '鎻忚堪淇℃伅',
-    embedding_model VARCHAR(128) NOT NULL COMMENT '宓屽叆妯″瀷鍚嶇О',
-    collection_name VARCHAR(128) NOT NULL COMMENT '鍚戦噺鍛藉悕绌洪棿',
-    enabled TINYINT(1) NOT NULL DEFAULT 1 COMMENT '鏄惁鍚敤',
-    create_dept BIGINT NULL COMMENT '鍒涘缓閮ㄩ棬',
-    create_by BIGINT NULL COMMENT '鍒涘缓浜?',
-    create_time DATETIME NULL COMMENT '鍒涘缓鏃堕棿',
-    update_by BIGINT NULL COMMENT '鏇存柊浜?',
-    update_time DATETIME NULL COMMENT '鏇存柊鏃堕棿',
-    remark VARCHAR(255) NULL COMMENT '澶囨敞淇℃伅',
+CREATE TABLE IF NOT EXISTS knowledge_base (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    base_code VARCHAR(64) NOT NULL COMMENT '知识库编码',
+    base_name VARCHAR(128) NOT NULL COMMENT '知识库名称',
+    description VARCHAR(512) NULL COMMENT '描述信息',
+    embedding_model VARCHAR(128) NOT NULL COMMENT '嵌入模型名称',
+    collection_name VARCHAR(128) NOT NULL COMMENT 'Chroma 集合名称',
+    enabled TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
     CONSTRAINT uk_base_code UNIQUE (base_code)
-) COMMENT='鐭ヨ瘑搴撹〃';
+    ) COMMENT='知识库表';
 
-CREATE TABLE knowledge_document (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '涓婚敭 ID',
-    base_id BIGINT NOT NULL COMMENT '鐭ヨ瘑搴?ID',
-    document_code VARCHAR(64) NOT NULL COMMENT '鏂囨。缂栫爜',
-    document_name VARCHAR(256) NOT NULL COMMENT '鏂囨。鍚嶇О',
-    file_path VARCHAR(512) NOT NULL COMMENT '鏂囦欢璺緞',
-    file_type VARCHAR(32) NULL COMMENT '鏂囦欢绫诲瀷',
-    file_size BIGINT NULL COMMENT '鏂囦欢澶у皬',
-    status VARCHAR(32) NOT NULL DEFAULT 'pending' COMMENT '澶勭悊鐘舵€?',
-    chunk_count INT NOT NULL DEFAULT 0 COMMENT '鍒囩墖鏁伴噺',
-    error_message VARCHAR(512) NULL COMMENT '閿欒淇℃伅',
-    create_dept BIGINT NULL COMMENT '鍒涘缓閮ㄩ棬',
-    create_by BIGINT NULL COMMENT '鍒涘缓浜?',
-    create_time DATETIME NULL COMMENT '鍒涘缓鏃堕棿',
-    update_by BIGINT NULL COMMENT '鏇存柊浜?',
-    update_time DATETIME NULL COMMENT '鏇存柊鏃堕棿',
-    remark VARCHAR(255) NULL COMMENT '澶囨敞淇℃伅',
+CREATE TABLE IF NOT EXISTS knowledge_document (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    base_id BIGINT NOT NULL COMMENT '知识库 ID',
+    document_code VARCHAR(64) NOT NULL COMMENT '文档编码',
+    document_name VARCHAR(256) NOT NULL COMMENT '文档名称',
+    file_path VARCHAR(512) NULL COMMENT '文件路径',
+    file_type VARCHAR(32) NULL COMMENT '文件类型',
+    file_size BIGINT NULL COMMENT '文件大小(字节)',
+    status VARCHAR(32) NOT NULL DEFAULT 'pending' COMMENT '处理状态: pending/processing/completed/failed',
+    chunk_count INT NOT NULL DEFAULT 0 COMMENT '切片数量',
+    error_message VARCHAR(512) NULL COMMENT '错误信息',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
     CONSTRAINT uk_document_code UNIQUE (document_code),
-    INDEX idx_knowledge_document_base_id (base_id)
-) COMMENT='鐭ヨ瘑鏂囨。琛?';
+    INDEX idx_base_id (base_id)
+    ) COMMENT='知识文档表';
 
-CREATE TABLE document_chunk (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '涓婚敭 ID',
-    document_id BIGINT NOT NULL COMMENT '鏂囨。 ID',
-    chunk_index INT NOT NULL COMMENT '鍒囩墖搴忓彿',
-    content TEXT NOT NULL COMMENT '鍒囩墖鍐呭',
-    vector_id VARCHAR(128) NULL COMMENT '鍚戦噺 ID',
-    token_count INT NULL COMMENT 'Token 鏁伴噺',
-    metadata JSON NULL COMMENT '鍏冩暟鎹?JSON',
-    create_dept BIGINT NULL COMMENT '鍒涘缓閮ㄩ棬',
-    create_by BIGINT NULL COMMENT '鍒涘缓浜?',
-    create_time DATETIME NULL COMMENT '鍒涘缓鏃堕棿',
-    update_by BIGINT NULL COMMENT '鏇存柊浜?',
-    update_time DATETIME NULL COMMENT '鏇存柊鏃堕棿',
-    remark VARCHAR(255) NULL COMMENT '澶囨敞淇℃伅',
-    INDEX idx_document_chunk_document_id (document_id),
-    INDEX idx_document_chunk_vector_id (vector_id)
-) COMMENT='鏂囨。鍒囩墖琛?';
+CREATE TABLE IF NOT EXISTS document_chunk (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    document_id BIGINT NOT NULL COMMENT '文档 ID',
+    chunk_index INT NOT NULL COMMENT '切片序号',
+    content TEXT NOT NULL COMMENT '切片内容',
+    vector_id VARCHAR(128) NULL COMMENT 'Chroma 向量 ID',
+    token_count INT NULL COMMENT 'Token 数量',
+    metadata JSON NULL COMMENT '元数据(JSON格式)',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
+    INDEX idx_document_id (document_id),
+    INDEX idx_vector_id (vector_id)
+    ) COMMENT='文档切片表';
 
-CREATE TABLE agent_knowledge_binding (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '涓婚敭 ID',
-    agent_code VARCHAR(64) NOT NULL COMMENT 'Agent 缂栫爜',
-    base_code VARCHAR(64) NOT NULL COMMENT '鐭ヨ瘑搴撶紪鐮?',
-    create_dept BIGINT NULL COMMENT '鍒涘缓閮ㄩ棬',
-    create_by BIGINT NULL COMMENT '鍒涘缓浜?',
-    create_time DATETIME NULL COMMENT '鍒涘缓鏃堕棿',
-    update_by BIGINT NULL COMMENT '鏇存柊浜?',
-    update_time DATETIME NULL COMMENT '鏇存柊鏃堕棿',
-    remark VARCHAR(255) NULL COMMENT '澶囨敞淇℃伅',
+CREATE TABLE IF NOT EXISTS agent_knowledge_binding (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    agent_code VARCHAR(64) NOT NULL COMMENT 'Agent 编码',
+    base_code VARCHAR(64) NOT NULL COMMENT '知识库编码',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
     CONSTRAINT uk_agent_knowledge UNIQUE (agent_code, base_code)
-) COMMENT='Agent 鐭ヨ瘑搴撶粦瀹氳〃';
+    ) COMMENT='Agent 知识库绑定表';
 
 CREATE TABLE llm_conversation_session (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
