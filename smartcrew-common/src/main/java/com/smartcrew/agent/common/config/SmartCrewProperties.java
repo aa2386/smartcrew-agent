@@ -161,6 +161,19 @@ public class SmartCrewProperties {
          * 请求超时秒数。
          */
         private int timeoutSeconds = 60;
+        /**
+         * Chroma API 版本（V1 或 V2）。
+         * Chroma 0.7.0+ 仅支持 V2 API。
+         */
+        private String apiVersion = "V2";
+        /**
+         * 租户名称（V2 API 必需）。
+         */
+        private String tenantName = "default_tenant";
+        /**
+         * 数据库名称（V2 API 必需）。
+         */
+        private String databaseName = "default_database";
     }
 
     /**

@@ -7,6 +7,7 @@ import com.smartcrew.agent.common.util.StringUtils;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
+import dev.langchain4j.store.embedding.chroma.ChromaApiVersion;
 import dev.langchain4j.store.embedding.chroma.ChromaEmbeddingStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,11 +87,19 @@ public class ChromaVectorStoreServiceImpl implements VectorStoreService {
     /* 创建指定命名空间的 Chroma 存储实例。 */
     private ChromaEmbeddingStore createStore(String namespace) {
         SmartCrewProperties.Chroma chroma = properties.getRag().getVectorStore().getChroma();
-        log.info("初始化 Chroma 向量命名空间: {}", namespace);
+        log.info("初始化 Chroma 向量命名空间: {}, API版本: {}", namespace, chroma.getApiVersion());
+        
+        ChromaApiVersion apiVersion = "V1".equalsIgnoreCase(chroma.getApiVersion()) 
+                ? ChromaApiVersion.V1 
+                : ChromaApiVersion.V2;
+        
         return ChromaEmbeddingStore.builder()
                 .baseUrl(chroma.getBaseUrl())
                 .collectionName(namespace)
                 .timeout(Duration.ofSeconds(chroma.getTimeoutSeconds()))
+                .apiVersion(apiVersion)
+                .tenantName(chroma.getTenantName())
+                .databaseName(chroma.getDatabaseName())
                 .build();
     }
 
