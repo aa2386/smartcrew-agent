@@ -157,4 +157,61 @@ public String buildSystemPrompt(String agentCode, Long userId) {
 
 ---
 
-## 4. 后续扩展预留 (TODO)
+## 4. RAG 基础设施与知识库运营链路 (Production-Ready RAG Foundation)
+**简介**：项目构建了可运营的 RAG 基础层，覆盖“知识库建模、文档加载、切片、向量化、向量库存储、Agent 关联管理”的完整闭环。设计上强调“上传即自动入库”的易用性与“向量库可替换”的长期可演进性，兼顾工程效率、线上稳定性与后续扩展空间。
+### 4.1 技术亮点
+- **领域建模清晰且可扩展**：通过 `knowledge_base`、`knowledge_document`、`document_chunk`、`agent_knowledge_binding` 四张核心表拆分“知识库、文档、切片、接入关系”职责，支持多知识库并行管理与按 Agent 精细化接入。
+- **端到端入库编排可观测**：文档处理流程采用状态机 `pending -> processing -> completed / failed`，后台可追踪错误信息、切片数量与处理进度，便于运营与排障。
+- **文档切片参数化设计**：切片服务支持 `paragraph / sentence` 两种切分策略，关键参数由配置驱动：`smartcrew.rag.document.splitter.type`、`max-chunk-size`、`overlap-size`。当前默认 `paragraph + maxChunkSize=200 + overlapSize=50`，在语义完整性与召回粒度之间做平衡。
+- **嵌入模型配置可治理**：嵌入模型采用 `smartcrew.rag.embedding.*` 独立配置，默认 `text-embedding-v3`；`api-key/base-url` 未单独配置时可回退到 LLM 配置，减少重复运维成本。
+- **向量库抽象先行**：业务侧仅依赖 `VectorStoreService(namespace, ...)`，由 `namespace` 映射 `knowledge_base.collection_name`。当前落地远程 Chroma，实现上层与底层解耦，后续替换 Milvus/PgVector/ES 时无需改文档处理主链路。
+- **集合级存储与缓存策略**：远程 Chroma 按 `collectionName` 动态创建/缓存 `EmbeddingStore`，避免反复构建连接对象，提升吞吐并降低请求延迟抖动。
+- **配置冻结规则保障一致性**：知识库一旦存在文档，`collectionName` 不允许修改；一旦存在已完成文档，`embeddingModel` 不允许修改，避免向量维度或集合漂移导致检索污染。
+- **异步化提升后台体验**：上传接口先落库再异步处理（`ragDocumentTaskExecutor`），页面通过轮询文档状态展示处理进度，实现“单次上传、自动完成”的管理体验。
+
+### 4.2 核心代码实现
+```java
+// 文档处理主链路：加载 -> 切片 -> 向量化 -> 写入向量库 -> 切片落库
+public void processDocument(Long documentId) {
+    updateStatus(documentId, "processing", null);
+
+    KnowledgeDocument document = requireDocument(documentId);
+    KnowledgeBase base = requireBase(document.getBaseId());
+
+    Document loaded = documentLoaderService.load(document.getFilePath(), document.getFileType());
+    List<TextSegment> segments = documentSplitterService.split(loaded);
+
+    List<Embedding> embeddings = embeddingService.embedAll(segments);
+    List<String> vectorIds = vectorStoreService.addAll(base.getCollectionName(), embeddings, segments);
+
+    persistChunks(documentId, segments, vectorIds);
+    updateStatus(documentId, "completed", null);
+}
+```
+
+### 4.3 关键设计取舍
+| 设计点 | 取舍方案 | 价值 |
+| :--- | :--- | :--- |
+| **上传交互** | 选择“上传即自动入库”而非手动三步 | 降低操作复杂度，提升后台运营效率 |
+| **向量库适配** | 先抽象 `VectorStoreService`，再实现 Chroma | 减少供应商绑定，便于后续迁移 |
+| **切片策略** | 可配置切分类型与重叠窗口 | 支持按场景平衡召回率与上下文完整性 |
+| **一致性治理** | 锁定已投产知识库的关键字段 | 降低向量污染和线上行为漂移风险 |
+| **执行模式** | 接口快速返回 + 后台异步处理 | 提升用户体验，降低请求超时风险 |
+
+### 4.4 简历描述建议
+- **主导搭建企业级 RAG 基础设施**，完成知识库、文档、切片、Agent 绑定的领域建模与多知识库管理能力落地。
+- **设计并实现配置驱动的文档切片与向量化链路**，支持按段落/句子切分与 `chunk size + overlap` 参数化调优。
+- **实现向量库抽象层并落地远程 Chroma**，通过命名空间隔离与集合级缓存机制提升可扩展性与吞吐表现。
+- **构建上传异步编排与状态机追踪机制**，实现文档处理全流程可观测与失败可恢复，显著优化后台运维体验。
+- **制定知识库关键字段冻结规则**，避免模型维度漂移与向量集合错配，保障检索链路稳定性。
+
+### 4.5 核心组件职责映射
+| 组件 | 核心职责 | 相关类 |
+| :--- | :--- | :--- |
+| **知识库应用服务层** | 聚合知识库、文档、切片、Agent 绑定管理能力 | `KnowledgeBaseAdminServiceImpl` |
+| **文档加载器** | 按文件类型解析文档内容（txt/md/pdf/tika 回退） | `DocumentLoaderServiceImpl` |
+| **文档切片器** | 按策略与参数完成语义切片 | `DocumentSplitterServiceImpl` |
+| **嵌入服务** | 调用嵌入模型批量向量化 | `DashScopeEmbeddingServiceImpl` |
+| **向量存储适配层** | 提供命名空间级向量写入/删除/检索接口 | `VectorStoreService`、`ChromaVectorStoreServiceImpl` |
+| **异步任务执行器** | 承载文档入库后台任务 | `ragDocumentTaskExecutor` |
+| **后台管理接口层** | 提供知识库、文档、切片、绑定的管理 API | `AdminKnowledgeBaseController` |
