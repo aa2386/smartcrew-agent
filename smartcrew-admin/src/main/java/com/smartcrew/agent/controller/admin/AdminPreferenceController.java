@@ -43,6 +43,9 @@ public class AdminPreferenceController {
         this.userPreferenceMapper = userPreferenceMapper;
     }
 
+    /**
+     * 查询用户长期偏好列表。
+     */
     @GetMapping
     public TableDataInfo<UserPreferenceVo> list(@RequestParam(value = "userId", required = false) Long userId) {
         var rows = userPreferenceMapper.selectList(Wrappers.lambdaQuery(UserPreference.class)
@@ -55,12 +58,18 @@ public class AdminPreferenceController {
         return TableDataInfo.build(rows);
     }
 
+    /**
+     * 新增或更新用户长期偏好。
+     */
     @PutMapping("/{userId}")
     public R<UserPreferenceVo> upsert(@PathVariable("userId") Long userId,
                                       @Valid @RequestBody UserPreferenceUpsertRequest request) {
         return R.ok(userPreferenceService.upsert(userId, request));
     }
 
+    /**
+     * 删除指定用户偏好。
+     */
     @DeleteMapping("/{userId}/{prefKey}")
     public R<Void> delete(@PathVariable("userId") Long userId, @PathVariable("prefKey") String prefKey) {
         userPreferenceService.delete(userId, prefKey);

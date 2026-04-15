@@ -44,21 +44,33 @@ public class WebChatController {
         this.conversationGatewayService = conversationGatewayService;
     }
 
+    /**
+     * 创建当前用户会话。
+     */
     @PostMapping("/sessions")
     public R<ChatSessionVo> createSession() {
         return R.ok(conversationQueryService.createWebSession(currentUserId()));
     }
 
+    /**
+     * 查询当前用户会话列表。
+     */
     @GetMapping("/sessions")
     public R<List<ChatSessionVo>> listSessions() {
         return R.ok(conversationQueryService.listWebSessions(currentUserId()));
     }
 
+    /**
+     * 查询指定会话消息列表。
+     */
     @GetMapping("/sessions/{sessionId}/messages")
     public R<List<ChatMessageVo>> listMessages(@PathVariable("sessionId") String sessionId) {
         return R.ok(conversationQueryService.listSessionMessages(currentUserId(), sessionId));
     }
 
+    /**
+     * 向指定会话发送消息。
+     */
     @PostMapping("/sessions/{sessionId}/messages")
     public R<ChatMessageVo> sendMessage(@PathVariable("sessionId") String sessionId,
                                         @Valid @RequestBody SendChatMessageRequest request) {

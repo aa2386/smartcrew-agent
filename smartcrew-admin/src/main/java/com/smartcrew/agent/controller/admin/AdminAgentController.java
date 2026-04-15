@@ -47,11 +47,17 @@ public class AdminAgentController {
         this.agentPromptBindingService = agentPromptBindingService;
     }
 
+    /**
+     * 查询 Agent 列表。
+     */
     @GetMapping
     public TableDataInfo<AgentDefinitionVo> list() {
         return TableDataInfo.build(agentDefinitionService.listAll());
     }
 
+    /**
+     * 查询指定 Agent 详情。
+     */
     @GetMapping("/{code}")
     public R<AgentDefinitionVo> detail(@PathVariable("code") String code) {
         AgentDefinitionVo vo = agentDefinitionService.findViewByCode(code)
@@ -59,12 +65,18 @@ public class AdminAgentController {
         return R.ok(vo);
     }
 
+    /**
+     * 查询 Agent 的 Prompt 绑定关系。
+     */
     @GetMapping("/{code}/prompt-bindings")
     public R<List<AgentPromptBindingVo>> listPromptBindings(@PathVariable("code") String code) {
         ensureAgentExists(code);
         return R.ok(agentPromptBindingService.listByAgentCode(code));
     }
 
+    /**
+     * 创建 Agent 配置。
+     */
     @PostMapping
     public R<AgentDefinitionVo> create(@Valid @RequestBody AgentConfigUpdateRequest request) {
         if (agentDefinitionService.findByCode(request.getAgentCode()).isPresent()) {
@@ -78,6 +90,9 @@ public class AdminAgentController {
         return R.ok(vo);
     }
 
+    /**
+     * 更新 Agent 配置。
+     */
     @PutMapping("/{code}")
     public R<AgentDefinitionVo> update(@PathVariable("code") String code,
                                        @Valid @RequestBody AgentConfigUpdateRequest request) {
@@ -92,6 +107,9 @@ public class AdminAgentController {
         return R.ok(vo);
     }
 
+    /**
+     * 替换 Agent 的 Prompt 绑定关系。
+     */
     @PutMapping("/{code}/prompt-bindings")
     public R<List<AgentPromptBindingVo>> replacePromptBindings(@PathVariable("code") String code,
                                                                @Valid @RequestBody AgentPromptBindingUpdateRequest request) {

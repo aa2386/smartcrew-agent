@@ -73,6 +73,7 @@ public class DashScopeEmbeddingServiceImpl implements EmbeddingService {
         return resolveModelName(properties.getRag().getEmbedding());
     }
 
+    /* 解析嵌入服务访问密钥。 */
     private String resolveApiKey(SmartCrewProperties.Embedding embedding) {
         if (StringUtils.isNotBlank(embedding.getApiKey())) {
             return embedding.getApiKey();
@@ -80,6 +81,7 @@ public class DashScopeEmbeddingServiceImpl implements EmbeddingService {
         return properties.getLlm().getApiKey();
     }
 
+    /* 解析嵌入模型名称。 */
     private String resolveModelName(SmartCrewProperties.Embedding embedding) {
         if (StringUtils.isNotBlank(embedding.getModel())) {
             return embedding.getModel();
@@ -87,6 +89,7 @@ public class DashScopeEmbeddingServiceImpl implements EmbeddingService {
         return "text-embedding-v3";
     }
 
+    /* 解析嵌入服务基础地址。 */
     private String resolveBaseUrl(SmartCrewProperties.Embedding embedding) {
         if (StringUtils.isNotBlank(embedding.getBaseUrl())) {
             return embedding.getBaseUrl();

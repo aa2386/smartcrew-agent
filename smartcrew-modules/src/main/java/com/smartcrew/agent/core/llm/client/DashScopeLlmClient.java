@@ -250,18 +250,21 @@ public class DashScopeLlmClient implements LlmClient {
         LogUtils.logModelInit(log, "DashScope", llmConfig.getModel(), !StringUtils.isBlank(llmConfig.getBaseUrl()));
     }
 
+    /* 校验非流式模型已初始化。 */
     private void ensureModelInitialized() {
         if (chatModel == null) {
             throw new IllegalStateException("DashScope 模型尚未初始化，请先检查配置并完成初始化");
         }
     }
 
+    /* 校验流式模型已初始化。 */
     private void ensureStreamingModelInitialized() {
         if (streamingChatModel == null) {
             throw new IllegalStateException("DashScope 流式模型尚未初始化，请先检查配置并完成初始化");
         }
     }
 
+    /* 统一处理模型调用失败结果。 */
     private LlmChatResponse handleFailure(LlmChatRequest request,
                                           String traceId,
                                           long startTime,
@@ -285,6 +288,7 @@ public class DashScopeLlmClient implements LlmClient {
                 .build();
     }
 
+    /* 安全结束流式回调。 */
     private void safelyComplete(LlmStreamingCallback callback, LlmChatResponse response) {
         try {
             callback.onComplete(response);

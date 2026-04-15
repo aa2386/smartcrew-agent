@@ -179,12 +179,14 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
         return knowledgeDocumentMapper.selectByStatus(STATUS_PENDING);
     }
 
+    /* 将文档状态标记为处理中。 */
     private void markProcessing(KnowledgeDocument document) {
         document.setStatus(STATUS_PROCESSING);
         document.setErrorMessage(null);
         knowledgeDocumentMapper.updateById(document);
     }
 
+    /* 清理文档已有切片及对应向量。 */
     private void cleanupExistingChunks(String namespace, Long documentId) {
         List<DocumentChunk> existingChunks = documentChunkMapper.selectByDocumentId(documentId);
         List<String> vectorIds = existingChunks.stream()
@@ -199,6 +201,7 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
         }
     }
 
+    /* 为切片补充业务元数据。 */
     private List<TextSegment> buildSegments(KnowledgeDocument document, KnowledgeBase knowledgeBase, List<TextSegment> segments) {
         List<TextSegment> enrichedSegments = new ArrayList<>(segments.size());
         for (int i = 0; i < segments.size(); i++) {
@@ -216,6 +219,7 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
         return enrichedSegments;
     }
 
+    /* 持久化文档切片记录。 */
     private void persistChunks(Long documentId, List<TextSegment> segments, List<String> vectorIds) {
         for (int i = 0; i < segments.size(); i++) {
             TextSegment segment = segments.get(i);
@@ -229,6 +233,7 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
         }
     }
 
+    /* 将上传文件保存到本地目录。 */
     private Path storeFile(String documentCode, String originalFilename, InputStream inputStream) {
         Path uploadDirectory = Path.of(properties.getRag().getDocument().getUploadPath()).toAbsolutePath().normalize();
         String safeFileName = sanitizeFileName(originalFilename);
@@ -242,6 +247,7 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
         }
     }
 
+    /* 删除文档对应的物理文件。 */
     private void deleteStoredFile(String filePath) {
         if (StringUtils.isBlank(filePath)) {
             return;
@@ -253,6 +259,7 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
         }
     }
 
+    /* 校验并返回可用知识库。 */
     private KnowledgeBase requireBase(Long baseId) {
         KnowledgeBase knowledgeBase = knowledgeBaseService.findById(baseId)
                 .orElseThrow(() -> new ServiceException(404, "知识库不存在"));
@@ -262,10 +269,12 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
         return knowledgeBase;
     }
 
+    /* 校验并返回知识文档。 */
     private KnowledgeDocument requireDocument(Long documentId) {
         return findById(documentId).orElseThrow(() -> new ServiceException(404, "知识文档不存在"));
     }
 
+    /* 根据文件名解析扩展名。 */
     private String resolveFileType(String originalFilename) {
         int lastDot = originalFilename.lastIndexOf('.');
         if (lastDot < 0 || lastDot == originalFilename.length() - 1) {
@@ -274,10 +283,12 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
         return originalFilename.substring(lastDot + 1).toLowerCase(Locale.ROOT);
     }
 
+    /* 清洗文件名中的非法字符。 */
     private String sanitizeFileName(String originalFilename) {
         return originalFilename.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
     }
 
+    /* 截断过长错误信息。 */
     private String truncateErrorMessage(String message) {
         String resolvedMessage = StringUtils.isBlank(message) ? "未知错误" : message;
         return resolvedMessage.length() > 512 ? resolvedMessage.substring(0, 512) : resolvedMessage;

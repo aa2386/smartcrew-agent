@@ -45,6 +45,7 @@ public class DocumentSplitterServiceImpl implements DocumentSplitterService {
         return segments;
     }
 
+    /* 根据配置创建文档分割器。 */
     private DocumentSplitter createSplitter(int maxChunkSize, int overlapSize) {
         String splitterType = properties.getRag().getDocument().getSplitter().getType();
         String normalizedType = StringUtils.isBlank(splitterType)

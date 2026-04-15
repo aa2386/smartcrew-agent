@@ -41,51 +41,78 @@ public class AdminKnowledgeBaseController {
         this.knowledgeBaseAdminService = knowledgeBaseAdminService;
     }
 
+    /**
+     * 查询知识库列表。
+     */
     @GetMapping
     public TableDataInfo<KnowledgeBaseAdminVo> list(KnowledgeBaseQuery query) {
         return knowledgeBaseAdminService.listKnowledgeBases(query);
     }
 
+    /**
+     * 查询知识库详情。
+     */
     @GetMapping("/{baseCode}")
     public R<KnowledgeBaseAdminVo> detail(@PathVariable("baseCode") String baseCode) {
         return R.ok(knowledgeBaseAdminService.getKnowledgeBase(baseCode));
     }
 
+    /**
+     * 创建知识库。
+     */
     @PostMapping
     public R<KnowledgeBaseAdminVo> create(@Valid @RequestBody KnowledgeBaseSaveRequest request) {
         return R.ok(knowledgeBaseAdminService.createKnowledgeBase(request));
     }
 
+    /**
+     * 更新知识库。
+     */
     @PutMapping("/{baseCode}")
     public R<KnowledgeBaseAdminVo> update(@PathVariable("baseCode") String baseCode,
                                           @Valid @RequestBody KnowledgeBaseSaveRequest request) {
         return R.ok(knowledgeBaseAdminService.updateKnowledgeBase(baseCode, request));
     }
 
+    /**
+     * 删除知识库。
+     */
     @DeleteMapping("/{baseCode}")
     public R<Void> delete(@PathVariable("baseCode") String baseCode) {
         knowledgeBaseAdminService.deleteKnowledgeBase(baseCode);
         return R.ok("删除成功", null);
     }
 
+    /**
+     * 查询知识库下的文档列表。
+     */
     @GetMapping("/{baseCode}/documents")
     public TableDataInfo<KnowledgeDocumentAdminVo> listDocuments(@PathVariable("baseCode") String baseCode,
                                                                  KnowledgeDocumentQuery query) {
         return knowledgeBaseAdminService.listDocuments(baseCode, query);
     }
 
+    /**
+     * 上传知识库文档。
+     */
     @PostMapping("/{baseCode}/documents")
     public R<List<KnowledgeDocumentAdminVo>> uploadDocuments(@PathVariable("baseCode") String baseCode,
                                                              @RequestParam("files") MultipartFile[] files) {
         return R.ok(knowledgeBaseAdminService.uploadDocuments(baseCode, files));
     }
 
+    /**
+     * 重新处理知识文档。
+     */
     @PostMapping("/{baseCode}/documents/{documentCode}/reprocess")
     public R<KnowledgeDocumentAdminVo> reprocessDocument(@PathVariable("baseCode") String baseCode,
                                                          @PathVariable("documentCode") String documentCode) {
         return R.ok(knowledgeBaseAdminService.reprocessDocument(baseCode, documentCode));
     }
 
+    /**
+     * 删除知识文档。
+     */
     @DeleteMapping("/{baseCode}/documents/{documentCode}")
     public R<Void> deleteDocument(@PathVariable("baseCode") String baseCode,
                                   @PathVariable("documentCode") String documentCode) {
@@ -93,6 +120,9 @@ public class AdminKnowledgeBaseController {
         return R.ok("删除成功", null);
     }
 
+    /**
+     * 查询文档切片列表。
+     */
     @GetMapping("/{baseCode}/documents/{documentCode}/chunks")
     public TableDataInfo<DocumentChunkAdminVo> listChunks(@PathVariable("baseCode") String baseCode,
                                                           @PathVariable("documentCode") String documentCode,
@@ -100,11 +130,17 @@ public class AdminKnowledgeBaseController {
         return knowledgeBaseAdminService.listChunks(baseCode, documentCode, query);
     }
 
+    /**
+     * 查询知识库接入的 Agent 绑定关系。
+     */
     @GetMapping("/{baseCode}/agent-bindings")
     public R<KnowledgeBaseAgentBindingVo> getAgentBindings(@PathVariable("baseCode") String baseCode) {
         return R.ok(knowledgeBaseAdminService.getAgentBindings(baseCode));
     }
 
+    /**
+     * 替换知识库接入的 Agent 绑定关系。
+     */
     @PutMapping("/{baseCode}/agent-bindings")
     public R<KnowledgeBaseAgentBindingVo> replaceAgentBindings(@PathVariable("baseCode") String baseCode,
                                                                @RequestBody KnowledgeBaseAgentBindingUpdateRequest request) {

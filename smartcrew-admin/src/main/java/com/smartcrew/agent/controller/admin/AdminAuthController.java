@@ -30,11 +30,17 @@ public class AdminAuthController {
         this.authenticationService = authenticationService;
     }
 
+    /**
+     * 执行后台登录。
+     */
     @PostMapping("/login")
     public R<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return R.ok(authenticationService.loginAdmin(request));
     }
 
+    /**
+     * 执行后台登出。
+     */
     @PostMapping("/logout")
     public R<Void> logout() {
         var user = AuthContextHolder.get();

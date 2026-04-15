@@ -33,16 +33,25 @@ public class WebAuthController {
         this.authenticationService = authenticationService;
     }
 
+    /**
+     * 执行 Web 端注册。
+     */
     @PostMapping("/register")
     public R<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
         return R.ok(authenticationService.register(request));
     }
 
+    /**
+     * 执行 Web 端登录。
+     */
     @PostMapping("/login")
     public R<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return R.ok(authenticationService.loginWeb(request));
     }
 
+    /**
+     * 执行 Web 端登出。
+     */
     @PostMapping("/logout")
     public R<Void> logout() {
         var user = AuthContextHolder.get();
@@ -53,6 +62,9 @@ public class WebAuthController {
         return R.ok("\u9000\u51fa\u6210\u529f", null);
     }
 
+    /**
+     * 查询当前登录用户信息。
+     */
     @GetMapping("/me")
     public R<CurrentUserVo> me() {
         var user = AuthContextHolder.get();

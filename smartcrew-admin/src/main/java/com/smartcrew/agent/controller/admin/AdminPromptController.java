@@ -38,11 +38,17 @@ public class AdminPromptController {
         this.promptTemplateService = promptTemplateService;
     }
 
+    /**
+     * 查询 Prompt 列表。
+     */
     @GetMapping
     public TableDataInfo<PromptTemplateVo> list() {
         return TableDataInfo.build(promptTemplateService.listAll());
     }
 
+    /**
+     * 查询 Prompt 分类列表。
+     */
     @GetMapping("/categories")
     public TableDataInfo<PromptTemplateVo> listCategories(PageQuery pageQuery) {
         if (pageQuery.hasPaging()) {
@@ -61,23 +67,35 @@ public class AdminPromptController {
                 .toList());
     }
 
+    /**
+     * 查询指定分类的 Prompt 详情。
+     */
     @GetMapping("/category/{category}")
     public R<PromptTemplateVo> detail(@PathVariable("category") String category) {
         return R.ok(promptTemplateService.queryByCategory(category)
                 .orElseThrow(() -> new ServiceException(404, "Prompt 分类不存在")));
     }
 
+    /**
+     * 创建 Prompt 模板。
+     */
     @PostMapping
     public R<PromptTemplateVo> create(@Valid @RequestBody PromptTemplateRequest request) {
         return R.ok(promptTemplateService.create(request));
     }
 
+    /**
+     * 更新 Prompt 模板。
+     */
     @PutMapping("/{id}")
     public R<PromptTemplateVo> update(@PathVariable("id") Long id,
                                       @Valid @RequestBody PromptTemplateRequest request) {
         return R.ok(promptTemplateService.update(id, request));
     }
 
+    /**
+     * 删除 Prompt 模板。
+     */
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable("id") Long id) {
         promptTemplateService.deleteById(id);

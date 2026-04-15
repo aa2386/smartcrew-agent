@@ -29,6 +29,9 @@ public class AdminConversationController {
         this.conversationQueryService = conversationQueryService;
     }
 
+    /**
+     * 查询会话分页列表。
+     */
     @GetMapping("/sessions")
     public TableDataInfo<ChatSessionVo> listSessions(PageQuery pageQuery,
                                                      @RequestParam(value = "userId", required = false) Long userId,
@@ -40,6 +43,9 @@ public class AdminConversationController {
         return TableDataInfo.build(conversationQueryService.listAllSessions(userId, provider, keyword));
     }
 
+    /**
+     * 查询消息列表。
+     */
     @GetMapping("/messages")
     public R<java.util.List<ChatMessageVo>> listMessages(@RequestParam(value = "userId", required = false) Long userId,
                                                          @RequestParam(value = "sessionId", required = false) String sessionId) {

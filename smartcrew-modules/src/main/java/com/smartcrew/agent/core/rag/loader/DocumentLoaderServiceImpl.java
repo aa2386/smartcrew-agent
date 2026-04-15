@@ -64,6 +64,7 @@ public class DocumentLoaderServiceImpl implements DocumentLoaderService {
         return parserMap.containsKey(normalizeFileType(fileType));
     }
 
+    /* 根据文件路径解析文件类型。 */
     private String resolveFileType(Path filePath) {
         String fileName = filePath.getFileName() == null ? "" : filePath.getFileName().toString();
         int lastDot = fileName.lastIndexOf('.');
@@ -73,6 +74,7 @@ public class DocumentLoaderServiceImpl implements DocumentLoaderService {
         return fileName.substring(lastDot + 1);
     }
 
+    /* 规范化文件类型字符串。 */
     private String normalizeFileType(String fileType) {
         if (StringUtils.isBlank(fileType)) {
             return "txt";

@@ -381,6 +381,7 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return getAgentBindings(knowledgeBase.getBaseCode());
     }
 
+    /* 提交文档异步处理任务。 */
     private void dispatchDocumentProcessing(Long documentId) {
         ragDocumentTaskExecutor.execute(() -> {
             try {
@@ -391,6 +392,7 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         });
     }
 
+    /* 为知识库列表补充统计信息。 */
     private List<KnowledgeBaseAdminVo> enrichKnowledgeBases(List<KnowledgeBase> bases) {
         if (bases.isEmpty()) {
             return Collections.emptyList();
@@ -401,6 +403,7 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
                 .toList();
     }
 
+    /* 构建知识库统计结果。 */
     private Map<Long, KnowledgeBaseStats> buildStats(List<KnowledgeBase> bases) {
         List<Long> baseIds = bases.stream().map(KnowledgeBase::getId).toList();
         List<String> baseCodes = bases.stream().map(KnowledgeBase::getBaseCode).toList();
@@ -431,6 +434,7 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return result;
     }
 
+    /* 转换知识库后台视图对象。 */
     private KnowledgeBaseAdminVo toKnowledgeBaseVo(KnowledgeBase base, KnowledgeBaseStats stats) {
         KnowledgeBaseAdminVo vo = new KnowledgeBaseAdminVo();
         vo.setId(base.getId());
@@ -452,6 +456,7 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return vo;
     }
 
+    /* 转换知识文档后台视图对象。 */
     private KnowledgeDocumentAdminVo toDocumentVo(KnowledgeBase base, KnowledgeDocument document) {
         KnowledgeDocumentAdminVo vo = new KnowledgeDocumentAdminVo();
         vo.setId(document.getId());
@@ -470,6 +475,7 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return vo;
     }
 
+    /* 转换文档切片后台视图对象。 */
     private DocumentChunkAdminVo toChunkVo(KnowledgeDocument document, DocumentChunk chunk) {
         DocumentChunkAdminVo vo = new DocumentChunkAdminVo();
         vo.setId(chunk.getId());
@@ -487,6 +493,7 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return vo;
     }
 
+    /* 转换 Agent 选项视图对象。 */
     private KnowledgeBaseAgentOptionVo toAgentOption(AgentDefinitionVo agent) {
         KnowledgeBaseAgentOptionVo vo = new KnowledgeBaseAgentOptionVo();
         vo.setAgentCode(agent.getAgentCode());
@@ -496,11 +503,13 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return vo;
     }
 
+    /* 校验并返回知识库。 */
     private KnowledgeBase requireBase(String baseCode) {
         return knowledgeBaseService.findByCode(baseCode)
                 .orElseThrow(() -> new ServiceException(404, "知识库不存在"));
     }
 
+    /* 校验并返回知识文档。 */
     private KnowledgeDocument requireDocument(Long documentId) {
         KnowledgeDocument document = knowledgeDocumentMapper.selectById(documentId);
         if (document == null) {
@@ -509,6 +518,7 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return document;
     }
 
+    /* 按知识库编码和文档编码校验文档。 */
     private KnowledgeDocument requireDocument(String baseCode, String documentCode) {
         KnowledgeBase base = requireBase(baseCode);
         KnowledgeDocument document = knowledgeDocumentMapper.selectOne(new LambdaQueryWrapper<KnowledgeDocument>()
@@ -521,17 +531,20 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return document;
     }
 
+    /* 统计知识库下文档数量。 */
     private long countDocuments(Long baseId) {
         return knowledgeDocumentMapper.selectCount(new LambdaQueryWrapper<KnowledgeDocument>()
                 .eq(KnowledgeDocument::getBaseId, baseId));
     }
 
+    /* 统计知识库下已完成文档数量。 */
     private long countCompletedDocuments(Long baseId) {
         return knowledgeDocumentMapper.selectCount(new LambdaQueryWrapper<KnowledgeDocument>()
                 .eq(KnowledgeDocument::getBaseId, baseId)
                 .eq(KnowledgeDocument::getStatus, STATUS_COMPLETED));
     }
 
+    /* 解析知识库使用的嵌入模型。 */
     private String resolveEmbeddingModel(String embeddingModel) {
         if (StringUtils.isNotBlank(embeddingModel)) {
             return embeddingModel.trim();
@@ -540,6 +553,7 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return StringUtils.isNotBlank(configured) ? configured.trim() : "text-embedding-v3";
     }
 
+    /* 解析知识库向量命名空间。 */
     private String resolveCollectionName(String collectionName, String baseCode) {
         if (StringUtils.isNotBlank(collectionName)) {
             return collectionName.trim();
@@ -547,6 +561,7 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return "kb_" + baseCode.replace('-', '_');
     }
 
+    /* 规范化知识库编码。 */
     private String normalizeBaseCode(String baseCode) {
         if (StringUtils.isBlank(baseCode)) {
             throw new ServiceException(400, "知识库编码不能为空");
@@ -561,10 +576,12 @@ public class KnowledgeBaseAdminServiceImpl implements KnowledgeBaseAdminService 
         return normalized;
     }
 
+    /* 将空白字符串转换为默认空字符串。 */
     private String trimToEmpty(String value) {
         return StringUtils.isBlank(value) ? "" : value.trim();
     }
 
+    /* 生成切片内容预览。 */
     private String buildContentPreview(String content) {
         if (StringUtils.isBlank(content)) {
             return "";

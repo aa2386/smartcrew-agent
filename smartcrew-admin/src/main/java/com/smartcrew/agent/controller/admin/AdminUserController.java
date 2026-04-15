@@ -47,6 +47,9 @@ public class AdminUserController {
         this.userIdentityService = userIdentityService;
     }
 
+    /**
+     * 查询用户列表。
+     */
     @GetMapping
     public TableDataInfo<ScUserVo> list(PageQuery pageQuery,
                                         @RequestParam(value = "keyword", required = false) String keyword) {
@@ -56,6 +59,9 @@ public class AdminUserController {
         return TableDataInfo.build(userAccountService.listAll());
     }
 
+    /**
+     * 查询用户详情。
+     */
     @GetMapping("/{id}")
     public R<ScUserVo> detail(@PathVariable("id") Long id) {
         ScUser user = userAccountService.findById(id)
@@ -63,23 +69,35 @@ public class AdminUserController {
         return R.ok(toVo(user));
     }
 
+    /**
+     * 更新用户状态。
+     */
     @PutMapping("/{id}/status")
     public R<ScUserVo> updateStatus(@PathVariable("id") Long id,
                                     @Valid @RequestBody UserStatusUpdateRequest request) {
         return R.ok(userAccountService.updateStatus(id, request.getStatus()));
     }
 
+    /**
+     * 查询用户身份映射列表。
+     */
     @GetMapping("/{id}/identities")
     public R<java.util.List<ScUserIdentityVo>> listIdentities(@PathVariable("id") Long id) {
         return R.ok(userIdentityService.listByUserId(id));
     }
 
+    /**
+     * 绑定用户身份映射。
+     */
     @PostMapping("/{id}/identities")
     public R<ScUserIdentityVo> bindIdentity(@PathVariable("id") Long id,
                                             @Valid @RequestBody UserIdentityBindRequest request) {
         return R.ok(userIdentityService.bind(id, request));
     }
 
+    /**
+     * 解绑用户身份映射。
+     */
     @DeleteMapping("/{id}/identities/{identityId}")
     public R<Void> unbindIdentity(@PathVariable("id") Long id, @PathVariable("identityId") Long identityId) {
         userIdentityService.unbind(id, identityId);
