@@ -79,6 +79,7 @@ const authStore = useAuthStore()
 const stats = ref({
   users: 0,
   agents: 0,
+  knowledgeBases: 0,
   prompts: 0,
   sessions: 0
 })
@@ -103,6 +104,12 @@ const statsCards = computed(() => [
     route: '/admin/agents'
   },
   {
+    label: '知识库数量',
+    value: `${stats.value.knowledgeBases}`,
+    description: '统一管理文档、切片与 Agent 接入范围。',
+    route: '/admin/knowledge-bases'
+  },
+  {
     label: 'Prompt 数量',
     value: `${stats.value.prompts}`,
     description: '统一维护模板库与分类版本。',
@@ -122,15 +129,17 @@ onMounted(async () => {
 
 async function loadStats() {
   try {
-    const [users, agents, prompts, sessions] = await Promise.all([
+    const [users, agents, knowledgeBases, prompts, sessions] = await Promise.all([
       adminPortalApi.listUsers(authStore.adminToken, { pageNum: 1, pageSize: 1 }),
       adminPortalApi.listAgents(authStore.adminToken),
+      adminPortalApi.listKnowledgeBases(authStore.adminToken, { pageNum: 1, pageSize: 1 }),
       adminPortalApi.listPrompts(authStore.adminToken),
       adminPortalApi.listConversationSessions(authStore.adminToken, { pageNum: 1, pageSize: 1 })
     ])
     stats.value = {
       users: users.total,
       agents: agents.rows.length,
+      knowledgeBases: knowledgeBases.total,
       prompts: prompts.total,
       sessions: sessions.total
     }
@@ -185,7 +194,7 @@ function formatDate(value?: string) {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
 

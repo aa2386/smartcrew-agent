@@ -4,6 +4,7 @@ import type { ApiEnvelope } from '../types'
 interface RequestOptions extends RequestInit {
   token?: string
   bodyJson?: unknown
+  bodyFormData?: FormData
 }
 
 interface TableEnvelope<T> {
@@ -22,7 +23,7 @@ function isTableEnvelope<T>(payload: unknown): payload is TableEnvelope<T> {
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { token, bodyJson, ...init } = options
+  const { token, bodyJson, bodyFormData, ...init } = options
   const headers = new Headers(options.headers)
   headers.set('Accept', 'application/json')
   if (bodyJson !== undefined) {
@@ -36,7 +37,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const response = await fetch(`${portalConfig.apiBaseUrl}${normalizedPath}`, {
     ...init,
     headers,
-    body: bodyJson === undefined ? options.body : JSON.stringify(bodyJson)
+    body: bodyJson !== undefined ? JSON.stringify(bodyJson) : bodyFormData ?? options.body
   })
 
   const rawText = await response.text()

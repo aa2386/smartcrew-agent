@@ -5,6 +5,10 @@ import type {
   ChatMessage,
   ChatSession,
   CurrentUser,
+  DocumentChunkRecord,
+  KnowledgeBaseAgentBindingRecord,
+  KnowledgeBaseRecord,
+  KnowledgeDocumentRecord,
   LoginResponse,
   PreferenceRecord,
   PromptRecord,
@@ -247,6 +251,121 @@ export const adminPortalApi = {
     const query = search.toString()
     return request<ChatMessage[]>(`/api/admin/conversations/messages${query ? `?${query}` : ''}`, {
       token
+    })
+  },
+  listKnowledgeBases(
+    token: string,
+    params: { keyword?: string; enabled?: boolean } & PageParams = {}
+  ) {
+    const search = new URLSearchParams()
+    if (params.keyword) search.set('keyword', params.keyword)
+    if (params.enabled !== undefined) search.set('enabled', String(params.enabled))
+    if (params.pageNum) search.set('pageNum', String(params.pageNum))
+    if (params.pageSize) search.set('pageSize', String(params.pageSize))
+    const query = search.toString()
+    return request<TablePayload<KnowledgeBaseRecord>>(`/api/admin/knowledge-bases${query ? `?${query}` : ''}`, {
+      token
+    })
+  },
+  getKnowledgeBase(token: string, baseCode: string) {
+    return request<KnowledgeBaseRecord>(`/api/admin/knowledge-bases/${baseCode}`, {
+      token
+    })
+  },
+  createKnowledgeBase(
+    token: string,
+    payload: Pick<KnowledgeBaseRecord, 'baseCode' | 'baseName' | 'description' | 'embeddingModel' | 'collectionName' | 'enabled'>
+  ) {
+    return request<KnowledgeBaseRecord>('/api/admin/knowledge-bases', {
+      method: 'POST',
+      token,
+      bodyJson: payload
+    })
+  },
+  updateKnowledgeBase(
+    token: string,
+    baseCode: string,
+    payload: Pick<KnowledgeBaseRecord, 'baseCode' | 'baseName' | 'description' | 'embeddingModel' | 'collectionName' | 'enabled'>
+  ) {
+    return request<KnowledgeBaseRecord>(`/api/admin/knowledge-bases/${baseCode}`, {
+      method: 'PUT',
+      token,
+      bodyJson: payload
+    })
+  },
+  deleteKnowledgeBase(token: string, baseCode: string) {
+    return request<void>(`/api/admin/knowledge-bases/${baseCode}`, {
+      method: 'DELETE',
+      token
+    })
+  },
+  listKnowledgeDocuments(
+    token: string,
+    baseCode: string,
+    params: { keyword?: string; status?: string; fileType?: string } & PageParams = {}
+  ) {
+    const search = new URLSearchParams()
+    if (params.keyword) search.set('keyword', params.keyword)
+    if (params.status) search.set('status', params.status)
+    if (params.fileType) search.set('fileType', params.fileType)
+    if (params.pageNum) search.set('pageNum', String(params.pageNum))
+    if (params.pageSize) search.set('pageSize', String(params.pageSize))
+    const query = search.toString()
+    return request<TablePayload<KnowledgeDocumentRecord>>(
+      `/api/admin/knowledge-bases/${baseCode}/documents${query ? `?${query}` : ''}`,
+      { token }
+    )
+  },
+  uploadKnowledgeDocuments(token: string, baseCode: string, files: File[]) {
+    const formData = new FormData()
+    files.forEach((file) => formData.append('files', file))
+    return request<KnowledgeDocumentRecord[]>(`/api/admin/knowledge-bases/${baseCode}/documents`, {
+      method: 'POST',
+      token,
+      bodyFormData: formData
+    })
+  },
+  reprocessKnowledgeDocument(token: string, baseCode: string, documentCode: string) {
+    return request<KnowledgeDocumentRecord>(
+      `/api/admin/knowledge-bases/${baseCode}/documents/${documentCode}/reprocess`,
+      {
+        method: 'POST',
+        token
+      }
+    )
+  },
+  deleteKnowledgeDocument(token: string, baseCode: string, documentCode: string) {
+    return request<void>(`/api/admin/knowledge-bases/${baseCode}/documents/${documentCode}`, {
+      method: 'DELETE',
+      token
+    })
+  },
+  listDocumentChunks(
+    token: string,
+    baseCode: string,
+    documentCode: string,
+    params: { keyword?: string } & PageParams = {}
+  ) {
+    const search = new URLSearchParams()
+    if (params.keyword) search.set('keyword', params.keyword)
+    if (params.pageNum) search.set('pageNum', String(params.pageNum))
+    if (params.pageSize) search.set('pageSize', String(params.pageSize))
+    const query = search.toString()
+    return request<TablePayload<DocumentChunkRecord>>(
+      `/api/admin/knowledge-bases/${baseCode}/documents/${documentCode}/chunks${query ? `?${query}` : ''}`,
+      { token }
+    )
+  },
+  getKnowledgeBaseAgentBindings(token: string, baseCode: string) {
+    return request<KnowledgeBaseAgentBindingRecord>(`/api/admin/knowledge-bases/${baseCode}/agent-bindings`, {
+      token
+    })
+  },
+  updateKnowledgeBaseAgentBindings(token: string, baseCode: string, agentCodes: string[]) {
+    return request<KnowledgeBaseAgentBindingRecord>(`/api/admin/knowledge-bases/${baseCode}/agent-bindings`, {
+      method: 'PUT',
+      token,
+      bodyJson: { agentCodes }
     })
   }
 }

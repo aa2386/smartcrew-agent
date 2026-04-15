@@ -53,7 +53,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Connection, Cpu, DataAnalysis, MessageBox, Setting, UserFilled } from '@element-plus/icons-vue'
+import { CollectionTag, Connection, Cpu, DataAnalysis, MessageBox, Setting, UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
@@ -65,6 +65,7 @@ const menuItems = [
   { path: '/admin/users', label: '用户管理', icon: UserFilled },
   { path: '/admin/identities', label: '平台映射', icon: Connection },
   { path: '/admin/agents', label: 'Agent 管理', icon: Cpu },
+  { path: '/admin/knowledge-bases', label: '知识库管理', icon: CollectionTag },
   { path: '/admin/prompts', label: 'Prompt 配置', icon: Setting },
   { path: '/admin/conversations', label: '消息记录', icon: MessageBox }
 ]

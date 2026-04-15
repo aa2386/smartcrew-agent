@@ -114,3 +114,66 @@ export interface TableData<T> {
   rows: T[]
   total: number
 }
+
+export interface KnowledgeBaseRecord {
+  id?: number
+  baseCode: string
+  baseName: string
+  description?: string
+  embeddingModel: string
+  collectionName: string
+  enabled: boolean
+  documentCount: number
+  chunkCount: number
+  agentCount: number
+  processingDocumentCount: number
+  hasDocuments: boolean
+  collectionNameEditable: boolean
+  embeddingModelEditable: boolean
+  createTime?: string
+  updateTime?: string
+}
+
+export interface KnowledgeDocumentRecord {
+  id?: number
+  baseId?: number
+  baseCode: string
+  documentCode: string
+  documentName: string
+  filePath?: string
+  fileType: string
+  fileSize: number
+  status: string
+  chunkCount: number
+  errorMessage?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface DocumentChunkRecord {
+  id?: number
+  documentId?: number
+  documentCode: string
+  documentName: string
+  chunkIndex: number
+  content: string
+  contentPreview: string
+  vectorId?: string
+  tokenCount?: number
+  metadata?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface KnowledgeBaseAgentOptionRecord {
+  agentCode: string
+  agentName: string
+  agentType: string
+  enabled: boolean
+}
+
+export interface KnowledgeBaseAgentBindingRecord {
+  baseCode: string
+  boundAgents: KnowledgeBaseAgentOptionRecord[]
+  availableAgents: KnowledgeBaseAgentOptionRecord[]
+}
