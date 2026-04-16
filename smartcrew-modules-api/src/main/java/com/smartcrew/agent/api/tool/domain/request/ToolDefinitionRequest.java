@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
- * ToolDefinitionRequest 请求对象，封装接口调用所需的入参数据。
+ * ToolDefinitionRequest 请求对象。
  */
 @Data
 public class ToolDefinitionRequest {
@@ -28,21 +28,33 @@ public class ToolDefinitionRequest {
     private String description;
 
     /**
-     * Spring Bean 名称。
+     * Spring Bean 名称，BEAN 模式下使用。
+     */
+    private String beanName;
+
+    /**
+     * 执行模式：BEAN / FLOW。
      */
     @NotBlank
-    private String beanName;
+    private String executionMode = "BEAN";
 
     /**
      * 风险等级。
      */
     private String riskLevel = "MEDIUM";
+
     /**
      * 是否启用。
      */
     private Boolean enabled = true;
+
     /**
-     * JSON 格式的扩展配置。
+     * 运行时附加配置 JSON。
      */
     private String configJson;
+
+    /**
+     * 顺序流程 DSL 定义 JSON。
+     */
+    private String flowDefinitionJson;
 }

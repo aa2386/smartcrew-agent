@@ -8,6 +8,7 @@ import com.smartcrew.agent.api.tool.domain.vo.ToolToggleResponse;
 import com.smartcrew.agent.api.tool.service.ToolDefinitionService;
 import com.smartcrew.agent.api.tool.service.ToolRegistry;
 import com.smartcrew.agent.common.domain.R;
+import com.smartcrew.agent.common.exception.ServiceException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,56 +21,52 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 工具管理控制器，提供工具定义维护和启停控制接口。
+ * 兼容旧版 `/api/v1/tools` 的 Tool 管理控制器。
  */
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/tools")
 public class ToolController {
 
-    /**
-     * 工具注册表。
-     */
     private final ToolRegistry toolRegistry;
-    /**
-     * 工具定义服务。
-     */
     private final ToolDefinitionService toolDefinitionService;
 
     /**
-     * 查询列表数据。
+     * 获取工具元数据列表（兼容旧版接口）。
+     *
+     * @return 工具元数据列表
      */
     @GetMapping
     public R<List<ToolMetadata>> list() {
-        return R.ok(toolRegistry.listAll());
+        return R.ok(toolRegistry.listLegacyMetadata());
     }
 
     /**
-     * 保存请求数据。
+     * 保存工具定义（创建或更新）。
+     *
+     * @param request 工具定义请求
+     * @return 保存后的工具定义
      */
     @PostMapping
     public R<ToolDefinitionVo> save(@Valid @RequestBody ToolDefinitionRequest request) {
         ToolDefinition definition = toolDefinitionService.saveOrUpdate(request);
         toolRegistry.refresh();
-        return R.ok(ToolDefinitionVo.builder()
-                .id(definition.getId())
-                .toolCode(definition.getToolCode())
-                .toolName(definition.getToolName())
-                .description(definition.getDescription())
-                .beanName(definition.getBeanName())
-                .riskLevel(definition.getRiskLevel())
-                .enabled(definition.getEnabled())
-                .configJson(definition.getConfigJson())
-                .build());
+        ToolDefinitionVo vo = toolRegistry.getByCode(definition.getToolCode())
+                .map(item -> item.toVo())
+                .orElseThrow(() -> new ServiceException(500, "Tool 保存后查询失败"));
+        return R.ok(vo);
     }
 
     /**
-     * 启用指定对象。
+     * 启用指定工具。
+     *
+     * @param toolCode 工具编码
+     * @return 启用结果
      */
     @PostMapping("/{toolCode}/enable")
     public R<ToolToggleResponse> enable(@PathVariable("toolCode") String toolCode) {
         toolDefinitionService.updateEnabledStatus(toolCode, true);
-        toolRegistry.setEnabled(toolCode, true);
+        toolRegistry.refresh();
         return R.ok(ToolToggleResponse.builder()
                 .toolCode(toolCode)
                 .enabled(true)
@@ -78,12 +75,15 @@ public class ToolController {
     }
 
     /**
-     * 禁用指定对象。
+     * 禁用指定工具。
+     *
+     * @param toolCode 工具编码
+     * @return 禁用结果
      */
     @PostMapping("/{toolCode}/disable")
     public R<ToolToggleResponse> disable(@PathVariable("toolCode") String toolCode) {
         toolDefinitionService.updateEnabledStatus(toolCode, false);
-        toolRegistry.setEnabled(toolCode, false);
+        toolRegistry.refresh();
         return R.ok(ToolToggleResponse.builder()
                 .toolCode(toolCode)
                 .enabled(false)
