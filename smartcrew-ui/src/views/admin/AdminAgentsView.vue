@@ -207,6 +207,25 @@
           </el-table>
           <div v-else class="binding-empty muted">当前未绑定工作流 Prompt 模板。</div>
 
+          <div class="binding-head binding-head--tools">
+            <div>
+              <h4>可用 Tool 白名单</h4>
+              <p class="muted">
+                Agent 运行时只会消费这里已绑定且可执行的 Tool；规划器会在白名单内选择动作，不会直接访问全量工具。
+              </p>
+            </div>
+          </div>
+
+          <el-transfer
+            v-model="bindingTargetToolCodes"
+            class="agent-transfer"
+            filterable
+            :data="toolTransferData"
+            :titles="['可选 Tool', '已绑定 Tool']"
+            :props="{ key: 'key', label: 'label', disabled: 'disabled' }"
+            filter-placeholder="搜索 Tool"
+          />
+
           <div class="action-row">
             <el-button type="primary" :loading="saving" @click="submitForm">
               {{ submitButtonText }}
@@ -232,14 +251,17 @@ import { ElMessage } from 'element-plus'
 import GlassPanel from '../../components/common/GlassPanel.vue'
 import { adminPortalApi } from '../../api/portal'
 import { useAuthStore } from '../../stores/auth'
-import type { AgentPromptBindingRecord, AgentRecord, PromptRecord } from '../../types'
+import type { AgentPromptBindingRecord, AgentRecord, AgentToolBindingRecord, PromptRecord, ToolRecord } from '../../types'
 
 type AgentPageMode = 'empty' | 'create' | 'createFromCode' | 'edit'
 
 const authStore = useAuthStore()
 const agents = ref<AgentRecord[]>([])
 const promptOptions = ref<PromptRecord[]>([])
+const allToolOptions = ref<ToolRecord[]>([])
 const promptBindings = ref<AgentPromptBindingRecord[]>([])
+const toolBindings = ref<AgentToolBindingRecord>()
+const bindingTargetToolCodes = ref<string[]>([])
 const selectedPromptTemplateId = ref<number>()
 const saving = ref(false)
 const pageMode = ref<AgentPageMode>('empty')
@@ -279,8 +301,18 @@ const submitButtonText = computed(() => {
   return '保存数据库配置'
 })
 
+const toolTransferData = computed(() => {
+  const binding = toolBindings.value
+  if (!binding) return []
+  return [...binding.availableTools, ...binding.boundTools].map((item) => ({
+    key: item.toolCode,
+    label: `${item.toolName} / ${item.toolCode} / ${sourceStatusText(item.sourceStatus)}`,
+    disabled: !item.enabled || item.executable === false
+  }))
+})
+
 onMounted(async () => {
-  await Promise.all([loadPrompts(), loadAgents()])
+  await Promise.all([loadPrompts(), loadAllTools(), loadAgents()])
 })
 
 function createEmptyForm(): AgentRecord {
@@ -348,6 +380,17 @@ async function loadPrompts() {
   }
 }
 
+async function loadAllTools() {
+  try {
+    const response = await adminPortalApi.listTools(authStore.adminToken)
+    allToolOptions.value = response.rows
+  } catch (error) {
+    if (error instanceof Error) {
+      ElMessage.error(error.message)
+    }
+  }
+}
+
 async function loadAgents(preferredCode?: string) {
   try {
     const response = await adminPortalApi.listAgents(authStore.adminToken)
@@ -367,13 +410,16 @@ async function loadAgents(preferredCode?: string) {
 
 async function loadAgentDetail(code: string) {
   try {
-    const [detail, bindings] = await Promise.all([
+    const [detail, bindings, toolBindingResult] = await Promise.all([
       adminPortalApi.getAgent(authStore.adminToken, code),
-      adminPortalApi.listAgentPromptBindings(authStore.adminToken, code)
+      adminPortalApi.listAgentPromptBindings(authStore.adminToken, code),
+      adminPortalApi.listAgentToolBindings(authStore.adminToken, code)
     ])
     selectedAgentCode.value = detail.agentCode
     applyForm(detail)
     promptBindings.value = bindings
+    toolBindings.value = toolBindingResult
+    bindingTargetToolCodes.value = toolBindingResult.boundTools.map((item) => item.toolCode)
     normalizeBindingSortOrder()
     pageMode.value = detail.hasDatabaseConfig ? 'edit' : 'createFromCode'
   } catch (error) {
@@ -393,6 +439,8 @@ function startCreateAgent() {
   pageMode.value = 'create'
   applyForm(createEmptyForm())
   promptBindings.value = []
+  toolBindings.value = { agentCode: '', boundTools: [], availableTools: allToolOptions.value }
+  bindingTargetToolCodes.value = []
   selectedPromptTemplateId.value = undefined
 }
 
@@ -408,6 +456,8 @@ function startCreateFromCode(row: AgentRecord) {
     strategyType: row.strategyType || 'REACT'
   })
   promptBindings.value = []
+  toolBindings.value = { agentCode: row.agentCode, boundTools: [], availableTools: allToolOptions.value }
+  bindingTargetToolCodes.value = []
   selectedPromptTemplateId.value = undefined
 }
 
@@ -416,6 +466,8 @@ function resetToEmpty() {
   pageMode.value = 'empty'
   applyForm(createEmptyForm())
   promptBindings.value = []
+  toolBindings.value = undefined
+  bindingTargetToolCodes.value = []
   selectedPromptTemplateId.value = undefined
 }
 
@@ -472,6 +524,16 @@ async function savePromptBindings(agentCode: string) {
   normalizeBindingSortOrder()
 }
 
+async function saveToolBindings(agentCode: string) {
+  const bindings = await adminPortalApi.updateAgentToolBindings(
+    authStore.adminToken,
+    agentCode,
+    bindingTargetToolCodes.value
+  )
+  toolBindings.value = bindings
+  bindingTargetToolCodes.value = bindings.boundTools.map((item) => item.toolCode)
+}
+
 async function submitForm() {
   if (!form.agentCode.trim()) {
     ElMessage.warning('请输入 Agent 编码')
@@ -504,6 +566,7 @@ async function submitForm() {
       const created = await adminPortalApi.createAgent(authStore.adminToken, payload)
       agentCode = created.agentCode
       await savePromptBindings(agentCode)
+      await saveToolBindings(agentCode)
       ElMessage.success('Agent 数据库信息创建成功')
       pageMode.value = 'edit'
       await loadAgents(agentCode)
@@ -513,6 +576,7 @@ async function submitForm() {
     const updated = await adminPortalApi.updateAgent(authStore.adminToken, form.agentCode, payload)
     agentCode = updated.agentCode
     await savePromptBindings(agentCode)
+    await saveToolBindings(agentCode)
     ElMessage.success('Agent 数据库配置已保存')
     await loadAgents(agentCode)
   } catch (error) {
@@ -596,6 +660,10 @@ async function submitForm() {
   }
 }
 
+.binding-head--tools {
+  margin-top: 18px;
+}
+
 .binding-toolbar {
   display: flex;
   gap: 12px;
@@ -608,6 +676,49 @@ async function submitForm() {
 
 .binding-table {
   margin-bottom: 16px;
+}
+
+.agent-transfer {
+  display: flex !important;
+  flex-direction: row;
+  flex-wrap: nowrap !important;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 16px;
+
+  :deep(.el-transfer-panel) {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    border-radius: 18px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.52)),
+      rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.58);
+    box-shadow: var(--sc-shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(18px) saturate(145%);
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+  }
+
+  :deep(.el-transfer-panel__body) {
+    height: 300px;
+  }
+
+  :deep(.el-transfer__buttons) {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-self: center;
+    gap: 10px;
+    padding: 0 4px;
+  }
+
+  :deep(.el-transfer__buttons .el-button) {
+    margin: 0;
+  }
 }
 
 .binding-actions {

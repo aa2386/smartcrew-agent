@@ -5,7 +5,7 @@
         <div class="brand-block">
           <span class="brand-badge">SmartCrew</span>
           <h1>后台管理台</h1>
-          <p>统一管理用户、Agent、Prompt 与消息审计。</p>
+          <p>统一管理用户、Agent、Tool、Prompt 与消息审计。</p>
         </div>
 
         <div class="admin-menu-scroll">
@@ -57,7 +57,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { CollectionTag, Connection, Cpu, DataAnalysis, MessageBox, Setting, UserFilled } from '@element-plus/icons-vue'
+import { CollectionTag, Connection, Cpu, DataAnalysis, MessageBox, Setting, Tools, UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
@@ -69,6 +69,7 @@ const menuItems = [
   { path: '/admin/users', label: '用户管理', icon: UserFilled },
   { path: '/admin/identities', label: '平台映射', icon: Connection },
   { path: '/admin/agents', label: 'Agent 管理', icon: Cpu },
+  { path: '/admin/tools', label: 'Tool 管理', icon: Tools },
   { path: '/admin/knowledge-bases', label: '知识库管理', icon: CollectionTag },
   { path: '/admin/prompts', label: 'Prompt 配置', icon: Setting },
   { path: '/admin/conversations', label: '消息记录', icon: MessageBox }

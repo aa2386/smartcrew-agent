@@ -2,6 +2,7 @@ import { request } from './http'
 import type {
   AgentRecord,
   AgentPromptBindingRecord,
+  AgentToolBindingRecord,
   ChatMessage,
   ChatSession,
   CurrentUser,
@@ -12,6 +13,8 @@ import type {
   LoginResponse,
   PreferenceRecord,
   PromptRecord,
+  ToolExecutionResultRecord,
+  ToolRecord,
   UserIdentityRecord,
   UserRecord
 } from '../types'
@@ -143,6 +146,11 @@ export const adminPortalApi = {
       token
     })
   },
+  listAgentToolBindings(token: string, code: string) {
+    return request<AgentToolBindingRecord>(`/api/admin/agents/${code}/tool-bindings`, {
+      token
+    })
+  },
   createAgent(token: string, payload: Partial<AgentRecord>) {
     return request<AgentRecord>('/api/admin/agents', {
       method: 'POST',
@@ -160,6 +168,48 @@ export const adminPortalApi = {
   updateAgentPromptBindings(token: string, code: string, payload: { bindings: Array<{ promptTemplateId: number }> }) {
     return request<AgentPromptBindingRecord[]>(`/api/admin/agents/${code}/prompt-bindings`, {
       method: 'PUT',
+      token,
+      bodyJson: payload
+    })
+  },
+  updateAgentToolBindings(token: string, code: string, toolCodes: string[]) {
+    return request<AgentToolBindingRecord>(`/api/admin/agents/${code}/tool-bindings`, {
+      method: 'PUT',
+      token,
+      bodyJson: { toolCodes }
+    })
+  },
+  listTools(token: string) {
+    return request<TablePayload<ToolRecord>>('/api/admin/tools', {
+      token
+    })
+  },
+  getTool(token: string, code: string) {
+    return request<ToolRecord>(`/api/admin/tools/${code}`, {
+      token
+    })
+  },
+  createTool(token: string, payload: Partial<ToolRecord>) {
+    return request<ToolRecord>('/api/admin/tools', {
+      method: 'POST',
+      token,
+      bodyJson: payload
+    })
+  },
+  updateTool(token: string, code: string, payload: Partial<ToolRecord>) {
+    return request<ToolRecord>(`/api/admin/tools/${code}`, {
+      method: 'PUT',
+      token,
+      bodyJson: payload
+    })
+  },
+  executeTool(
+    token: string,
+    code: string,
+    payload: { actionName?: string; arguments?: Record<string, unknown>; executionContext?: Record<string, unknown> }
+  ) {
+    return request<ToolExecutionResultRecord>(`/api/admin/tools/${code}/execute`, {
+      method: 'POST',
       token,
       bodyJson: payload
     })

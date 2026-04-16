@@ -47,6 +47,11 @@ const router = createRouter({
           component: () => import('../views/admin/AdminAgentsView.vue')
         },
         {
+          path: 'tools',
+          name: 'admin-tools',
+          component: () => import('../views/admin/AdminToolsView.vue')
+        },
+        {
           path: 'knowledge-bases',
           name: 'admin-knowledge-bases',
           component: () => import('../views/admin/AdminKnowledgeBasesView.vue')

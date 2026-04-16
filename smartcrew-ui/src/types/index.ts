@@ -93,6 +93,54 @@ export interface AgentPromptBindingRecord {
   sortOrder: number
 }
 
+export interface ToolActionParameterRecord {
+  name: string
+  description?: string
+  required?: boolean
+}
+
+export interface ToolActionRecord {
+  toolCode: string
+  actionName: string
+  description?: string
+  parameters: ToolActionParameterRecord[]
+}
+
+export interface ToolRecord {
+  id?: number
+  toolCode: string
+  toolName: string
+  description?: string
+  beanName?: string
+  executionMode: string
+  riskLevel?: string
+  enabled: boolean
+  configJson?: string
+  flowDefinitionJson?: string
+  sourceStatus?: string
+  hasCodeBean?: boolean
+  hasDatabaseConfig?: boolean
+  executable?: boolean
+  resolveError?: string
+  actions: ToolActionRecord[]
+}
+
+export interface ToolExecutionResultRecord {
+  toolCode: string
+  actionName: string
+  executionMode?: string
+  success: boolean
+  output?: unknown
+  errorMessage?: string
+  durationMs?: number
+}
+
+export interface AgentToolBindingRecord {
+  agentCode: string
+  boundTools: ToolRecord[]
+  availableTools: ToolRecord[]
+}
+
 export interface PromptRecord {
   id: number
   templateName: string
