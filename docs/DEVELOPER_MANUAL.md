@@ -1,1041 +1,919 @@
-# SmartCrew-Agent 开发手册
+# SmartCrew-Agent Developer Manual
 
-> 版本：v1.0  
+> 版本：v2.0  
 > 适用仓库：`smartcrew-agent`  
-> 目标读者：后端开发、平台开发、算法工程、技术负责人
+> 更新时间：2026-04-16  
+> 面向读者：后端开发、平台开发、算法工程、前端管理后台开发、技术负责人
 
 ---
 
-## 1. 手册说明与阅读建议
+## 1. 文档定位
 
-本手册采用“项目落地优先”写法：
+本文档不再采用“愿景式说明”，而是以**当前仓库已经实现的真实能力**为基础，回答下面四个问题：
 
-- 先讲当前仓库**已经具备**的能力和可直接复用的代码入口；
-- 再讲 LLM、RAG、多 Agent、企微/飞书接入的**可执行扩展方案**；
-- 明确区分“已实现”与“建议实现”，避免误判现状。
+1. SmartCrew-Agent 现在已经能做什么。
+2. 各模块分别承担什么职责。
+3. 新功能应该接到哪里、怎么扩。
+4. 后续应该沿着哪些主流前沿方向继续演进。
 
-建议阅读路径：
+阅读建议：
 
-1. 初次接手项目：先看第 2、3、5、8、10 章。
-2. 要接入大模型：重点看第 4 章。
-3. 要做知识库问答：重点看第 6 章。
-4. 要做多 Agent 编排：重点看第 7 章。
-5. 要做线上稳定性治理：重点看第 11、12、13 章。
-
-### 1.1 当前能力边界（必须先确认）
-
-- 已实现：
-  - 代理注册与派发链路
-  - 工具注册、启停、元数据管理
-  - 用户偏好/会话记忆基础能力
-  - ReAct 决策占位引擎
-  - 平台网关与企微/飞书占位适配器
-- 未完整实现（需扩展）：
-  - 真正可用的 LLM 推理服务接入链路
-  - 完整 RAG 管线（切分/向量化/检索/重排）
-  - 生产级多 Agent 编排与调度
-  - 平台回调验签、幂等、重试、回发闭环
+- 首次接手项目：先看第 2、3、4、8、9 章。
+- 要理解主链路：重点看第 4 章。
+- 要扩展 Agent / Prompt / Tool / RAG：重点看第 5、8 章。
+- 要做架构规划：重点看第 9、10、11 章。
 
 ---
 
-## 2. 项目架构与模块映射
+## 2. 当前真实能力总览
 
-### 2.1 模块职责
+截至当前代码版本，SmartCrew-Agent 已经不是一个“骨架工程”，而是一套已经打通核心闭环的智能体平台雏形。
+
+### 2.1 后端能力
+
+- 已实现统一 Agent 注册、发现、派发与运行时查询。
+- 已实现 `initial-agent` 主执行链路。
+- 已实现 Prompt 模板管理、Agent-Prompt 绑定与运行时组装。
+- 已实现 Tool 双层配置体系：
+  - 代码 Tool（Bean Tool）
+  - 数据库 Flow Tool（顺序 DSL）
+  - 代码 + 数据库联动解析
+- 已实现 Agent-Tool 绑定，并已接入 `initial-agent` 运行时。
+- 已实现 RAG 基础设施：
+  - 知识库
+  - 文档上传
+  - 文档切片
+  - 向量化
+  - Chroma 检索
+  - Agent 与知识库绑定
+  - 运行时检索增强
+- 已实现 Web 端聊天会话、消息历史、用户登录态接入。
+- 已实现企业微信 / 飞书平台事件接入到统一会话网关。
+- 已实现 DashScope LLM 同步 / 流式对话与会话落库。
+
+### 2.2 管理后台能力
+
+当前已存在对应后台 API 与前端页面的能力包括：
+
+- 用户管理
+- 会话管理
+- Agent 管理
+- Prompt 模板管理
+- Tool 管理
+- 知识库管理
+- 偏好设置管理
+- 管理端登录
+
+### 2.3 当前不应误判为“已完成”的部分
+
+以下能力已有基础，但仍属于**下一阶段增强项**：
+
+- 决策引擎仍以启发式规划为主，还不是成熟的 LLM Planner。
+- Tool 编排已经闭环，但还没有直接切到模型原生 function calling。
+- Tool 体系已经很完整，但还没有独立的 Skill 层。
+- 多 Agent 体系已有注册与扩展基础，但还没有图式编排 / 持久化工作流。
+- 平台接入已打通会话入口，但线上级别的签名校验、幂等、重试、审批流还需继续补强。
+
+---
+
+## 3. 仓库结构与模块职责
+
+### 3.1 模块映射
 
 - `smartcrew-admin`
-  - Spring Boot 启动入口
-  - REST 控制器（agent/tool/prompt/memory/decision/platform）
+  - Spring Boot 启动模块
+  - 管理端 / Web 端 / 兼容 `api/v1` 控制器
+  - 集成测试
 - `smartcrew-modules-api`
-  - 领域实体、请求响应模型、Mapper、Service 接口契约
+  - 领域实体、VO、Request、Mapper、Service 接口契约
 - `smartcrew-modules`
-  - 核心实现：agent/tool/memory/decision/platform/prompt/mcp
+  - 核心实现层
+  - 包含 Agent、Prompt、Tool、RAG、LLM、Platform、Chat、Memory 等实现
 - `smartcrew-common`
-  - 公共配置、统一返回结构、异常处理、分页与工具类
+  - 公共配置、统一返回结构、异常、分页与通用工具
+- `smartcrew-ui`
+  - Vue 3 前端工程
+  - 包含公众页与管理后台
+- `sql`
+  - 初始化 SQL 与增量迁移脚本
+- `docs`
+  - 项目文档、技术手册、技术洞察与 skill 文档
 
-### 2.2 核心调用链
+### 3.2 推荐的定位顺序
 
-1. `Controller` 接收请求并做参数校验。
-2. `Service`/`Registry` 负责业务编排和对象路由。
-3. `Mapper` 读写 MySQL。
-4. 返回统一响应结构 `R<T>` 或 `TableDataInfo<T>`。
+遇到业务问题时，优先按下面顺序查：
 
-### 2.3 关键入口（当前代码）
+1. `controller`
+2. `service`
+3. `registry / orchestrator / executor`
+4. `mapper + entity`
+5. `ui/api`
 
-- 代理入口：`/api/v1/agents`
-- 工具入口：`/api/v1/tools`
-- 记忆入口：`/api/v1/memory/preferences`
-- 决策入口：`/api/v1/decision/plan`
-- 平台入口：`/api/v1/platform/{platform}/events`
+这套顺序适用于 Agent、Tool、Prompt、RAG、Chat 几乎所有主链路。
 
 ---
 
-## 3. 核心模块详解：smartcrew-modules
+## 4. 核心运行链路
 
-本章节详细介绍 `smartcrew-modules` 模块中 `com.smartcrew.agent.core` 包下各个子包的作用、核心类、功能定位和使用场景。这是项目的核心实现层，包含了 Agent、工具、记忆、决策、LLM、平台适配等关键能力。
+### 4.1 Web 聊天主链路
 
-### 3.1 模块整体架构
+主入口：
 
-`smartcrew-modules` 是项目的核心实现模块，采用分层架构设计：
+- `POST /api/web/chat/sessions`
+- `GET /api/web/chat/sessions`
+- `GET /api/web/chat/sessions/{sessionId}/messages`
+- `POST /api/web/chat/sessions/{sessionId}/messages`
 
-```
-com.smartcrew.agent.core/
-├── agent/          # 代理核心实现
-├── config/         # 配置管理
-├── decision/       # 决策引擎
-├── llm/            # 大模型客户端
-├── mcp/            # MCP 服务管理
-├── memory/         # 记忆体系
-├── platform/       # 平台适配器
-├── prompt/         # 提示词模板
-└── tool/           # 工具体系
-```
+链路如下：
 
-### 3.2 agent 包 - 代理核心实现
-
-#### 3.2.1 包的作用与意义
-
-`agent` 包是整个项目的核心，负责代理的生命周期管理、注册发现、消息派发和协调调度。它实现了多代理系统的核心架构，为构建智能对话系统提供了基础设施。
-
-#### 3.2.2 核心类详解
-
-**1. AgentCoordinatorImpl - 代理协调器**
-
-- **作用**：作为代理系统的中央调度器，负责接收外部请求、组装派发命令、发布消息并调用目标代理。
-- **核心功能**：
-  - 接收来自 API 网关的请求
-  - 生成全局唯一的 traceId 用于链路追踪
-  - 组装 `AgentDispatchCommand` 和 `MessageEnvelope`
-  - 通过消息总线发布消息
-  - 调用目标代理的 `handle` 方法
-- **使用场景**：
-  - 用户发起对话请求时
-  - 平台事件需要派发给特定代理时
-  - 多代理协作时的任务分发
-
-**2. InMemoryAgentRegistry - 代理注册表**
-
-- **作用**：基于内存的代理注册中心，维护运行期所有代理实例和定义的映射关系。
-- **核心功能**：
-  - 代理注册与更新
-  - 按编码查询代理实例和定义
-  - 列出所有已注册代理
-  - 判断代理是否存在
-- **使用场景**：
-  - 应用启动时自动发现并注册代理
-  - 派发请求时查询目标代理
-  - 管理代理的生命周期
-
-**3. AgentDiscoveryServiceImpl - 代理发现服务**
-
-- **作用**：在应用启动时自动发现 Spring 容器中的所有 Agent Bean，并完成注册。
-- **核心功能**：
-  - 监听 `ApplicationReadyEvent` 事件
-  - 扫描所有实现了 `Agent` 接口的 Bean
-  - 自动注册代理到注册表
-  - 为数据库中存在但无 Bean 的代理定义创建 StubAgent
-- **使用场景**：
-  - 应用启动时的自动发现机制
-  - 支持动态扩展代理
-
-**4. AgentDefinitionServiceImpl - 代理定义服务**
-
-- **作用**：管理代理定义的持久化，负责代理定义的增删改查。
-- **核心功能**：
-  - 创建新的代理定义
-  - 查询代理定义列表
-  - 更新代理定义
-  - 删除代理定义
-- **使用场景**：
-  - 通过 API 动态注册新代理
-  - 管理代理的元数据配置
-
-**5. EchoAgent - 回显代理**
-
-- **作用**：示例代理实现，直接返回用户输入内容，用于测试和演示。
-- **核心功能**：
-  - 支持 `echo` 和 `chat` 能力
-  - 简单的请求-响应模式
-- **使用场景**：
-  - 系统测试和验证
-  - 作为新代理开发的模板参考
-
-**6. PlannerAgent - 规划代理**
-
-- **作用**：负责复杂任务的规划和分解，将用户意图拆解为可执行的步骤。
-- **核心功能**：
-  - 分析用户输入
-  - 生成执行计划
-  - 协调多个工具和代理
-- **使用场景**：
-  - 复杂任务处理
-  - 多步骤工作流编排
-
-**7. StubAgent - 占位代理**
-
-- **作用**：为数据库中存在但无实际 Bean 的代理定义提供占位实现。
-- **核心功能**：
-  - 返回"代理未实现"的提示信息
-  - 防止系统因找不到代理而崩溃
-- **使用场景**：
-  - 代理定义已存在但代码未部署时
-  - 代理开发过程中的临时状态
-
-**8. InMemoryAgentMessageBus - 代理消息总线**
-
-- **作用**：基于内存的消息总线，用于代理间的消息传递和通信。
-- **核心功能**：
-  - 发布消息到指定代理
-  - 订阅和监听消息
-  - 支持异步消息处理
-- **使用场景**：
-  - 代理间协作通信
-  - 事件驱动的消息传递
-
-#### 3.2.3 核心调用链
-
-```
-API 请求
-  ↓
-AgentController.dispatch()
-  ↓
-AgentCoordinatorImpl.dispatch()
-  ↓
-AgentRegistry.get(agentCode)
-  ↓
-AgentMessageBus.publish()
-  ↓
-Agent.handle()
-  ↓
-返回响应
+```text
+WebChatController
+-> ConversationGatewayService
+-> AgentCoordinator
+-> initial-agent
+-> (可选) RAG augment
+-> (可选) Decision plan
+-> (可选) Tool orchestrator
+-> LlmClient
+-> ConversationStore 落库
+-> 返回回答
 ```
 
----
+职责分工：
 
-### 3.3 config 包 - 配置管理
+- `WebChatController` 只负责会话接口与登录态读取。
+- `ConversationGatewayServiceImpl` 负责把 Web 请求转换为统一 Agent 派发请求。
+- `AgentCoordinator` 负责 traceId、派发与目标 Agent 路由。
+- `InitialAgent` 负责把 Prompt、RAG、Tool、LLM 串起来。
 
-#### 3.3.1 包的作用与意义
+### 4.2 平台事件主链路
 
-`config` 包负责管理项目的核心配置，特别是 LLM 客户端的初始化和配置管理。它确保配置的正确加载和客户端的正确初始化。
+平台入口：
 
-#### 3.3.2 核心类详解
+- `POST /api/v1/platform/{platform}/events`
 
-**LlmConfig - LLM 配置类**
+当前支持：
 
-- **作用**：负责初始化大模型客户端，根据配置选择合适的供应商并完成客户端初始化。
-- **核心功能**：
-  - 读取 LLM 配置（供应商、API Key、模型名称等）
-  - 根据供应商类型初始化对应的客户端
-  - 支持条件化加载（`@ConditionalOnProperty`）
-  - 提供配置验证和日志记录
-- **使用场景**：
-  - 应用启动时自动初始化 LLM 客户端
-  - 支持多供应商切换
-  - 配置热更新（需扩展）
+- `wecom`
+- `feishu`
 
----
+链路如下：
 
-### 3.4 decision 包 - 决策引擎
-
-#### 3.4.1 包的作用与意义
-
-`decision` 包实现了智能决策引擎，负责分析用户意图、规划执行步骤、选择合适的工具和代理。它是实现智能对话和工作流编排的核心组件。
-
-#### 3.4.2 核心类详解
-
-**ReActDecisionEngine - ReAct 决策引擎**
-
-- **作用**：基于 ReAct（Reasoning and Acting）模式的决策引擎，通过"观察-思考-行动"的循环来处理复杂任务。
-- **核心功能**：
-  - 分析用户输入和上下文
-  - 生成多步骤执行计划
-  - 选择候选工具和代理
-  - 返回结构化的决策结果
-- **决策流程**：
-  1. **Observe（观察）**：检查输入和上下文
-  2. **Think（思考）**：分解意图为子问题
-  3. **Act（行动）**：选择工具和代理执行
-  4. **Summarize（总结）**：返回结构化结果
-- **使用场景**：
-  - 复杂任务的自动规划
-  - 多工具协作的场景
-  - 需要推理和决策的对话
-
----
-
-### 3.5 llm 包 - 大模型客户端
-
-#### 3.5.1 包的作用与意义
-
-`llm` 包封装了对大语言模型（LLM）的调用，提供统一的接口和实现，支持多供应商切换。它是项目与 AI 模型交互的核心桥梁。
-
-#### 3.5.2 核心类详解
-
-**DashScopeLlmClient - 千问客户端**
-
-- **作用**：基于 LangChain4j 框架实现的阿里云千问（DashScope）LLM 客户端。
-- **核心功能**：
-  - 初始化 ChatLanguageModel 实例
-  - 发送聊天请求并获取响应
-  - 记录调用日志（traceId、耗时）
-  - 错误处理和异常捕获
-- **使用场景**：
-  - 对话生成
-  - 文本分析和理解
-  - 意图识别
-- **配置要求**：
-  - `smartcrew.llm.enabled=true`
-  - `smartcrew.llm.provider=dashscope`
-  - `smartcrew.llm.api-key=<your-api-key>`
-  - `smartcrew.llm.model=qwen-plus`
-
----
-
-### 3.6 mcp 包 - MCP 服务管理
-
-#### 3.6.1 包的作用与意义
-
-`mcp` 包管理 Model Context Protocol (MCP) 服务的配置和生命周期，支持外部工具和服务的集成。
-
-#### 3.6.2 核心类详解
-
-**McpInfoServiceImpl - MCP 服务管理**
-
-- **作用**：负责 MCP 服务配置的新增、更新、查询和删除。
-- **核心功能**：
-  - 保存或更新 MCP 服务配置
-  - 查询所有 MCP 服务
-  - 按服务名称查询
-  - 管理 MCP 服务的状态
-- **使用场景**：
-  - 注册外部工具服务
-  - 管理工具服务的生命周期
-  - 支持动态工具扩展
-
----
-
-### 3.7 memory 包 - 记忆体系
-
-#### 3.7.1 包的作用与意义
-
-`memory` 包实现了智能体的记忆系统，包括用户偏好管理和会话记忆。它是实现个性化对话和上下文保持的关键组件。
-
-#### 3.7.2 核心类详解
-
-**1. UserPreferenceServiceImpl - 用户偏好服务**
-
-- **作用**：管理用户的个性化偏好设置，支持偏好的增删改查。
-- **核心功能**：
-  - 查询用户的所有偏好
-  - 按键查询特定偏好
-  - 新增或更新偏好
-  - 删除偏好
-- **使用场景**：
-  - 存储用户的语言偏好、风格偏好
-  - 记录用户的常用设置
-  - 实现个性化对话体验
-
-**2. ConversationMemoryServiceImpl - 会话记忆服务**
-
-- **作用**：管理会话级别的记忆，维护对话上下文。
-- **核心功能**：
-  - 加载会话记忆
-  - 更新会话记忆
-  - 清除会话记忆
-- **使用场景**：
-  - 多轮对话的上下文保持
-  - 会话状态管理
-  - 对话历史记录
-
----
-
-### 3.8 platform 包 - 平台适配器
-
-#### 3.8.1 包的作用与意义
-
-`platform` 包实现了多平台适配器，支持企业微信、飞书等外部平台的接入。它提供了统一的平台事件处理接口，屏蔽不同平台的差异。
-
-#### 3.8.2 核心类详解
-
-**1. WecomPlatformAdapter - 企业微信适配器**
-
-- **作用**：处理企业微信平台的事件回调，实现企微消息的接收和响应。
-- **核心功能**：
-  - 验证回调签名
-  - 解析企微事件
-  - 标准化事件模型
-  - 返回处理结果
-- **使用场景**：
-  - 企业微信机器人
-  - 企微群聊助手
-  - 企微应用集成
-
-**2. FeishuPlatformAdapter - 飞书适配器**
-
-- **作用**：处理飞书平台的事件回调，实现飞书消息的接收和响应。
-- **核心功能**：
-  - 处理飞书 challenge 验证
-  - 校验事件签名
-  - 解析飞书事件
-  - 标准化事件模型
-- **使用场景**：
-  - 飞书机器人
-  - 飞书群聊助手
-  - 飞书应用集成
-
-**3. InMemoryPlatformAdapterRegistry - 平台适配器注册表**
-
-- **作用**：管理所有平台适配器的注册和查询。
-- **核心功能**：
-  - 注册平台适配器
-  - 按平台编码查询适配器
-  - 列出所有适配器
-- **使用场景**：
-  - 多平台统一接入
-  - 平台适配器的生命周期管理
-
----
-
-### 3.9 prompt 包 - 提示词模板
-
-#### 3.9.1 包的作用与意义
-
-`prompt` 包管理提示词模板的创建、存储和查询，支持模板化提示词的管理和复用。
-
-#### 3.9.2 核心类详解
-
-**PromptTemplateServiceImpl - 提示词模板服务**
-
-- **作用**：管理提示词模板的增删改查，支持按分类查询模板。
-- **核心功能**：
-  - 创建提示词模板
-  - 查询所有模板
-  - 按分类查询最新模板
-  - 模板版本管理
-- **使用场景**：
-  - 系统提示词管理
-  - 角色扮演提示词
-  - 任务特定提示词
-
----
-
-### 3.10 tool 包 - 工具体系
-
-#### 3.10.1 包的作用与意义
-
-`tool` 包实现了完整的工具体系，包括工具注册、执行、元数据管理和多种内置工具。它是智能体与外部世界交互的核心能力。
-
-#### 3.10.2 核心类详解
-
-**1. InMemoryToolRegistry - 工具注册表**
-
-- **作用**：管理所有工具的注册、发现和状态控制。
-- **核心功能**：
-  - 启动时扫描工具 Bean
-  - 与数据库合并启停状态
-  - 查询工具元数据
-  - 设置工具启用/禁用状态
-- **使用场景**：
-  - 工具生命周期管理
-  - 工具状态控制
-  - 工具发现和查询
-
-**2. DefaultToolExecutor - 默认工具执行器**
-
-- **作用**：执行工具调用，处理参数校验和结果返回。
-- **核心功能**：
-  - 校验工具状态
-  - 定位工具 Bean
-  - 执行工具方法
-  - 返回执行结果
-- **使用场景**：
-  - 代理调用工具
-  - 工具执行流程控制
-
-**3. ToolDefinitionServiceImpl - 工具定义服务**
-
-- **作用**：管理工具定义的持久化，支持工具定义的增删改查。
-- **核心功能**：
-  - 创建工具定义
-  - 查询工具定义列表
-  - 更新工具定义
-  - 删除工具定义
-- **使用场景**：
-  - 动态注册新工具
-  - 管理工具元数据
-
-#### 3.10.3 内置工具详解
-
-**1. BasicTools - 基础工具**
-
-- **作用**：提供基础的工具能力，包括随机标识生成和时间查询。
-- **工具方法**：
-  - `generateId(prefix)`：生成随机标识符
-  - `currentTime()`：获取当前服务器时间
-- **使用场景**：
-  - 生成唯一标识
-  - 获取系统时间
-
-**2. FileTools - 文件工具**
-
-- **作用**：在工具工作目录中读写文件。
-- **工具方法**：
-  - `readFile(fileName)`：读取文件内容
-  - `writeFile(fileName, content)`：写入文件内容
-- **使用场景**：
-  - 文档处理
-  - 数据持久化
-  - 文件操作
-
-**3. WebSearchTools - 网页搜索工具**
-
-- **作用**：使用 Tavily 进行网络搜索。
-- **工具方法**：
-  - `search(query)`：执行网络搜索
-- **使用场景**：
-  - 实时信息查询
-  - 知识检索
-
-**4. WebPageTools - 网页内容工具**
-
-- **作用**：提取网页的文本内容。
-- **工具方法**：
-  - `fetchContent(url)`：获取网页文本内容
-- **使用场景**：
-  - 网页内容分析
-  - 信息提取
-
-**5. DocumentTools - 文档工具**
-
-- **作用**：处理各种文档格式（PDF、Word 等）。
-- **工具方法**：
-  - `extractText(filePath)`：提取文档文本
-- **使用场景**：
-  - 文档分析
-  - 内容提取
-
-**6. ImageSearchTools - 图片搜索工具**
-
-- **作用**：使用 Pexels 进行图片搜索。
-- **工具方法**：
-  - `search(query)`：搜索图片
-- **使用场景**：
-  - 图片检索
-  - 视觉内容查找
-
-**7. PlantUmlTools - PlantUML 工具**
-
-- **作用**：生成 PlantUML 图表。
-- **工具方法**：
-  - `generateDiagram(umlCode)`：生成图表
-- **使用场景**：
-  - 架构图生成
-  - 流程图绘制
-
-**8. TerminalTools - 终端工具**
-
-- **作用**：执行终端命令（高风险，默认禁用）。
-- **工具方法**：
-  - `execute(command)`：执行命令
-- **风险等级**：HIGH
-- **使用场景**：
-  - 系统管理
-  - 自动化脚本执行
-
----
-
-### 3.11 模块间协作关系
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        API Layer                             │
-│  (AgentController, ToolController, PlatformController)      │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│                      Core Layer                              │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │  Agent   │  │ Decision │  │   LLM    │  │ Platform │   │
-│  │  System  │←→│  Engine  │←→│  Client  │  │ Adapter  │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
-│       ↓              ↓                           ↓          │
-│  ┌──────────┐  ┌──────────┐              ┌──────────┐     │
-│  │   Tool   │  │  Memory  │              │  Prompt  │     │
-│  │  System  │  │  System  │              │ Template │     │
-│  └──────────┘  └──────────┘              └──────────┘     │
-│       ↓                                                     │
-│  ┌──────────┐                                              │
-│  │   MCP    │                                              │
-│  │ Services │                                              │
-│  └──────────┘                                              │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│                     Data Layer                               │
-│        (MySQL, Redis, Vector DB - 可扩展)                    │
-└─────────────────────────────────────────────────────────────┘
+```text
+PlatformController
+-> PlatformAdapter(Wecom / Feishu)
+-> ConversationGatewayService.chatFromPlatform(...)
+-> AgentCoordinator
+-> initial-agent
 ```
 
----
+当前特征：
 
-## 4. 快速启动与关键配置
+- 企业微信、飞书都已经不是占位适配器，而是已接入统一会话网关。
+- 平台用户会通过 `UserIdentityResolver` 解析或自动创建本地用户身份。
+- 平台会话根 ID 会按 provider/chat/thread 组合生成。
 
-### 4.1 运行前提
+### 4.3 `initial-agent` 执行链路
 
-- Java 17
-- Maven 3.9+
-- MySQL 8.x
+当前 `initial-agent` 是 SmartCrew 的默认总入口 Agent，也是 Tool 与 RAG 真正落地的地方。
 
-> 注意：本机如果是 Java 8，会在 `maven-compiler-plugin` 的 `--release 17` 报错。
+执行顺序：
 
-### 4.2 初始化步骤
+1. 读取当前 Agent 的 Prompt 组装结果。
+2. 如果启用了 RAG，则按 Agent 已绑定知识库执行检索增强。
+3. 查询当前 Agent 已绑定且启用的 Tool。
+4. 调用 `DecisionEngine.plan()` 生成结构化 Tool 计划。
+5. 调用 `AgentToolOrchestrator` 顺序执行 Tool。
+6. 将 Tool 结果与 RAG 结果一起拼入最终 LLM 请求。
+7. 调用 `LlmClient` 完成最终回答。
 
-1. 建库：`smartcrew_agent`
-2. 执行脚本：`sql/init-smartcrew-agent.sql`
-3. 修改：`smartcrew-admin/src/main/resources/application-dev.yml`
-4. 编译：`mvn clean package`
-5. 启动：`smartcrew-admin` 模块
+这意味着当前系统已经不是“纯 LLM 聊天”，而是：
 
-### 4.3 配置项重点
+**Prompt + RAG + Tool + 会话持久化** 的组合式智能体执行链。
 
-主配置文件：`smartcrew-admin/src/main/resources/application.yml`
+### 4.4 管理后台配置链路
 
-- `smartcrew.llm.enabled`
-- `smartcrew.llm.provider`
-- `smartcrew.llm.model`
-- `smartcrew.tools.enabled.*`
-- `smartcrew.tooling.file.save-dir`
+后台当前已经不仅是展示页，而是实际生效的配置入口。
 
-开发配置文件：`smartcrew-admin/src/main/resources/application-dev.yml`
+典型配置链路如下：
 
-- MySQL 数据源
-- Tavily（网页搜索）
-- Pexels（图片搜索）
+```text
+Admin Controller
+-> Definition/Binding Service
+-> Mapper 持久化
+-> Registry refresh / runtime read
+-> initial-agent 在运行时消费
+```
 
----
+例如：
 
-## 5. 接入大模型（LLM）
-
-### 5.1 当前现状
-
-- 项目已有 LLM 配置模型：`SmartCrewProperties.Llm`
-- 默认配置为：
-  - `enabled=false`
-  - `provider=dashscope`
-  - `model=qwen-plus`
-- 当前代码中尚未形成"统一 LLM 调用服务层"。
-
-### 5.2 目标能力
-
-形成统一的 LLM Gateway，支持：
-
-- 模型路由（按任务选择模型）
-- 统一超时、重试、熔断
-- 统一日志与成本记录
-- 可插拔供应商（千问 / 本地模型 / 其他）
-
-### 5.3 最小可用接入步骤
-
-1. 在 `modules-api` 新增 LLM 服务接口（如 `LlmClient`）。
-2. 在 `modules` 新增实现（如 `DashScopeLlmClient`）。
-3. 在 `SmartCrewProperties` 中补足 `apiKey/model` 的读取逻辑。
-4. 在 `DecisionEngine` 或 `Agent` 的处理链路引入该客户端。
-5. 为调用结果增加 traceId、耗时、token 统计日志。
-
-### 5.4 回退策略（建议）
-
-- 主模型失败时降级到小模型或规则引擎输出兜底文案。
-- LLM 超时后立即返回“受理中”并改异步处理。
-- 高风险请求（命令执行类）触发二次确认机制。
+- 修改 Tool 配置后会刷新 `ToolRegistry`
+- 修改 Agent 配置后会影响 Agent 详情与绑定关系
+- 修改 Prompt 绑定后，下次请求就会走新组装结果
+- 修改知识库绑定后，下次 RAG 检索就会生效
 
 ---
 
-## 6. 构建 Agent
+## 5. 已实现核心能力详解
 
-### 6.1 Agent 契约
+### 5.1 Agent 体系
 
-接口：`com.smartcrew.agent.api.agent.service.Agent`
+核心类：
 
-- `code()`
-- `name()`
-- `supports(String capability)`
-- `handle(AgentDispatchCommand command)`
+- `InMemoryAgentRegistry`
+- `AgentDiscoveryServiceImpl`
+- `AgentCoordinatorImpl`
+- `AgentDefinitionServiceImpl`
+- `InitialAgent`
+- `StubAgent`
 
-### 6.2 当前注册与发现机制
+当前设计特点：
 
-- `AgentDiscoveryServiceImpl` 在 `ApplicationReadyEvent` 自动发现并注册 Agent Bean。
-- 内置代理：`EchoAgent`、`PlannerAgent`。
-- 数据库中存在但无 Bean 的代理定义会注册为 `StubAgent`。
+- 代码 Bean Agent 与数据库 Agent 定义统一收敛到运行时注册中心。
+- 启动时自动扫描 `Agent` Bean。
+- 对数据库存在但代码暂未实现的 Agent，系统会注册 `StubAgent`，避免链路直接崩掉。
+- `AgentCoordinator` 负责统一派发，而不是让控制器直接调用具体 Agent。
 
-### 6.3 派发链路
+这意味着：
 
-`AgentController.dispatch` -> `AgentCoordinatorImpl.dispatch` -> `AgentRegistry.get` -> `agent.handle`
+- Agent 可以工程化开发。
+- Agent 也可以先在数据库建模、后补代码。
+- 运行时派发路径统一，便于后续接监控、权限和多 Agent 编排。
 
-派发时会组装：
+### 5.2 Prompt 体系
 
-- `traceId`
-- `AgentDispatchCommand`
-- `MessageEnvelope`（投递到消息总线）
+核心类：
 
-### 6.4 新增一个 Agent 的模板流程
+- `InitialAgentPromptServiceImpl`
+- `AgentPromptBindingServiceImpl`
+- `AdminPromptController`
 
-1. 新建类实现 `Agent` 接口并标记 `@Component`。
-2. 实现 `code/name/supports/handle`。
-3. 若需要数据库持久化配置，调用 `AgentDefinitionService.register` 写入定义。
-4. 通过 `/api/v1/agents/{code}/dispatch` 验证行为。
+当前采用的是**分层 Prompt 组装**：
 
-### 6.5 生产建议
+1. Agent 自身 `system_prompt`
+2. 绑定的 Prompt 模板内容
+3. 用户偏好（language / nickname / tone 等）
+4. RAG prompt block（运行时附加）
 
-- `supports` 规则保持互斥或有明确优先级。
-- `handle` 输出统一结构，避免自由文本难解析。
-- 对外部依赖（LLM/工具）调用增加超时与异常隔离。
+当前优点：
+
+- Agent 人设、工作流模板、用户偏好职责清晰。
+- Prompt 模板是可运营的，而不是写死在代码里。
+- Agent 与 Prompt 模板是显式绑定关系，不走模糊匹配。
+
+### 5.3 Tool 体系
+
+当前 Tool 体系已经是本项目最完整的基础设施之一。
+
+核心类：
+
+- `InMemoryToolRegistry`
+- `DefaultToolExecutor`
+- `BeanToolExecutor`
+- `FlowToolExecutor`
+- `ToolDefinitionServiceImpl`
+- `AgentToolBindingServiceImpl`
+- `AdminToolController`
+- `ReActDecisionEngine`
+- `AgentToolOrchestrator`
+
+#### 5.3.1 当前 Tool 设计
+
+当前 Tool 有两种执行模式：
+
+- `BEAN`
+  - 调用代码中的 Spring Bean Tool
+- `FLOW`
+  - 调用数据库中保存的顺序 DSL
+
+当前 Tool 的运行时来源状态：
+
+- `CODE_ONLY`
+- `DB_ONLY`
+- `LINKED`
+
+运行时统一视图使用：
+
+- `ResolvedToolDefinition`
+
+这意味着当前 Tool 已经不是简单的“代码函数列表”，而是统一了：
+
+- 来源状态
+- 动作元数据
+- 是否可执行
+- 解析错误
+- 管理后台展示
+
+#### 5.3.2 当前 Flow DSL 能力边界
+
+当前顺序 DSL 只支持三类步骤：
+
+- `template`
+- `tool_call`
+- `return`
+
+适合的场景：
+
+- 串联已有 Tool
+- 对结果做轻量包装
+- 配置化定义简单执行流程
+
+不适合的场景：
+
+- 分支
+- 循环
+- 任意脚本
+- 直接 SQL
+- 直接 shell
+
+所以当前 Flow Tool 的定位是：
+
+**轻量可配置工作流，而不是通用脚本引擎。**
+
+#### 5.3.3 当前 Agent 与 Tool 的接法
+
+当前并没有直接走模型原生 function calling，而是：
+
+```text
+规划一次
+-> 执行一次
+-> 总结一次
+```
+
+当前收益：
+
+- 模型协议解耦
+- 执行平面统一
+- 更容易加权限、审计、风控
+- 更利于后续引入 Skill 层
+
+当前代价：
+
+- 多一次规划与汇总，时延高于原生函数调用
+- 决策质量受启发式 Planner 限制
+
+### 5.4 RAG 体系
+
+核心类：
+
+- `KnowledgeBaseAdminServiceImpl`
+- `DocumentLoaderServiceImpl`
+- `DocumentSplitterServiceImpl`
+- `DashScopeEmbeddingServiceImpl`
+- `ChromaVectorStoreServiceImpl`
+- `RagAugmentationServiceImpl`
+- `AdminKnowledgeBaseController`
+
+当前闭环已经打通：
+
+1. 管理端创建知识库
+2. 上传文档
+3. 异步处理文档
+4. 文档切片
+5. 生成向量
+6. 写入 Chroma
+7. 绑定 Agent
+8. 运行时检索增强
+
+当前设计取舍：
+
+- 向量库通过 `VectorStoreService` 抽象，当前默认落到 Chroma。
+- 切片策略由配置驱动，而不是写死。
+- 检索增强只在运行时按 Agent 已绑定知识库执行，不是全库盲搜。
+- 检索失败会降级，不会直接打崩主对话链路。
+
+### 5.5 会话、LLM 与持久化
+
+核心类：
+
+- `DashScopeLlmClient`
+- `LlmConversationStore`
+- `ConversationGatewayServiceImpl`
+- `ConversationQueryService`
+
+当前特征：
+
+- 已支持同步对话与流式对话。
+- 已支持多轮历史消息读取。
+- 已支持用户消息与助手消息落库。
+- 已对会话级并发做细粒度锁控制，避免同会话消息乱序。
+
+当前模型接入现状：
+
+- 主实现为 DashScope / Qwen 链路。
+- `SmartCrewProperties` 已为模型配置留出了统一入口。
+- 会话数据保存在 `llm_conversation_session` / `llm_conversation_message`。
+
+### 5.6 用户与身份体系
+
+当前已支持两类入口用户：
+
+- Web 用户
+- 平台用户（企业微信 / 飞书）
+
+能力包括：
+
+- 后台管理员登录
+- Web 用户登录态读取
+- 平台用户身份解析 / 自动建档
+- 会话与用户关联
+
+### 5.7 前端与后台页面
+
+当前前端不是空壳，已有完整后台信息架构：
+
+- 管理端登录
+- 总览 / 会话 / 用户 / Agent / Prompt / Tool / 知识库 / 偏好
+- Agent 详情页已支持 Prompt 模板与 Tool 绑定
+- Tool 页已支持列表、详情、执行模式、动作预览、手动执行
+- 知识库页已支持文档、切片、Agent 绑定联动
+- 公众页已支持登录与聊天会话交互
+
+前端风格基线：
+
+- 统一液态玻璃风格
+- 固定视口 + 区块内滚动
+- 后台以双栏管理视图为主
 
 ---
 
-## 7. 构建 RAG（建议扩展）
+## 6. 数据模型与关键表
 
-### 7.1 当前现状
+下面只列核心表，不展开所有字段。
 
-- 项目有 `DocumentTools`（拉取文档文本）和 `WebPageTools`（网页转文本）；
-- 尚未实现向量数据库、嵌入模型、检索与重排链路。
+### 6.1 Agent / Prompt / Tool
 
-### 7.2 推荐目标架构
+- `agent_definition`
+- `prompt_template`
+- `agent_prompt_binding`
+- `tool_definition`
+- `agent_tool_binding`
 
-`数据采集` -> `文本清洗/切分` -> `Embedding` -> `向量索引` -> `召回` -> `重排` -> `生成`
+### 6.2 RAG
 
-### 7.3 最小可用 RAG 实施步骤
+- `knowledge_base`
+- `knowledge_document`
+- `document_chunk`
+- `agent_knowledge_binding`
 
-1. 新增知识文档入库接口（来源：文件、URL、平台消息）。
-2. 设计切分策略（固定窗口 + overlap）。
-3. 接入 embedding 服务并生成向量。
-4. 选择向量存储（可先用轻量方案，再升级）。
-5. 查询时执行召回 + 可选重排。
-6. 将召回片段拼接到提示词后送入 LLM。
-7. 响应中返回引用片段来源（source、chunkId）。
+### 6.3 会话与用户
 
-### 7.4 质量建议
+- `sc_user`
+- `user_identity`
+- `user_preference`
+- `llm_conversation_session`
+- `llm_conversation_message`
 
-- 先做离线评测集，再做线上灰度。
-- 召回与生成分开观测指标。
-- 对低置信结果启用“拒答 + 请求补充信息”。
+### 6.4 当前特别注意
 
----
+Tool 双层配置相关新增字段并不完全体现在旧初始化脚本中，当前还依赖增量迁移：
 
-## 8. 构建多 Agent 协作（建议扩展）
+- `sql/migrations/20260416_tool_dual_layer.sql`
 
-### 8.1 当前现状
+这意味着：
 
-- 已有多代理基础模型（Agent 接口、Registry、Coordinator、MessageBus）；
-- 还缺任务分解、路由策略、状态机、冲突仲裁。
-
-### 8.2 协作模式建议
-
-- Router 模式：入口 Agent 根据能力路由到单 Agent。
-- Planner-Executor 模式：Planner 拆解任务，Executor 执行。
-- Supervisor 模式：总控 Agent 管理子 Agent 生命周期。
-
-### 8.3 最小可用编排方案
-
-1. 新增“任务计划模型”（阶段、负责人、输入输出契约）。
-2. 在 `DecisionEngine` 输出可执行步骤而非占位文本。
-3. 引入“轮次上限”和“停止条件”防止无限循环。
-4. 统一会话上下文存储结构（sessionId + stepId）。
-5. 对失败步骤启用重试与降级（跳过/替代 Agent）。
-
-### 8.4 防失控策略
-
-- 每轮最大步数限制。
-- 每个 Agent 的职责边界白名单。
-- 超时后强制中断并返回部分结果。
-- 关键任务引入仲裁 Agent 复核。
+- 如果直接用旧基线 SQL 落库，需要再补跑迁移。
+- 后续建议整理新的初始化基线，避免“初始化脚本落后于真实结构”。
 
 ---
 
-## 9. 工具体系与安全治理
+## 7. 接口分层约定
 
-### 9.1 当前工具体系
+项目当前已经形成比较清晰的接口分层：
 
-核心契约：`SmartCrewTool`
+- `/api/web/*`
+  - 面向公众页
+  - 如聊天、登录
+- `/api/admin/*`
+  - 面向后台管理
+  - 如 Agent、Prompt、Tool、知识库、用户、会话管理
+- `/api/v1/*`
+  - 历史兼容与基础能力接口
+  - 不应轻易破坏既有语义
 
-- `toolCode`
-- `toolName`
-- `description`
-- `riskLevel`
-- `enabledByDefault`
+开发约定：
 
-注册中心：`InMemoryToolRegistry`
-
-- 启动时扫描工具 Bean
-- 与数据库 `tool_definition` 合并启停状态
-
-执行器：`DefaultToolExecutor`
-
-- 目前仅校验工具状态并定位 Bean
-- 尚未完成“按方法动态执行”的生产级能力
-
-### 9.2 工具风险分级建议
-
-- LOW：纯计算、格式转换
-- MEDIUM：外部 HTTP 读取
-- HIGH：命令执行、文件写入
-
-### 9.3 安全控制建议
-
-- 高风险工具默认关闭（当前 `terminal` 已默认关闭）。
-- 工具调用参数做白名单校验。
-- 为工具调用加入审计日志（调用人、traceId、参数摘要、耗时、结果状态）。
-- 对终端工具增加命令黑名单与目录沙箱。
+- 新的后台管理接口优先放 `/api/admin/*`
+- 新的公众页接口优先放 `/api/web/*`
+- 需要兼容旧能力时，保留 `/api/v1/*`
 
 ---
 
-## 10. 记忆体系（当前 + 扩展）
+## 8. 常见扩展任务指南
 
-### 10.1 当前能力
+### 8.1 新增一个 Agent
 
-- `UserPreferenceServiceImpl`：用户偏好增删改查
-- `ConversationMemoryServiceImpl`：基于偏好服务加载/更新会话记忆
+推荐路径：
 
-### 10.2 建议扩展为三层记忆
+1. 先在代码中实现 `Agent` Bean。
+2. 在数据库中补 Agent 定义与元数据。
+3. 如果要复用现有主链路能力，可直接仿照 `InitialAgent`。
+4. 通过后台页管理 Prompt / Tool / 知识库绑定。
 
-- 短期记忆：当前会话上下文
-- 中期记忆：用户偏好和近期主题摘要
-- 长期记忆：知识图谱/向量知识库
+如果只是预留配置，也可以先建数据库定义，系统会先生成 `StubAgent`。
 
-### 10.3 建议原则
+### 8.2 新增一个代码 Tool
 
-- 记忆写入要有来源标记（手动/会话/系统）
-- 建立 TTL 与过期清理机制
-- 敏感信息不入长期记忆
+推荐路径：
 
----
+1. 实现 `SmartCrewTool` Bean。
+2. 用 `@Tool` 暴露动作。
+3. 用 `@P` 补参数说明。
+4. 启动后由 `ToolRegistry` 自动发现。
+5. 如需运营化展示，再补数据库配置覆盖名称、描述、风险等级等元数据。
 
-## 11. 企业微信 / 飞书接入（重点）
+### 8.3 新增一个纯数据库 Flow Tool
 
-### 11.1 当前代码映射
+推荐路径：
 
-- 平台统一入口：`POST /api/v1/platform/{platform}/events`
-- 平台编码：
-  - 企业微信：`wecom`
-  - 飞书：`feishu`
-- 当前 `WecomPlatformAdapter` / `FeishuPlatformAdapter` 为 placeholder 实现，仅返回受理消息。
+1. 通过后台或接口创建 `tool_definition`
+2. `executionMode = FLOW`
+3. 填写 `flowDefinitionJson`
+4. 保存后刷新注册中心
+5. 绑定到 Agent
 
-### 11.2 目标接入架构
+适合轻量串联，不建议承载复杂核心业务。
 
-`平台回调` -> `鉴权/验签/去重` -> `统一事件模型` -> `Agent 派发` -> `平台回发` -> `重试/告警`
+### 8.4 给 Agent 增加 Prompt / Tool / 知识库能力
 
-### 11.3 企业微信接入方法（实施建议）
+当前三类绑定都已经有现成模式：
 
-1. 回调验证：
-  - 实现回调 URL 验证流程；
-  - 验证签名、时间戳、随机串合法性。
-2. 事件解析：
-  - 将企微事件转换为统一事件模型（`platformUserId/eventType/content/metadata`）。
-3. 身份映射：
-  - 平台用户 ID 映射到内部 userId；
-  - sessionKey 建议：`platform + corpId + userId`。
-4. 幂等与去重：
-  - 基于事件 ID + 时间窗口去重；
-  - 消息重复投递时直接返回“已处理”。
-5. 回发策略：
-  - 同步响应失败时进入异步重试队列；
-  - 明确最大重试次数与退避策略。
-6. Token 管理：
-  - 统一缓存 access token；
-  - 到期前预刷新，失败时降级告警。
+- Prompt：`AgentPromptBindingService`
+- Tool：`AgentToolBindingService`
+- 知识库：知识库绑定服务
 
-### 11.4 飞书接入方法（实施建议）
+推荐做法：
 
-1. URL 验证：
-  - 处理飞书 challenge 验证握手。
-2. 签名校验：
-  - 按飞书事件签名规范校验请求有效性。
-3. 事件标准化：
-  - 飞书事件体转换为统一事件模型；
-  - 区分消息事件、成员事件、机器人事件。
-4. 多租户隔离：
-  - tenant key / app 配置分租户存储；
-  - token 缓存按租户隔离。
-5. 消息回发：
-  - 统一消息发送接口；
-  - 失败进入重试与告警流程。
+- Prompt 负责角色与任务指令
+- Tool 负责动作执行
+- 知识库负责检索上下文
 
-### 11.5 平台抽象统一建议
+不要把三者职责混成一个“大 Prompt”。
 
-- 统一事件字段：
-  - `platform`
-  - `platformUserId`
-  - `eventType`
-  - `content`
-  - `metadata`
-- 统一状态与错误码：
-  - 参数错误、验签失败、重复事件、下游失败、限流触发
-- 统一降级：
-  - 平台 API 失败不阻塞主链路，转异步补偿
+### 8.5 扩展 RAG
 
-### 11.6 运维与安全建议
+当前适合继续增强的方向：
 
-- 回调源 IP 白名单
-- API 限流与突发保护
-- 敏感字段脱敏（手机号、邮箱、内部ID）
-- 审计日志：接收时间、来源平台、事件ID、处理结果、traceId
-- 平台失败告警阈值：连续失败、超时比例、重试积压量
+- 检索重排器
+- Hybrid Search
+- 引用片段可追溯展示
+- 评测集与命中质量评估
+- 文档版本化与增量重建
+
+### 8.6 扩展后台页面
+
+前端开发必须遵循现有视觉基线：
+
+- 复用现有液态玻璃风格
+- 不另起主题系统
+- 保持固定视口 + 区域内滚动
+- 列表页优先复用已有管理页骨架
 
 ---
 
-## 12. 观测与评测
+## 9. 当前架构边界与已知风险
 
-### 12.1 观测维度
+### 9.1 决策引擎仍偏启发式
 
-- 请求维度：QPS、P95/P99、错误率
-- 业务维度：派发成功率、工具调用成功率、平台回发成功率
-- LLM 维度（扩展后）：token、耗时、失败率、成本
-- RAG 维度（扩展后）：召回命中率、引用率、拒答率
+`ReActDecisionEngine` 当前更像结构化启发式 Planner：
 
-### 12.2 最小可观测建议
+- 支持显式 `tool:code#action {}` 指令
+- 支持部分关键词推断
+- 支持简单动作候选匹配
 
-- 全链路强制携带 `traceId`
-- 关键节点统一日志结构（JSON）
-- 错误按“可重试/不可重试”分类
+但它还不是：
 
-### 12.3 评测建议
+- 基于 LLM 的强规划器
+- 支持复杂多步反思的 Planner
+- 支持并行工具计划的成熟代理框架
 
-- 离线评测：
-  - 构建标准问答集
-  - 评估准确率、召回率、引用一致性
-- 线上评测：
-  - 采样人工质检
-  - 用户反馈闭环
+### 9.2 Tool 体系不等于 Skill 体系
 
----
+当前 Tool 已经解决的是：
 
-## 13. 常见技术挑战与粗略解决思路
+- 动作执行
+- 流程配置
+- Agent 白名单绑定
 
-### 13.1 大模型幻觉
+但还没有解决：
 
-问题：
+- 会话级临时技能挂载
+- 技能说明 / 策略 / 约束模板
+- Skill 对 Tool 的上层编排
 
-- 模型编造不存在事实
-- 回答看似合理但无法验证
+如果后续目标是接近 Codex 式 Skill 体系，建议在 Tool 之上补一层 `skill_definition`，而不是继续把所有语义都塞进 Tool。
 
-粗略解法：
+### 9.3 Tool 编排尚未切到模型原生 function calling
 
-- 强制检索增强，优先基于证据生成
-- 输出附带引用来源
-- 结构化输出 + 校验器二次检查
-- 低置信度场景拒答或追问
+当前使用“规划 -> 执行 -> 总结”骨架的优势很明显，但也意味着：
 
-### 13.2 RAG 召回质量不稳定
+- 时延更高
+- 规划精度依赖外部 Planner
+- Tool schema 约束能力还不如原生 tool calling 强
 
-问题：
+### 9.4 多 Agent 仍处于“可扩展”而非“已编排”
 
-- 分块不合理导致语义破碎
-- 检索召回不到关键片段
+当前系统已经具备多 Agent 的注册与派发基础，但还没有：
 
-粗略解法：
+- Graph 级工作流引擎
+- Durable execution
+- Agent 间状态编排
+- 人工审批断点恢复
 
-- 优化切分策略（语义切分 + overlap）
-- 混合检索（关键词 + 向量）
-- 增加重排（rerank）
-- 建立文档更新与索引重建策略
+### 9.5 初始化 SQL 与真实结构存在时间差
 
-### 13.3 多 Agent 协作失控
+当前增量迁移脚本比初始化基线更新，这在多人协作或新环境初始化时容易造成误判。
 
-问题：
+### 9.6 平台链路仍需线上级治理
 
-- 任务相互推诿、循环调用、上下文污染
+当前企业微信 / 飞书已经接入统一会话入口，但如果要面向生产公网环境，还应补：
 
-粗略解法：
-
-- 明确角色边界和职责输入输出
-- 设置轮次上限与终止条件
-- 引入仲裁 Agent
-- 失败快速短路并回退到单 Agent 路径
-
-### 13.4 成本与延迟压力
-
-问题：
-
-- LLM 成本高、响应慢
-
-粗略解法：
-
-- 模型分层路由（小模型优先）
-- 缓存热点问答与工具结果
-- 异步化长任务
-- 超时降级与兜底文案
-
-### 13.5 平台接入稳定性风险
-
-问题：
-
-- 回调重放、签名异常、平台 API 波动
-
-粗略解法：
-
-- 严格验签 + 幂等去重
-- 失败重试（指数退避）
-- 死信队列兜底
-- 持续告警与可视化监控
+- 回调签名校验
+- 幂等控制
+- 事件去重
+- 失败重试
+- 超时与审计
 
 ---
 
-## 14. 分阶段实施路线图（P0 / P1 / P2）
+## 10. 后续演进方向
 
-### P0（1-2 周）：跑通主链路
+这一章只讨论**主流且值得落地到本项目**的方向，不做空泛技术展望。
 
-- 完成 LLM 最小接入（单供应商）
-- 完成单 Agent 可用对话流程
-- 完成平台回调验签与标准化事件模型
-- 建立 traceId 日志和基本错误告警
+### 10.1 方向一：升级到“模型原生 Tool Calling + 平台统一治理”
 
-### P1（2-4 周）：提升效果与稳定性
+当前主流趋势：
 
-- 上线最小 RAG 管线（入库 + 检索 + 引用）
-- 完成工具执行器增强（真实方法调用）
-- 完成平台回发重试和幂等
-- 建立离线评测集与质量看板
+- OpenAI 已以 Responses API 作为新一代 agent primitive，统一承载 tool calling、built-in tools、remote MCP 等能力。
+- Anthropic 的 Tool Use 也已经把 client tools / server tools 做成一等概念。
 
-### P2（4-8 周）：迈向生产级
+对 SmartCrew 的建议：
 
-- 多 Agent 编排框架（Planner/Executor/Supervisor）
-- 模型路由与成本治理
-- 长期记忆体系
-- 安全合规与审计完善（含高风险工具治理）
+- 保留当前 `ToolRegistry + ToolExecutor + AgentToolOrchestrator` 作为治理平面。
+- 在 Planner 之上增加“模型原生 tool calling 适配层”。
+- 短期可让 `initial-agent` 支持两种策略：
+  - 当前外部规划模式
+  - 原生 function calling 模式
+
+这样做的好处：
+
+- 性能更好
+- 参数 schema 更严格
+- 与主流模型生态更一致
+- 同时不丢失项目现有治理能力
+
+优先级：**高**
+
+### 10.2 方向二：把当前启发式 Planner 升级为结构化 LLM Planner
+
+当前主流趋势：
+
+- 大多数成熟 Agent 系统不会长期停留在关键词启发式规划。
+- 更常见的是：
+  - 结构化 JSON 计划输出
+  - 显式工具白名单
+  - tool choice 约束
+  - 可观测计划对象
+
+对 SmartCrew 的建议：
+
+- 用模型输出 `PlannedToolCall[]`
+- 增加计划校验器
+- 对计划执行前做白名单、参数与风险校验
+- 保留当前启发式逻辑作为兜底 fallback
+
+优先级：**高**
+
+### 10.3 方向三：引入 Durable Execution 与 Human-in-the-Loop
+
+当前主流趋势：
+
+- LangGraph 等框架已经把 durable execution、interrupt、resume、human approval 做成标准能力。
+- 对高风险操作，越来越强调“工具调用前审批”。
+
+对 SmartCrew 的建议：
+
+- 为 ToolExecution 引入可持久化执行状态。
+- 对高风险 Tool 增加审批断点。
+- 支持：
+  - approve
+  - edit arguments
+  - reject
+- 后台或前台可展示“待审批工具动作”。
+
+这将显著提升系统处理高风险操作时的可治理性。
+
+优先级：**高**
+
+### 10.4 方向四：在 Tool 之上增加独立 Skill 层
+
+当前主流趋势：
+
+- 越来越多系统把“执行动作”和“任务方法”拆开。
+- Tool 负责执行，Skill 负责组织：
+  - 指令模板
+  - 调用约束
+  - 推荐 Tool 组合
+  - 适用场景
+  - 上下文注入规则
+
+对 SmartCrew 的建议：
+
+- 新增 `skill_definition`
+- 允许 Skill 绑定多个 Tool
+- 支持 Agent 绑定 Skill，而不是直接全暴露 Tool
+- 后续支持“页面临时挂 Skill 到当前会话”
+
+这会更接近你们想要的“可运营 Skill 系统”，也更贴近 Codex 类产品的能力形态。
+
+优先级：**高**
+
+### 10.5 方向五：引入 MCP，做标准化外部工具 / 资源接入
+
+当前主流趋势：
+
+- MCP 正在成为外部工具与上下文接入的重要标准协议。
+- OpenAI、Anthropic、IDE 工具链都在逐步强化对 MCP 的支持。
+
+对 SmartCrew 的建议：
+
+- 先做 MCP Client：
+  - 让 SmartCrew 能消费外部 MCP server 暴露的 tools/resources/prompts
+- 再做 MCP Server：
+  - 将 SmartCrew 的内部 Tool / Knowledge / Prompt 暴露给外部客户端
+
+推荐顺序：
+
+1. 内部 Tool 体系稳定
+2. 增加 MCP Client 适配
+3. 再视需要做 MCP Server
+
+优先级：**中高**
+
+### 10.6 方向六：把 RAG 升级到“检索质量治理”阶段
+
+当前主流趋势：
+
+- 主流 RAG 已经不只看“能检索”，而是强调：
+  - Hybrid Search
+  - Rerank
+  - 引用可追溯
+  - 命中率评测
+  - 数据 freshness
+
+对 SmartCrew 的建议：
+
+- 增加关键词检索与向量检索混合召回
+- 增加 rerank 层
+- 最终回答中附片段来源
+- 建立评测集与离线评估脚本
+
+优先级：**中高**
+
+### 10.7 方向七：建设 Agent Observability / Evals / Replay
+
+当前主流趋势：
+
+- 越来越多 Agent 平台强调：
+  - trace
+  - event timeline
+  - tool spans
+  - response evals
+  - replay
+
+对 SmartCrew 的建议：
+
+- 给 Agent / Tool / RAG / LLM 全链路打 traceId 与 span
+- 后台增加执行回放视图
+- 建立 prompt/tool/rag 的回归评测集
+
+这会直接影响系统能否从“能跑”进入“能稳定迭代”。
+
+优先级：**中高**
+
+### 10.8 方向八：建设图式多 Agent 编排
+
+当前主流趋势：
+
+- Google ADK、LangGraph 等都强调 workflow agents / graph orchestration / multi-agent patterns。
+- 多 Agent 不再只是“注册多个 Agent”，而是：
+  - supervisor
+  - sequential
+  - parallel
+  - critique
+  - refinement
+
+对 SmartCrew 的建议：
+
+- 在现有 AgentCoordinator 之上增加 graph / workflow 层
+- 支持：
+  - 顺序编排
+  - 并行 fan-out
+  - review / critic
+  - 失败恢复
+
+优先级：**中**
+
+### 10.9 方向九：把 Memory 从“偏好/会话”升级到长期记忆
+
+当前主流趋势：
+
+- Google ADK 等体系已经把 Session / State / Memory 分层得很清楚。
+- 长期记忆越来越强调跨会话可检索与可治理。
+
+对 SmartCrew 的建议：
+
+- 保留当前 `user_preference` 的轻量偏好层
+- 增加长期 MemoryService：
+  - 从会话中提炼可保留事实
+  - 跨 session 检索
+  - 带 TTL 或人工确认的记忆写入策略
+
+优先级：**中**
 
 ---
 
-## 附录 A：当前主要 REST 接口速览
+## 11. 建议的阶段性路线图
 
-- Agent
-  - `POST /api/v1/agents/register`
-  - `GET /api/v1/agents`
-  - `POST /api/v1/agents/{code}/dispatch`
-- Tool
-  - `GET /api/v1/tools`
-  - `POST /api/v1/tools`
-  - `POST /api/v1/tools/{toolCode}/enable`
-  - `POST /api/v1/tools/{toolCode}/disable`
-- Prompt
-  - `GET /api/v1/prompts`
-  - `POST /api/v1/prompts`
-  - `GET /api/v1/prompts/category/{category}`
-- Memory
-  - `GET /api/v1/memory/preferences/{userId}`
-  - `PUT /api/v1/memory/preferences/{userId}`
-- Decision
-  - `POST /api/v1/decision/plan`
-- Platform
-  - `POST /api/v1/platform/{platform}/events`
+### Phase 1：把当前基础设施做稳
+
+- 统一新的数据库初始化基线
+- 补 Planner 回归测试
+- 补 Tool / RAG / 平台链路的监控与错误可视化
+- 补高风险 Tool 审计字段
+
+### Phase 2：让 Agent 更像“可治理生产系统”
+
+- LLM Planner 升级
+- 原生 tool calling 适配
+- 高风险 Tool 审批流
+- 执行状态可恢复
+
+### Phase 3：向平台化 Agent 演进
+
+- Skill 层
+- MCP Client / Server
+- 多 Agent Graph
+- 长期 Memory
+- 完整评测与回放平台
 
 ---
 
-## 附录 B：扩展实现时的边界声明模板
+## 12. 官方参考与主流方案基线
 
-建议在评审文档或 PR 描述里固定写明：
+以下资料适合作为本项目后续演进时的外部参照：
 
-- 已实现能力：
-- 仅提供配置入口但未落地能力：
-- 本次新增能力：
-- 不在本次范围内：
-- 风险与回滚策略：
+- OpenAI Responses API  
+  [https://platform.openai.com/docs/guides/migrate-to-responses](https://platform.openai.com/docs/guides/migrate-to-responses)
 
-这样可以显著降低“以为已实现”的协作误差。
+- OpenAI Function Calling  
+  [https://platform.openai.com/docs/guides/function-calling](https://platform.openai.com/docs/guides/function-calling)
+
+- OpenAI Tools / Remote MCP  
+  [https://platform.openai.com/docs/guides/tools](https://platform.openai.com/docs/guides/tools)
+
+- Anthropic Tool Use Overview  
+  [https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview)
+
+- Anthropic How to Implement Tool Use  
+  [https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/implement-tool-use](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/implement-tool-use)
+
+- LangGraph Durable Execution  
+  [https://docs.langchain.com/oss/python/langgraph/durable-execution](https://docs.langchain.com/oss/python/langgraph/durable-execution)
+
+- LangGraph Human-in-the-Loop / Interrupts  
+  [https://docs.langchain.com/oss/python/langgraph/human-in-the-loop](https://docs.langchain.com/oss/python/langgraph/human-in-the-loop)
+
+- Model Context Protocol Introduction  
+  [https://modelcontextprotocol.io/docs/start/tutorial](https://modelcontextprotocol.io/docs/start/tutorial)
+
+- Model Context Protocol Specification Overview  
+  [https://modelcontextprotocol.io/specification/2025-06-18/basic](https://modelcontextprotocol.io/specification/2025-06-18/basic)
+
+- Google Agent Development Kit Overview  
+  [https://google.github.io/adk-docs/get-started/about/](https://google.github.io/adk-docs/get-started/about/)
+
+- Google ADK Workflow Agents  
+  [https://google.github.io/adk-docs/agents/workflow-agents/](https://google.github.io/adk-docs/agents/workflow-agents/)
+
+- Google ADK Multi-Agent Systems  
+  [https://google.github.io/adk-docs/agents/multi-agents/](https://google.github.io/adk-docs/agents/multi-agents/)
+
+- Google ADK Session / State / Memory  
+  [https://google.github.io/adk-docs/sessions/](https://google.github.io/adk-docs/sessions/)
+
+---
+
+## 13. 一句话结论
+
+SmartCrew-Agent 当前已经完成了从“多模块骨架工程”到“可运行智能体平台雏形”的跨越：
+
+- 运行时主链路已经打通
+- Tool / RAG / Prompt / Agent 后台配置闭环已经成立
+- 平台化演进方向也已经比较明确
+
+下一阶段最值得投入的不是再堆功能点，而是把：
+
+**原生 Tool Calling、Skill 层、Durable Execution、MCP、RAG 质量治理、Observability**
+
+这几件事补齐，推动系统从“能跑”走向“可规模化演进”。
