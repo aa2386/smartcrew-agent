@@ -8,11 +8,23 @@ import lombok.Data;
 @Data
 public class KnowledgeBaseAgentOptionVo {
 
+    /**
+     * Agent 编码。
+     */
     private String agentCode;
 
+    /**
+     * Agent 名称。
+     */
     private String agentName;
 
+    /**
+     * Agent 类型。
+     */
     private String agentType;
 
+    /**
+     * 是否启用。
+     */
     private Boolean enabled;
 }

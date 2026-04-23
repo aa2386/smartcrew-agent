@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * ToolDefinition 实体，表示持久化层的 Tool 配置。
+ * 工具定义实体，描述可接入平台的工具配置。
  */
 @Data
 @TableName("tool_definition")
@@ -37,12 +37,12 @@ public class ToolDefinition extends BaseEntity {
     private String description;
 
     /**
-     * Spring Bean 名称，BEAN 模式下使用。
+     * Spring Bean 名称。
      */
     private String beanName;
 
     /**
-     * 执行模式：BEAN / FLOW。
+     * 执行模式。
      */
     private String executionMode;
 
@@ -57,12 +57,12 @@ public class ToolDefinition extends BaseEntity {
     private Boolean enabled;
 
     /**
-     * 运行时附加配置 JSON。
+     * 运行时扩展配置 JSON。
      */
     private String configJson;
 
     /**
-     * 顺序流程 DSL 定义 JSON。
+     * 流程定义 JSON。
      */
     private String flowDefinitionJson;
 }

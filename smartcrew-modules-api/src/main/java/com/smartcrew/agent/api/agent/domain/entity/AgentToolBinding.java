@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * AgentToolBinding 实体，表示持久化层的业务数据结构。
+ * Agent 与工具绑定关系实体。
  */
 @Data
 @TableName("agent_tool_binding")
@@ -20,10 +20,12 @@ public class AgentToolBinding extends BaseEntity {
      */
     @TableId(type = IdType.AUTO)
     private Long id;
+
     /**
-     * 代理编码。
+     * Agent 编码。
      */
     private String agentCode;
+
     /**
      * 工具编码。
      */

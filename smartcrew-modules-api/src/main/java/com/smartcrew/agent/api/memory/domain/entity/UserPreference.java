@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * UserPreference 实体，表示持久化层的业务数据结构。
+ * 用户偏好实体。
  */
 @Data
 @TableName("user_preference")
@@ -20,24 +20,29 @@ public class UserPreference extends BaseEntity {
      */
     @TableId(type = IdType.AUTO)
     private Long id;
+
     /**
      * 用户 ID。
      */
     private Long userId;
+
     /**
      * 偏好键。
      */
     private String prefKey;
+
     /**
      * 偏好值。
      */
     private String prefValue;
+
     /**
      * 偏好类型。
      */
     private String prefType;
+
     /**
-     * 来源标识。
+     * 偏好来源。
      */
     private String source;
 }

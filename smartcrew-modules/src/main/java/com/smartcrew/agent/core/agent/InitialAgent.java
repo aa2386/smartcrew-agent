@@ -34,7 +34,7 @@ public class InitialAgent implements Agent {
 
     private final LlmClient llmClient;
     private final InitialAgentPromptService promptService;
-    private final Optional<RagAugmentationService> ragAugmentationService;
+    private final Optional<RagAugmentationService> ragAugmentationService;// 当项目配置为不启用RAG时可能为null，所以使用Optional
     private final AgentToolBindingService agentToolBindingService;
     private final DecisionEngine decisionEngine;
     private final AgentToolOrchestrator agentToolOrchestrator;
@@ -77,7 +77,9 @@ public class InitialAgent implements Agent {
     @Override
     public AgentDispatchResponse handle(AgentDispatchCommand command) {
         String llmSessionId = code() + "::" + command.getSessionId();
+        // 构建RAG检索结果
         RagAugmentationResult augmentationResult = resolveRagAugmentation(command);
+        // 构建工具决策计划
         List<ResolvedToolDefinition> availableTools = agentToolBindingService.listEnabledResolvedToolsByAgentCode(code());
         DecisionPlanResponse decisionPlan = buildDecisionPlan(command, availableTools);
         List<ToolExecutionResult> toolResults = agentToolOrchestrator.execute(

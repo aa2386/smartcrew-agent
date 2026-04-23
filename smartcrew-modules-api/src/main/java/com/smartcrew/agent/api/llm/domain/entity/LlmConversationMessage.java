@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 大模型会话消息实体，表示一条持久化的对话消息。
+ * 大模型会话消息实体，记录一条持久化的对话消息。
  */
 @Data
 @TableName("llm_conversation_message")
@@ -32,12 +32,12 @@ public class LlmConversationMessage extends BaseEntity {
     private String sessionId;
 
     /**
-     * 会话内的消息顺序号。
+     * 会话内消息序号。
      */
     private Long messageSeq;
 
     /**
-     * 消息角色，例如 system、user、assistant、tool。
+     * 消息角色。
      */
     private String role;
 
@@ -47,12 +47,12 @@ public class LlmConversationMessage extends BaseEntity {
     private String content;
 
     /**
-     * 本轮调用链追踪 ID。
+     * 当前调用链路追踪 ID。
      */
     private String traceId;
 
     /**
-     * 使用的模型名称。
+     * 实际使用的模型名称。
      */
     private String model;
 
@@ -72,7 +72,7 @@ public class LlmConversationMessage extends BaseEntity {
     private Integer totalTokens;
 
     /**
-     * 消息处理状态，例如 SUCCESS、FAILED。
+     * 消息处理状态。
      */
     private String status;
 

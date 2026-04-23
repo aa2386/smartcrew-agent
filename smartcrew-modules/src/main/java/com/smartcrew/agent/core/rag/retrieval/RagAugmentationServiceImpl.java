@@ -98,12 +98,14 @@ public class RagAugmentationServiceImpl implements RagAugmentationService {
             }
         }
 
+        // 此处将retrievedChunks去重、排序、截断（已根据相关度分数进行倒序排序，从分数低的开始截出）
         List<RagRetrievedChunk> finalChunks = truncateChunks(
                 deduplicateAndSort(retrievedChunks),
                 retrieval
         );
+        // 构建RAG提示词
         String promptBlock = buildPromptBlock(finalChunks, retrieval.getMaxContextChars());
-        Double topScore = finalChunks.isEmpty() ? null : finalChunks.get(0).getScore();
+        Double topScore = finalChunks.isEmpty() ? null : finalChunks.get(0).getScore();// 获取最高相关度分数
 
         log.info("RAG 检索完成，traceId: {}, agentCode: {}, knowledgeBases: {}, hitCount: {}, topScore: {}, degraded: {}",
                 traceId,
@@ -200,6 +202,7 @@ public class RagAugmentationServiceImpl implements RagAugmentationService {
         if (sortedChunks == null || sortedChunks.isEmpty()) {
             return List.of();
         }
+        // 根据最大切片数量、最大上下文字符数裁剪切片。
         int maxCount = Math.min(retrieval.getTopK(), retrieval.getMaxContextChunks());
         int remainingChars = Math.max(retrieval.getMaxContextChars(), 0);
         List<RagRetrievedChunk> selected = new ArrayList<>();

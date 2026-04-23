@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * PromptTemplate 实体，表示持久化层的业务数据结构。
+ * Prompt 模板实体。
  */
 @Data
 @TableName("prompt_template")
@@ -20,16 +20,19 @@ public class PromptTemplate extends BaseEntity {
      */
     @TableId(type = IdType.AUTO)
     private Long id;
+
     /**
      * 模板名称。
      */
     private String templateName;
+
     /**
      * 模板内容。
      */
     private String templateContent;
+
     /**
-     * 分类标识。
+     * 模板分类标识。
      */
     private String category;
 }

@@ -149,40 +149,70 @@ public class InMemoryToolRegistry implements ToolRegistry {
         return result;
     }
 
-    /* 构建代码 Tool 的描述符。 */
+    /*
+     * 构建代码 Tool 的描述符。
+     * <p>
+     * 该方法通过反射扫描 SmartCrewTool 实现类中的 @Tool 注解方法，
+     * 解析方法参数和注解信息，构建完整的工具描述符。
+     * </p>
+     *
+     */
     private CodeToolDescriptor buildCodeDescriptor(String beanName, SmartCrewTool tool) {
+        // 获取目标类（去除 AOP 代理包装）
+        // AopUtils.getTargetClass 用于获取被代理对象的真实类型
         Class<?> targetClass = AopUtils.getTargetClass(tool);
+
+        // 初始化动作列表，用于存储工具的所有可执行动作
         List<ToolActionMetadata> actions = new ArrayList<>();
+
+        // 遍历目标类的所有方法
         for (Method method : targetClass.getMethods()) {
+            // 检查方法是否带有 @Tool 注解
+            // @Tool 注解标记该方法为工具的可执行动作
             Tool toolAnnotation = method.getAnnotation(Tool.class);
             if (toolAnnotation == null) {
+                // 跳过没有 @Tool 注解的方法
                 continue;
             }
+
+            // 初始化参数列表，用于存储方法的参数信息
             List<ToolActionParameter> parameters = new ArrayList<>();
+
+            // 遍历方法的所有参数
             for (Parameter parameter : method.getParameters()) {
+                // 检查参数是否带有 @P 注解
+                // @P 注解用于标记参数的描述信息
                 P pAnnotation = parameter.getAnnotation(P.class);
+
+                // 构建参数元数据
                 parameters.add(ToolActionParameter.builder()
-                        .name(resolveParameterName(parameter))
-                        .description(pAnnotation == null ? "" : pAnnotation.value())
-                        .required(true)
+                        .name(resolveParameterName(parameter)) // 解析参数名称
+                        .description(pAnnotation == null ? "" : pAnnotation.value()) // 获取参数描述
+                        .required(true) // 默认为必填参数
                         .build());
             }
+
+            // 构建动作元数据
             actions.add(ToolActionMetadata.builder()
-                    .toolCode(tool.toolCode())
-                    .actionName(method.getName())
-                    .description(String.join(" ", toolAnnotation.value()))
-                    .parameters(parameters)
+                    .toolCode(tool.toolCode()) // 工具编码
+                    .actionName(method.getName()) // 动作名称（使用方法名）
+                    .description(String.join(" ", toolAnnotation.value())) // 动作描述（拼接 @Tool 注解值）
+                    .parameters(parameters) // 参数列表
                     .build());
         }
+
+        // 按动作名称排序，确保顺序一致
         actions.sort(Comparator.comparing(ToolActionMetadata::getActionName));
+
+        // 创建并返回代码工具描述符
         return new CodeToolDescriptor(
-                tool.toolCode(),
-                tool.toolName(),
-                tool.description(),
-                beanName,
-                tool.riskLevel(),
-                tool.enabledByDefault(),
-                actions
+                tool.toolCode(),           // 工具编码
+                tool.toolName(),           // 工具名称
+                tool.description(),        // 工具描述
+                beanName,                  // Spring Bean 名称
+                tool.riskLevel(),          // 风险等级
+                tool.enabledByDefault(),   // 默认启用状态
+                actions                    // 动作列表
         );
     }
 

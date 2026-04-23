@@ -29,7 +29,7 @@ public class ScUser extends BaseEntity {
     private String username;
 
     /**
-     * 密码哈希。
+     * 密码哈希值。
      */
     private String passwordHash;
 

@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
- * 大模型会话实体，表示一条用户会话的基础信息。
+ * 大模型会话实体，记录一条对话会话的基础信息。
  */
 @Data
 @TableName("llm_conversation_session")
@@ -34,12 +34,12 @@ public class LlmConversationSession extends BaseEntity {
     private String sessionId;
 
     /**
-     * 最近一次消息时间。
+     * 最近一条消息时间。
      */
     private LocalDateTime lastMessageAt;
 
     /**
-     * 当前会话已保存的消息总数。
+     * 会话内消息总数。
      */
     private Integer messageCount;
 }

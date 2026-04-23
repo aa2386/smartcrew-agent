@@ -14,7 +14,7 @@ import java.util.Map;
 public class DecisionPlanRequest {
 
     /**
-     * 代理编码。
+     * Agent 编码。
      */
     @NotBlank
     private String agentCode;

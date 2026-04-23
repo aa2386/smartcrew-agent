@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * McpInfo 实体，表示持久化层的业务数据结构。
+ * MCP 服务信息实体。
  */
 @Data
 @TableName("mcp_info")
@@ -16,34 +16,41 @@ import lombok.EqualsAndHashCode;
 public class McpInfo extends BaseEntity {
 
     /**
-     * MCP 服务主键 ID。
+     * MCP 主键 ID。
      */
     @TableId(value = "mcp_id", type = IdType.AUTO)
     private Long mcpId;
+
     /**
      * 服务端名称。
      */
     private String serverName;
+
     /**
      * 传输类型。
      */
     private String transportType;
+
     /**
      * 启动命令。
      */
     private String command;
+
     /**
      * 启动参数。
      */
     private String arguments;
+
     /**
      * 环境变量配置。
      */
     private String env;
+
     /**
-     * 状态标记。
+     * 启用状态。
      */
     private Boolean status;
+
     /**
      * 描述信息。
      */

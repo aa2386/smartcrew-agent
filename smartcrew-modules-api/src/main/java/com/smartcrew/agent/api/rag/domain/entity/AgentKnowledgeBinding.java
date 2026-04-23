@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * Agent 与知识库绑定实体。
+ * Agent 与知识库绑定关系实体。
  */
 @Data
 @TableName("agent_knowledge_binding")
@@ -20,10 +20,12 @@ public class AgentKnowledgeBinding extends BaseEntity {
      */
     @TableId(type = IdType.AUTO)
     private Long id;
+
     /**
      * Agent 编码。
      */
     private String agentCode;
+
     /**
      * 知识库编码。
      */

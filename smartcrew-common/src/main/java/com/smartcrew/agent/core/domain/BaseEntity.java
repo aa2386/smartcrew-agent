@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 基础实体类，封装通用的审计字段。
+ * 基础实体类，封装通用审计字段。
  */
 @Data
 public class BaseEntity implements Serializable {
@@ -21,13 +21,13 @@ public class BaseEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 创建部门。
+     * 创建部门 ID。
      */
     @TableField(fill = FieldFill.INSERT)
     private Long createDept;
 
     /**
-     * 创建人。
+     * 创建人 ID。
      */
     @TableField(fill = FieldFill.INSERT)
     private Long createBy;
@@ -39,7 +39,7 @@ public class BaseEntity implements Serializable {
     private LocalDateTime createTime;
 
     /**
-     * 更新人。
+     * 更新人 ID。
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateBy;

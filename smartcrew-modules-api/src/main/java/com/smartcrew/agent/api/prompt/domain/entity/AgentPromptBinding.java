@@ -32,7 +32,7 @@ public class AgentPromptBinding extends BaseEntity {
     private Long promptTemplateId;
 
     /**
-     * 拼接顺序。
+     * 模板拼接顺序。
      */
     private Integer sortOrder;
 }

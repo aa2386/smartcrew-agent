@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 知识库实体，描述 RAG 知识库的元数据。
+ * 知识库实体，描述 RAG 知识库的基础信息。
  */
 @Data
 @TableName("knowledge_base")
@@ -20,26 +20,32 @@ public class KnowledgeBase extends BaseEntity {
      */
     @TableId(type = IdType.AUTO)
     private Long id;
+
     /**
      * 知识库编码。
      */
     private String baseCode;
+
     /**
      * 知识库名称。
      */
     private String baseName;
+
     /**
-     * 描述信息。
+     * 知识库描述。
      */
     private String description;
+
     /**
-     * 嵌入模型名称。
+     * 使用的嵌入模型名称。
      */
     private String embeddingModel;
+
     /**
-     * 向量命名空间。
+     * 向量库命名空间或集合名称。
      */
     private String collectionName;
+
     /**
      * 是否启用。
      */

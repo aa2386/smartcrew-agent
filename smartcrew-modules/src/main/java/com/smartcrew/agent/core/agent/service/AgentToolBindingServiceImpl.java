@@ -43,7 +43,7 @@ public class AgentToolBindingServiceImpl implements AgentToolBindingService {
     @Override
     public AgentToolBindingVo getBindings(String agentCode) {
         ensureAgentExists(agentCode);
-        Set<String> boundCodes = listBoundToolCodes(agentCode);
+        Set<String> boundCodes = listBoundToolCodes(agentCode);// 获取agent绑定的tool编码
         AgentToolBindingVo result = new AgentToolBindingVo();
         result.setAgentCode(agentCode);
 
