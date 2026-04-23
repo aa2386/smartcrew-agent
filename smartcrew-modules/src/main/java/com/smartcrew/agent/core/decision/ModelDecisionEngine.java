@@ -246,4 +246,3 @@ public class ModelDecisionEngine implements DecisionEngine {
         String preview(@V("toolSummary") String toolSummary, @UserMessage String userMessage);
     }
 }
-        String preview(@V("toolSummary") String toolSummary, @UserMessage String userMessage);

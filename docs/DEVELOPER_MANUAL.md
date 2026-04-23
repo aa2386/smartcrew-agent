@@ -270,21 +270,19 @@ Admin Controller
 - `InMemoryToolRegistry`
 - `DefaultToolExecutor`
 - `BeanToolExecutor`
-- `FlowToolExecutor`
 - `ToolDefinitionServiceImpl`
 - `AgentToolBindingServiceImpl`
 - `AdminToolController`
+- `ToolController`
 - `ReActDecisionEngine`
 - `AgentToolOrchestrator`
 
 #### 5.3.1 当前 Tool 设计
 
-当前 Tool 有两种执行模式：
+当前 Tool 已明确收敛为单一执行模式：
 
 - `BEAN`
   - 调用代码中的 Spring Bean Tool
-- `FLOW`
-  - 调用数据库中保存的顺序 DSL
 
 当前 Tool 的运行时来源状态：
 
@@ -304,31 +302,18 @@ Admin Controller
 - 解析错误
 - 管理后台展示
 
-#### 5.3.2 当前 Flow DSL 能力边界
+这里的 `DB_ONLY` 不是独立执行能力，而是“数据库里有元数据，但当前缺少对应代码实现”的治理状态。
 
-当前顺序 DSL 只支持三类步骤：
+#### 5.3.2 当前 Tool 的数据库定位
 
-- `template`
-- `tool_call`
-- `return`
+数据库中的 `tool_definition` 当前只负责：
 
-适合的场景：
+- 名称、描述、风险等级等元数据治理
+- 启用 / 禁用控制
+- 补充配置 `configJson`
+- 与代码 Tool 建立显式绑定关系
 
-- 串联已有 Tool
-- 对结果做轻量包装
-- 配置化定义简单执行流程
-
-不适合的场景：
-
-- 分支
-- 循环
-- 任意脚本
-- 直接 SQL
-- 直接 shell
-
-所以当前 Flow Tool 的定位是：
-
-**轻量可配置工作流，而不是通用脚本引擎。**
+数据库配置不再承担执行模式切换，也不再保存独立流程定义。
 
 #### 5.3.3 当前 Agent 与 Tool 的接法
 
@@ -425,7 +410,7 @@ Admin Controller
 - 管理端登录
 - 总览 / 会话 / 用户 / Agent / Prompt / Tool / 知识库 / 偏好
 - Agent 详情页已支持 Prompt 模板与 Tool 绑定
-- Tool 页已支持列表、详情、执行模式、动作预览、手动执行
+- Tool 页已支持列表、详情、来源状态、启停状态、动作预览、手动执行
 - 知识库页已支持文档、切片、Agent 绑定联动
 - 公众页已支持登录与聊天会话交互
 
@@ -522,17 +507,17 @@ Tool 双层配置相关新增字段并不完全体现在旧初始化脚本中，
 4. 启动后由 `ToolRegistry` 自动发现。
 5. 如需运营化展示，再补数据库配置覆盖名称、描述、风险等级等元数据。
 
-### 8.3 新增一个纯数据库 Flow Tool
+### 8.3 给现有代码 Tool 增加数据库治理配置
 
 推荐路径：
 
 1. 通过后台或接口创建 `tool_definition`
-2. `executionMode = FLOW`
-3. 填写 `flowDefinitionJson`
+2. 填写 `toolName`、`description`、`beanName`、`riskLevel`
+3. 按需要补充 `configJson`
 4. 保存后刷新注册中心
 5. 绑定到 Agent
 
-适合轻量串联，不建议承载复杂核心业务。
+这一步适合给已有代码 Tool 补元数据治理能力，不负责新增独立执行模式。
 
 ### 8.4 给 Agent 增加 Prompt / Tool / 知识库能力
 

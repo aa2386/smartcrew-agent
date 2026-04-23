@@ -50,11 +50,7 @@ public class ToolController {
     @PostMapping
     public R<ToolDefinitionVo> save(@Valid @RequestBody ToolDefinitionRequest request) {
         ToolDefinition definition = toolDefinitionService.saveOrUpdate(request);
-        toolRegistry.refresh();
-        ToolDefinitionVo vo = toolRegistry.getByCode(definition.getToolCode())
-                .map(item -> item.toVo())
-                .orElseThrow(() -> new ServiceException(500, "Tool 保存后查询失败"));
-        return R.ok(vo);
+        return R.ok(refreshAndLoadView(definition.getToolCode()));
     }
 
     /**
@@ -67,11 +63,7 @@ public class ToolController {
     public R<ToolToggleResponse> enable(@PathVariable("toolCode") String toolCode) {
         toolDefinitionService.updateEnabledStatus(toolCode, true);
         toolRegistry.refresh();
-        return R.ok(ToolToggleResponse.builder()
-                .toolCode(toolCode)
-                .enabled(true)
-                .message("tool enabled")
-                .build());
+        return R.ok(buildToggleResponse(toolCode, true, "Tool 已启用"));
     }
 
     /**
@@ -84,10 +76,21 @@ public class ToolController {
     public R<ToolToggleResponse> disable(@PathVariable("toolCode") String toolCode) {
         toolDefinitionService.updateEnabledStatus(toolCode, false);
         toolRegistry.refresh();
-        return R.ok(ToolToggleResponse.builder()
+        return R.ok(buildToggleResponse(toolCode, false, "Tool 已禁用"));
+    }
+
+    private ToolDefinitionVo refreshAndLoadView(String toolCode) {
+        toolRegistry.refresh();
+        return toolRegistry.getByCode(toolCode)
+                .map(item -> item.toVo())
+                .orElseThrow(() -> new ServiceException(500, "Tool 保存后查询失败"));
+    }
+
+    private ToolToggleResponse buildToggleResponse(String toolCode, boolean enabled, String message) {
+        return ToolToggleResponse.builder()
                 .toolCode(toolCode)
-                .enabled(false)
-                .message("tool disabled")
-                .build());
+                .enabled(enabled)
+                .message(message)
+                .build();
     }
 }

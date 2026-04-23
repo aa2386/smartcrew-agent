@@ -218,55 +218,47 @@ public void processDocument(Long documentId) {
 
 ---
 
-## 5. Tool 双层配置与 Agent 执行编排体系 (Dual-Layer Tool System with Agent Orchestration)
-**简介**：项目在已有代码 Tool 的基础上，进一步补齐了数据库流程定义、运行时解析、后台配置、Agent 绑定与执行编排闭环，使 Tool 从“可被注册的代码能力”升级为“可配置、可治理、可被 Agent 消费的执行能力池”。这套设计的重点不是单个 Tool 的实现，而是把 Tool 做成一套可复用的基础设施，方便后续 Agent、后台配置和业务流程持续扩展。
+## 5. Tool 元数据治理与 Agent 执行编排体系 (Bean-only Tool Governance with Agent Orchestration)
+**简介**：项目当前的 Tool 体系已经明确收敛为 BEAN-only 模式。代码 Bean 提供真正执行能力，数据库承担元数据治理与启停控制，Agent 通过绑定关系消费“当前允许且可执行”的 Tool 集合。重点不再是引入新的执行模式，而是把运行事实、数据库结构、后台页面和文档表述统一起来。
 
 ### 5.1 技术亮点
-- **代码层 + 数据库层双来源解析**：运行时以 `ResolvedToolDefinition` 作为统一真相，合并代码 Tool 与数据库配置，并通过 `sourceStatus` 明确区分 `CODE_ONLY / DB_ONLY / LINKED` 三种来源状态，避免后台视图和运行时状态割裂。
-- **执行方式显式建模**：在 `tool_definition` 中新增 `executionMode` 与 `flowDefinitionJson`，把 `BEAN / FLOW` 做成一等概念，而不是把主流程混在 `configJson` 中，提升配置清晰度与长期可演进性。
-- **动作级元数据自动发现**：通过反射 LangChain4j `@Tool` 和 `@P` 注解，自动生成 `ToolActionMetadata` 与参数说明，使代码方法能够转化为 Agent 可理解、后台可展示的动作级能力目录。
-- **数据库 Flow Tool 可独立执行**：新增 `FlowToolExecutor` 解释顺序 DSL，支持 `template / tool_call / return` 三类步骤，使没有代码 Bean 的数据库 Tool 也能被直接执行。
-- **统一执行协议**：`ToolExecutor` 升级为 `execute(toolCode, actionName, arguments, executionContext)`，将 Bean Tool 与 Flow Tool 收敛为统一调用协议，便于后台调试、Agent 编排和后续审计复用。
-- **Agent 绑定与运行时真正打通**：新增 `AgentToolBindingService` 和后台绑定接口，`initial-agent` 运行时只消费当前 Agent 已绑定且可执行的 Tool 集合，形成“绑定约束 -> 决策规划 -> 工具执行 -> 结果汇总”的闭环。
-- **渐进式接入策略稳健**：当前通过 `ReActDecisionEngine` 先实现结构化启发式规划，而不是一次性重构为模型原生函数调用，优先保证系统可控、可测、可逐步演进。
-- **兼容性保留完整**：保留 `/api/v1/tools` 以及 `ToolExecutor` 旧签名，确保新基础设施落地后不破坏原有对外链路。
+- **代码执行与数据库治理职责分离**：执行只走代码 Bean，数据库只负责名称、描述、风险等级、启停状态和补充配置，避免半实现流程引擎带来的认知噪音。
+- **运行时统一真相清晰可解释**：通过 `ResolvedToolDefinition` 合并代码 Tool 与数据库配置，并通过 `sourceStatus` 明确区分 `CODE_ONLY / DB_ONLY / LINKED`，方便后台和测试排查问题。
+- **动作级元数据自动发现**：通过反射 LangChain4j `@Tool` 和 `@P` 注解，自动生成 `ToolActionMetadata` 与参数说明，让代码方法可以直接转成后台可展示、决策层可消费的动作目录。
+- **统一执行协议稳定复用**：`ToolExecutor` 统一使用 `execute(toolCode, actionName, arguments, executionContext)`，后台调试、Agent 编排、日志审计都走同一条执行链路。
+- **Agent 绑定与运行时真正打通**：`initial-agent` 只消费当前 Agent 已绑定、已启用且可执行的 Tool 集合，形成“绑定约束 -> 决策规划 -> 工具执行 -> 结果汇总”的闭环。
+- **兼容链路边界更清晰**：`/api/v1/tools` 只保留元数据管理与启停控制，兼容旧调用方，但不再承载执行模式或流程编排语义。
 
 ### 5.2 简历描述建议
-- **主导设计并落地 Tool 双层配置基础设施**，将代码 Tool 与数据库 Tool 流程定义统一收敛到运行时解析模型中，支持 `BEAN / FLOW` 双执行模式与 `CODE_ONLY / DB_ONLY / LINKED` 多来源治理。
-- **构建基于动作级元数据的 Tool Registry / Executor 体系**，通过反射 `@Tool` 注解自动发现 Tool Action，并以统一执行协议同时支持代码 Bean 调用与数据库 DSL 流程执行。
+- **主导收敛 Tool 基础设施为 BEAN-only 架构**，移除未落地的历史双模式设计，使代码、数据库、后台页面与文档口径完全一致。
+- **构建基于动作级元数据的 Tool Registry / Executor 体系**，通过反射 `@Tool` 注解自动发现 Tool Action，并以统一执行协议支撑后台调试与 Agent 编排。
 - **设计并实现 Agent-Tool 绑定与执行编排链路**，打通后台绑定配置、运行时可用 Tool 过滤、结构化工具规划、顺序执行与结果注入，完成 `initial-agent` 的 Tool 能力接入闭环。
-- **在不破坏既有 API 的前提下完成基础设施升级**，保留 `/api/v1/tools` 兼容路径与旧执行签名，实现存量能力平滑迁移。
+- **在不破坏既有 API 的前提下完成兼容收敛**，保留 `/api/v1/tools` 元数据与启停接口，降低存量迁移成本。
 
 ### 5.3 核心组件职责映射
 | 组件 | 核心职责 | 相关类 |
 | :--- | :--- | :--- |
-| **Tool 持久化模型层** | 持久化 Tool 基础元数据、执行模式与 Flow DSL 定义 | `ToolDefinition`、`ToolDefinitionRequest` |
+| **Tool 持久化模型层** | 持久化 Tool 基础元数据与治理配置 | `ToolDefinition`、`ToolDefinitionRequest` |
 | **Tool 运行时解析层** | 合并代码 Tool 与数据库配置，生成统一可执行视图 | `ResolvedToolDefinition`、`InMemoryToolRegistry` |
 | **动作元数据层** | 描述 Tool 下的动作与参数，用于后台展示和决策规划 | `ToolActionMetadata`、`ToolActionParameter` |
-| **统一执行入口** | 按 Tool + Action 路由到对应执行器并返回结构化结果 | `ToolExecutor`、`DefaultToolExecutor`、`ToolExecutionResult` |
+| **统一执行入口** | 按 Tool + Action 路由到执行器并返回结构化结果 | `ToolExecutor`、`DefaultToolExecutor`、`ToolExecutionResult` |
 | **代码 Tool 执行层** | 反射调用代码 Bean 中的 Tool Action | `BeanToolExecutor` |
-| **数据库 Flow 执行层** | 解释顺序 DSL，完成变量渲染、嵌套 Tool 调用与结果返回 | `FlowToolExecutor`、`ToolFlowDefinition`、`ToolFlowStep` |
 | **后台管理接口层** | 提供 Tool 列表、详情、配置保存和手动执行能力 | `AdminToolController` |
+| **兼容接口层** | 提供 `/api/v1/tools` 元数据与启停控制能力 | `ToolController` |
 | **Agent Tool 绑定层** | 管理 Agent 与 Tool 的绑定关系，并筛出可执行 Tool 集合 | `AgentToolBindingServiceImpl`、`AgentToolBindingVo` |
 | **决策规划层** | 基于输入和可用 Tool 元数据生成结构化调用计划 | `ReActDecisionEngine`、`PlannedToolCall` |
 | **执行编排层** | 顺序执行 Tool 计划并汇总结果回注 Agent 对话链路 | `AgentToolOrchestrator`、`InitialAgent` |
 
-### 5.4 设计动机与面试回答要点（每个工作都有动机）
-- **为什么做代码+数据库双层配置，而不是只做代码 Tool？**  
-  动机是平衡“工程可控性”和“业务配置效率”。代码层负责高风险、强校验、可测试的原子能力；数据库层负责元数据治理与流程编排，避免每次小改都发版。
-- **为什么把 `executionMode(BEAN/FLOW)` 显式建模？**  
-  动机是避免隐式推断导致线上行为不可控。执行主体必须一眼可见，方便排障、审计和跨团队协作，降低“配置看不出来实际跑哪套逻辑”的风险。
+### 5.4 设计动机与面试回答要点
+- **为什么做代码 + 数据库双来源，而不是把一切都写死在代码里？**  
+  动机是平衡“工程可控性”和“运营治理效率”。执行能力依然由代码负责，数据库只提供元数据覆盖和启停控制，避免每次小改都发版。
 - **为什么保留 `CODE_ONLY / DB_ONLY / LINKED` 运行时状态？**  
-  动机是提升系统可解释性。我们不仅要知道 Tool 能不能执行，还要知道“为什么能/为什么不能”，这样后台运营、测试和研发定位问题更快。
-- **为什么采用统一执行入口，而不是 Bean/Flow 各跑各的？**  
+  动机是提升系统可解释性。我们不仅要知道 Tool 能不能执行，还要知道“为什么能/为什么不能”，这样后台运营、测试和研发排障更快。
+- **为什么采用统一执行入口？**  
   动机是统一治理面。权限控制、风险分级、日志审计、超时策略都可以收敛到同一个执行平面，减少重复实现和策略漂移。
-- **为什么 FLOW DSL 只支持顺序步骤（template/tool_call/return）？**  
-  动机是先把安全边界和稳定性打牢。先覆盖 80% 的轻编排场景，再逐步扩展复杂控制流，避免一开始就把 DSL 做成高风险脚本引擎。
-- **为什么不是直接走模型原生 function calling，而是“规划+执行+总结”？**  
-  动机是降低模型供应商耦合，提升可迁移性和可观测性。牺牲一点性能换来跨模型复用、结构化回放和工程侧可控，是平台化场景下更稳妥的长期选择。
 - **为什么 Tool 绑定做在 Agent 维度？**  
   动机是建立最小可治理边界。先限制“这个 Agent 能用哪些 Tool”，再让规划器在白名单内选择动作，避免模型直接接触全量工具造成越权调用风险。
 - **为什么保留 `/api/v1/tools` 兼容链路？**  
-  动机是保障增量演进。基础设施升级不能一次性打断存量调用，保留兼容接口可降低迁移风险，保证业务连续性与上线稳定性。
+  动机是保障增量演进。基础设施收敛不能一次性打断存量调用，保留兼容接口可降低迁移风险，保证业务连续性与上线稳定性。
 
-**面试可用总结话术**：这套设计的核心动机不是“炫技”，而是在生产环境里平衡四件事：**可控性、可配置性、可观测性、可演进性**。我们接受了部分性能与复杂度成本，换取长期平台能力和跨模型稳定运行能力。
+**面试可用总结话术**：这套设计的核心动机不是把 Tool 做得更花，而是把“执行能力、治理能力、兼容边界”分别放到正确的位置，让系统在生产环境里同时具备**可控性、可配置性、可观测性、可维护性**。

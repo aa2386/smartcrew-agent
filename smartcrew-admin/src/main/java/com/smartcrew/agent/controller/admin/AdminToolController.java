@@ -73,8 +73,7 @@ public class AdminToolController {
             throw new ServiceException(400, "Tool 数据库配置已存在");
         }
         ToolDefinition definition = toolDefinitionService.saveOrUpdate(request);
-        toolRegistry.refresh();
-        return R.ok(loadView(definition.getToolCode()));
+        return R.ok(refreshAndLoadView(definition.getToolCode()));
     }
 
     /**
@@ -94,8 +93,7 @@ public class AdminToolController {
         }
         request.setToolCode(code);
         ToolDefinition definition = toolDefinitionService.saveOrUpdate(request);
-        toolRegistry.refresh();
-        return R.ok(loadView(definition.getToolCode()));
+        return R.ok(refreshAndLoadView(definition.getToolCode()));
     }
 
     /**
@@ -123,5 +121,10 @@ public class AdminToolController {
         return toolRegistry.getByCode(toolCode)
                 .map(item -> item.toVo())
                 .orElseThrow(() -> new ServiceException(500, "Tool 保存后查询失败"));
+    }
+
+    private ToolDefinitionVo refreshAndLoadView(String toolCode) {
+        toolRegistry.refresh();
+        return loadView(toolCode);
     }
 }

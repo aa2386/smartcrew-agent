@@ -29,15 +29,6 @@ public class BeanToolExecutor {
         this.applicationContext = applicationContext;
     }
 
-    /**
-     * 执行 BEAN 模式的工具调用。
-     *
-     * @param definition       工具定义
-     * @param actionName       动作名称
-     * @param arguments        调用参数
-     * @param executionContext 执行上下文
-     * @return 执行结果
-     */
     public ToolExecutionResult execute(ResolvedToolDefinition definition,
                                        String actionName,
                                        Map<String, Object> arguments,
@@ -52,7 +43,6 @@ public class BeanToolExecutor {
             return ToolExecutionResult.builder()
                     .toolCode(definition.getToolCode())
                     .actionName(actionName)
-                    .executionMode(definition.getExecutionMode())
                     .success(Boolean.TRUE)
                     .output(output)
                     .durationMs(System.currentTimeMillis() - startTime)
@@ -65,7 +55,6 @@ public class BeanToolExecutor {
         }
     }
 
-    /* 解析并获取目标方法。 */
     private Method resolveActionMethod(Object bean, String actionName, String toolCode) {
         Class<?> targetClass = AopUtils.getTargetClass(bean);
         for (Method method : targetClass.getMethods()) {
@@ -79,7 +68,6 @@ public class BeanToolExecutor {
         throw new ServiceException(404, "Tool 动作不存在: " + toolCode + "#" + actionName);
     }
 
-    /* 构建方法调用参数数组。 */
     private Object[] buildInvocationArguments(Method method, Map<String, Object> arguments) {
         Parameter[] parameters = method.getParameters();
         Object[] values = new Object[parameters.length];
@@ -96,7 +84,6 @@ public class BeanToolExecutor {
         return values;
     }
 
-    /* 从参数映射中查找参数值。 */
     private Object findArgumentValue(Map<String, Object> arguments,
                                      String externalName,
                                      String javaName,
@@ -118,7 +105,6 @@ public class BeanToolExecutor {
         return null;
     }
 
-    /* 解析参数的外部名称（优先使用 @P 注解值）。 */
     private String resolveExternalParameterName(Parameter parameter) {
         P pAnnotation = parameter.getAnnotation(P.class);
         if (pAnnotation != null && StringUtils.isNotBlank(pAnnotation.value())) {
@@ -127,7 +113,6 @@ public class BeanToolExecutor {
         return parameter.getName();
     }
 
-    /* 将原始值转换为目标类型。 */
     private Object convertValue(Object rawValue, Class<?> targetType) {
         if (rawValue == null) {
             return null;
@@ -156,7 +141,6 @@ public class BeanToolExecutor {
         return JsonUtils.parse(JsonUtils.toJson(rawValue), targetType);
     }
 
-    /* 安全获取异常消息。 */
     private String safeMessage(Throwable throwable) {
         if (throwable == null) {
             return "unknown";

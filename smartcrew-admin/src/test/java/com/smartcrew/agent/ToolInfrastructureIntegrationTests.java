@@ -24,6 +24,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 
@@ -38,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 工具基础设施集成测试，验证工具注册、来源状态判定、LangChain 工具提供及智能体对话调度等端到端流程。
+ * Tool 基础设施集成测试。
  */
 @ActiveProfiles("test")
 @SpringBootTest
@@ -56,6 +60,9 @@ class ToolInfrastructureIntegrationTests {
 
     @Autowired
     private ToolProvider toolProvider;
+
+    @Autowired
+    private DataSource dataSource;
 
     @MockBean
     private InitialAgentChatService initialAgentChatService;
@@ -77,7 +84,6 @@ class ToolInfrastructureIntegrationTests {
                                   "toolName": "基础工具配置",
                                   "description": "基础工具数据库配置",
                                   "beanName": "basicTools",
-                                  "executionMode": "BEAN",
                                   "riskLevel": "LOW",
                                   "enabled": true
                                 }
@@ -97,7 +103,6 @@ class ToolInfrastructureIntegrationTests {
                                   "toolName": "数据库元数据 Tool",
                                   "description": "仅保留治理元数据",
                                   "beanName": "missingBean",
-                                  "executionMode": "BEAN",
                                   "riskLevel": "LOW",
                                   "enabled": true
                                 }
@@ -111,8 +116,7 @@ class ToolInfrastructureIntegrationTests {
 
         mockMvc.perform(get("/api/admin/tools/db-only-metadata"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.executionMode").value("BEAN"))
-                .andExpect(jsonPath("$.data.resolveError").value("BEAN 模式缺少代码实现"));
+                .andExpect(jsonPath("$.data.resolveError").value("缺少代码实现"));
     }
 
     @Test
@@ -173,5 +177,29 @@ class ToolInfrastructureIntegrationTests {
         assertThat(response.isAccepted()).isTrue();
         assertThat(response.getMessage()).isEqualTo("已经通过 LangChain4j Tool Calling 回答");
         assertThat(systemPromptCaptor.getValue()).isNotBlank();
+    }
+
+    @Test
+    void shouldUseBeanOnlyToolDefinitionSchema() throws Exception {
+        try (Connection connection = dataSource.getConnection()) {
+            DatabaseMetaData metaData = connection.getMetaData();
+
+            assertThat(hasColumn(metaData, "tool_definition", "execution_mode")).isFalse();
+            assertThat(hasColumn(metaData, "tool_definition", "flow_definition_json")).isFalse();
+            assertThat(isColumnNotNull(metaData, "tool_definition", "bean_name")).isTrue();
+        }
+    }
+
+    private boolean hasColumn(DatabaseMetaData metaData, String tableName, String columnName) throws Exception {
+        try (ResultSet columns = metaData.getColumns(null, null, tableName.toUpperCase(), columnName.toUpperCase())) {
+            return columns.next();
+        }
+    }
+
+    private boolean isColumnNotNull(DatabaseMetaData metaData, String tableName, String columnName) throws Exception {
+        try (ResultSet columns = metaData.getColumns(null, null, tableName.toUpperCase(), columnName.toUpperCase())) {
+            assertThat(columns.next()).isTrue();
+            return columns.getInt("NULLABLE") == DatabaseMetaData.columnNoNulls;
+        }
     }
 }

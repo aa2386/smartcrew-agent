@@ -130,7 +130,6 @@ export interface ToolRecord {
   toolName: string
   description?: string
   beanName?: string
-  executionMode: string
   riskLevel?: string
   enabled: boolean
   configJson?: string
@@ -146,7 +145,6 @@ export interface ToolRecord {
 export interface ToolExecutionResultRecord {
   toolCode: string
   actionName: string
-  executionMode?: string
   success: boolean
   output?: unknown
   errorMessage?: string
