@@ -1,9 +1,6 @@
 package com.smartcrew.agent;
 
 import com.smartcrew.agent.api.agent.domain.model.AgentDispatchCommand;
-import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
-import com.smartcrew.agent.api.llm.domain.vo.LlmChatResponse;
-import com.smartcrew.agent.api.llm.service.LlmClient;
 import com.smartcrew.agent.api.rag.domain.entity.AgentKnowledgeBinding;
 import com.smartcrew.agent.api.rag.domain.entity.KnowledgeBase;
 import com.smartcrew.agent.api.rag.domain.vo.RagAugmentationResult;
@@ -13,9 +10,11 @@ import com.smartcrew.agent.api.rag.service.KnowledgeBaseService;
 import com.smartcrew.agent.api.rag.service.RagAugmentationService;
 import com.smartcrew.agent.api.rag.service.VectorStoreService;
 import com.smartcrew.agent.core.agent.InitialAgent;
+import com.smartcrew.agent.core.agent.service.InitialAgentChatService;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.service.Result;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +38,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * RAG 运行时检索增强测试。
+ * RAG 增强服务集成测试，验证知识库绑定、多知识库检索合并、异常降级及提示词注入等核心场景。
  */
 @ActiveProfiles("test")
 @SpringBootTest(properties = {
@@ -72,11 +71,11 @@ class RagAugmentationServiceTests {
     private VectorStoreService vectorStoreService;
 
     @MockBean
-    private LlmClient llmClient;
+    private InitialAgentChatService initialAgentChatService;
 
     @BeforeEach
     void setUp() {
-        Mockito.reset(embeddingService, vectorStoreService, llmClient);
+        Mockito.reset(embeddingService, vectorStoreService, initialAgentChatService);
         agentKnowledgeBindingMapper.deleteByAgentCode("initial-agent");
         when(embeddingService.embed(anyString())).thenReturn(Embedding.from(new float[]{1.0F, 2.0F, 3.0F}));
     }
@@ -106,9 +105,7 @@ class RagAugmentationServiceTests {
                         createMatch(0.72D, "vec-b", kbOne, "doc-b", "文档B", 1, "知识库一的第二段内容")
                 );
             }
-            return List.of(
-                    createMatch(0.95D, "vec-c", kbTwo, "doc-c", "文档C", 0, "知识库二的高分内容")
-            );
+            return List.of(createMatch(0.95D, "vec-c", kbTwo, "doc-c", "文档C", 0, "知识库二的高分内容"));
         });
 
         RagAugmentationResult result = ragAugmentationService.augment("initial-agent", "请介绍 RAG", "trace-merge");
@@ -149,10 +146,8 @@ class RagAugmentationServiceTests {
         when(vectorStoreService.search(anyString(), any(Embedding.class), anyInt(), anyDouble())).thenReturn(List.of(
                 createMatch(0.93D, "vec-chat", knowledgeBase, "doc-chat", "聊天文档", 0, "这是注入到提示词中的知识片段")
         ));
-        when(llmClient.chat(any(LlmChatRequest.class))).thenReturn(LlmChatResponse.builder()
-                .success(Boolean.TRUE)
-                .content("模型回答")
-                .build());
+        when(initialAgentChatService.chat(anyString(), anyString(), anyString()))
+                .thenReturn(new Result<>("模型回答", null, null, null, List.of()));
 
         var response = initialAgent.handle(AgentDispatchCommand.builder()
                 .agentCode("initial-agent")
@@ -162,15 +157,18 @@ class RagAugmentationServiceTests {
                 .traceId("trace-agent")
                 .build());
 
-        ArgumentCaptor<LlmChatRequest> captor = ArgumentCaptor.forClass(LlmChatRequest.class);
-        verify(llmClient).chat(captor.capture());
+        ArgumentCaptor<String> systemPromptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(initialAgentChatService).chat(
+                org.mockito.ArgumentMatchers.eq("initial-agent::1001::session-rag"),
+                org.mockito.ArgumentMatchers.eq("请根据知识库回答"),
+                systemPromptCaptor.capture()
+        );
 
         assertThat(response.isAccepted()).isTrue();
         assertThat(response.getMessage()).isEqualTo("模型回答");
-        assertThat(captor.getValue().getSystemPrompt()).contains("知识库回答规则", "聊天文档", "这是注入到提示词中的知识片段");
+        assertThat(systemPromptCaptor.getValue()).contains("知识库回答规则", "聊天文档", "这是注入到提示词中的知识片段");
     }
 
-    /* 创建测试知识库。 */
     private KnowledgeBase createKnowledgeBase(String baseName) {
         KnowledgeBase knowledgeBase = new KnowledgeBase();
         knowledgeBase.setBaseCode("kb-" + UUID.randomUUID());
@@ -182,7 +180,6 @@ class RagAugmentationServiceTests {
         return knowledgeBaseService.create(knowledgeBase);
     }
 
-    /* 创建 Agent 与知识库绑定。 */
     private void bindKnowledgeBase(String agentCode, KnowledgeBase knowledgeBase) {
         AgentKnowledgeBinding binding = new AgentKnowledgeBinding();
         binding.setAgentCode(agentCode);
@@ -190,7 +187,6 @@ class RagAugmentationServiceTests {
         agentKnowledgeBindingMapper.insert(binding);
     }
 
-    /* 构造向量检索命中结果。 */
     private EmbeddingMatch<TextSegment> createMatch(double score,
                                                     String vectorId,
                                                     KnowledgeBase knowledgeBase,

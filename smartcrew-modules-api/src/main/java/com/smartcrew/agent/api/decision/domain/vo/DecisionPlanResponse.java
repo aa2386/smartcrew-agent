@@ -2,15 +2,25 @@ package com.smartcrew.agent.api.decision.domain.vo;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * DecisionPlanResponse 视图对象，封装结构化决策结果。
+ * 决策计划响应视图对象，封装智能体结构化决策结果。
+ *
+ * <p>包含决策思考过程、分步执行计划、工具调用安排及最终行动建议，
+ * 用于将决策引擎的输出以结构化方式返回给调用方。</p>
+ *
+ * @see DecisionStep
+ * @see PlannedToolCall
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class DecisionPlanResponse {
 
     /**

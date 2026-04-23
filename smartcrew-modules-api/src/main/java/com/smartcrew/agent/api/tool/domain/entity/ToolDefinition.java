@@ -8,7 +8,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 工具定义实体，描述可接入平台的工具配置。
+ * 工具定义实体，描述可接入平台的工具配置信息。
+ *
+ * <p>对应数据库表 {@code tool_definition}，存储工具的基本属性、执行模式、
+ * 风险等级及扩展配置，是工具注册与运行时调度的核心数据模型。</p>
+ *
+ * @see com.smartcrew.agent.core.domain.BaseEntity
  */
 @Data
 @TableName("tool_definition")
@@ -61,8 +66,4 @@ public class ToolDefinition extends BaseEntity {
      */
     private String configJson;
 
-    /**
-     * 流程定义 JSON。
-     */
-    private String flowDefinitionJson;
 }

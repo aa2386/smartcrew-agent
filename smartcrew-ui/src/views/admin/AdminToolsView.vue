@@ -4,7 +4,7 @@
       <div class="card-head">
         <div>
           <h3>Tool 管理</h3>
-          <p class="muted">统一查看代码 Tool 与数据库 Tool，维护执行模式、动作定义和手动调试入口。</p>
+          <p class="muted">统一查看代码 Tool 与数据库元数据，维护名称、描述、风险级别和手动调试入口。</p>
         </div>
         <el-button type="primary" @click="startCreateTool">新增 Tool</el-button>
       </div>
@@ -15,11 +15,6 @@
           clearable
           placeholder="按名称、编码或描述搜索"
         />
-        <el-select v-model="filters.executionMode" placeholder="执行模式">
-          <el-option label="全部模式" value="all" />
-          <el-option label="BEAN" value="BEAN" />
-          <el-option label="FLOW" value="FLOW" />
-        </el-select>
         <el-select v-model="filters.enabled" placeholder="启用状态">
           <el-option label="全部状态" value="all" />
           <el-option label="仅启用" value="true" />
@@ -39,10 +34,8 @@
           <el-table-column prop="toolName" label="名称" min-width="170" />
           <el-table-column prop="toolCode" label="编码" min-width="170" />
           <el-table-column label="模式" width="90">
-            <template #default="{ row }">
-              <el-tag :type="row.executionMode === 'FLOW' ? 'warning' : 'primary'">
-                {{ row.executionMode || '未知' }}
-              </el-tag>
+            <template #default>
+              <el-tag type="primary">BEAN</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="来源" width="100">
@@ -74,7 +67,7 @@
                 type="primary"
                 @click.stop="startCreateFromCode(row)"
               >
-                创建数据库信息
+                创建元数据
               </el-button>
               <span v-else class="muted">查看 / 编辑</span>
             </template>
@@ -91,18 +84,14 @@
         </div>
         <div v-if="form.toolCode" class="status-stack">
           <el-tag :type="sourceStatusTagType(form.sourceStatus)">{{ sourceStatusText(form.sourceStatus) }}</el-tag>
-          <el-tag :type="form.executionMode === 'FLOW' ? 'warning' : 'primary'">
-            {{ form.executionMode || 'BEAN' }}
-          </el-tag>
+          <el-tag type="primary">BEAN</el-tag>
           <el-tag :type="form.enabled ? 'success' : 'info'">{{ form.enabled ? '启用' : '停用' }}</el-tag>
         </div>
       </div>
 
       <div v-if="pageMode === 'empty'" class="empty-state">
-        <h4>请选择一个 Tool，或创建新的数据库 Tool</h4>
-        <p class="muted">
-          代码 Tool 可以直接运行；数据库 Tool 可以补充元数据，或使用 FLOW 模式编排出新的可执行能力。
-        </p>
+        <h4>请选择一个 Tool，或创建新的数据库元数据</h4>
+        <p class="muted">数据库配置现在只承载治理元数据。真正可执行的 Tool 必须来自代码 Bean。</p>
       </div>
 
       <template v-else>
@@ -115,7 +104,7 @@
                   type="info"
                   :closable="false"
                   show-icon
-                  title="BEAN 模式适合承载代码层原子能力，FLOW 模式适合在数据库里做轻量流程编排。"
+                  title="当前仅支持 BEAN 模式。数据库配置只负责治理元数据，不再承载 Flow 编排。"
                 />
 
                 <el-alert
@@ -152,12 +141,9 @@
 
                   <div class="form-row">
                     <el-form-item label="执行模式">
-                      <el-select v-model="form.executionMode" class="full-width">
-                        <el-option label="BEAN" value="BEAN" />
-                        <el-option label="FLOW" value="FLOW" />
-                      </el-select>
+                      <el-input model-value="BEAN" disabled />
                     </el-form-item>
-                    <el-form-item label="风险等级">
+                    <el-form-item label="风险级别">
                       <el-select v-model="form.riskLevel" class="full-width">
                         <el-option label="LOW" value="LOW" />
                         <el-option label="MEDIUM" value="MEDIUM" />
@@ -180,19 +166,10 @@
                     </el-form-item>
                   </div>
 
-                  <el-form-item v-if="form.executionMode === 'BEAN'" label="Spring Bean 名称">
+                  <el-form-item label="Spring Bean 名称">
                     <el-input
                       v-model="form.beanName"
                       placeholder="例如：basicTools"
-                    />
-                  </el-form-item>
-
-                  <el-form-item v-if="form.executionMode === 'FLOW'" label="Flow DSL 定义 JSON">
-                    <el-input
-                      v-model="form.flowDefinitionJson"
-                      type="textarea"
-                      :rows="12"
-                      placeholder="{&#10;  &quot;description&quot;: &quot;包装搜索结果&quot;,&#10;  &quot;steps&quot;: []&#10;}"
                     />
                   </el-form-item>
 
@@ -224,7 +201,7 @@
                 <div class="binding-head">
                   <div>
                     <h4>当前 Tool 可调用动作</h4>
-                    <p class="muted">代码 Tool 的动作来自 `@Tool` 反射结果；FLOW Tool 一般只暴露一个动作。</p>
+                    <p class="muted">动作定义来自代码层 `@Tool` 反射结果，数据库只做治理补充。</p>
                   </div>
                   <el-tag :type="form.executable ? 'success' : 'danger'">
                     {{ form.executable ? '当前可执行' : '当前不可执行' }}
@@ -234,11 +211,11 @@
                 <el-table v-if="form.actions.length > 0" :data="form.actions" stripe class="actions-table">
                   <el-table-column prop="actionName" label="动作名称" min-width="160" />
                   <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip />
-                  <el-table-column label="参数" min-width="240">
+                  <el-table-column label="参数" min-width="260">
                     <template #default="{ row }">
                       <div v-if="row.parameters.length > 0" class="param-list">
                         <span v-for="item in row.parameters" :key="`${row.actionName}-${item.name}`" class="param-chip">
-                          {{ item.name }}{{ item.required ? ' *' : '' }}
+                          {{ item.name }}<span v-if="item.type"> / {{ item.type }}</span>{{ item.required ? ' *' : '' }}
                         </span>
                       </div>
                       <span v-else class="muted">无参数</span>
@@ -315,9 +292,7 @@
                   <div class="binding-head">
                     <div>
                       <h4>执行结果</h4>
-                      <p class="muted">
-                        {{ latestExecutionLabel }}
-                      </p>
+                      <p class="muted">{{ latestExecutionLabel }}</p>
                     </div>
                     <el-tag :type="lastExecutionResult?.success ? 'success' : 'danger'">
                       {{ lastExecutionResult?.success ? '成功' : '失败' }}
@@ -335,13 +310,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+/**
+ * Tool 管理页面组件，提供工具列表查看、数据库元数据维护、动作预览及手动执行验证功能。
+ *
+ * @example
+ * <AdminToolsView />
+ */
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import GlassPanel from '../../components/common/GlassPanel.vue'
 import { adminPortalApi } from '../../api/portal'
 import { useAuthStore } from '../../stores/auth'
 import type { ToolExecutionResultRecord, ToolRecord } from '../../types'
 
+/** 工具页面模式类型。 */
 type ToolPageMode = 'empty' | 'create' | 'createFromCode' | 'edit'
 
 const authStore = useAuthStore()
@@ -355,7 +337,6 @@ const lastExecutionResult = ref<ToolExecutionResultRecord>()
 
 const filters = reactive({
   keyword: '',
-  executionMode: 'all',
   enabled: 'all'
 })
 
@@ -369,27 +350,27 @@ const executionForm = reactive({
 })
 
 const panelTitle = computed(() => {
-  if (pageMode.value === 'create') return '新增数据库 Tool'
-  if (pageMode.value === 'createFromCode') return '为代码 Tool 创建数据库信息'
+  if (pageMode.value === 'create') return '新增数据库 Tool 元数据'
+  if (pageMode.value === 'createFromCode') return '为代码 Tool 创建数据库元数据'
   if (pageMode.value === 'edit') return '编辑 Tool 配置'
   return 'Tool 配置'
 })
 
 const panelDescription = computed(() => {
   if (pageMode.value === 'create') {
-    return '可以直接创建新的数据库 Tool，选择 BEAN 绑定代码实现，或选择 FLOW 编排新能力。'
+    return '可以直接创建新的数据库 Tool 元数据，用于补充名称、描述、风险级别与开关状态。'
   }
   if (pageMode.value === 'createFromCode') {
-    return '当前 Tool 已有代码实现但尚未写入数据库配置，可以在这里补齐元数据和执行模式。'
+    return '当前 Tool 已有代码实现但尚未写入数据库配置，可以在这里补齐治理元数据。'
   }
   if (pageMode.value === 'edit') {
-    return '左侧展示统一来源的 Tool 列表，右侧用于维护数据库配置、查看动作并做手动执行验证。'
+    return '左侧展示统一来源的 Tool 列表，右侧用于维护数据库元数据、查看动作并做手动执行验证。'
   }
   return '请先从左侧选择一个 Tool。'
 })
 
 const submitButtonText = computed(() => {
-  return pageMode.value === 'create' || pageMode.value === 'createFromCode' ? '创建数据库信息' : '保存数据库配置'
+  return pageMode.value === 'create' || pageMode.value === 'createFromCode' ? '创建数据库元数据' : '保存数据库配置'
 })
 
 const filteredTools = computed(() => {
@@ -399,9 +380,8 @@ const filteredTools = computed(() => {
       || item.toolName.toLowerCase().includes(keyword)
       || item.toolCode.toLowerCase().includes(keyword)
       || (item.description || '').toLowerCase().includes(keyword)
-    const matchesMode = filters.executionMode === 'all' || item.executionMode === filters.executionMode
     const matchesEnabled = filters.enabled === 'all' || String(item.enabled) === filters.enabled
-    return matchesKeyword && matchesMode && matchesEnabled
+    return matchesKeyword && matchesEnabled
   })
 })
 
@@ -420,15 +400,11 @@ onMounted(async () => {
   await loadTools()
 })
 
-watch(
-  () => form.executionMode,
-  (mode) => {
-    if (mode === 'FLOW' && !form.flowDefinitionJson?.trim()) {
-      form.flowDefinitionJson = '{\n  "description": "",\n  "steps": []\n}'
-    }
-  }
-)
-
+/**
+ * 创建空白的工具表单数据。
+ *
+ * @returns 默认的工具记录对象
+ */
 function createEmptyForm(): ToolRecord {
   return {
     toolCode: '',
@@ -439,7 +415,6 @@ function createEmptyForm(): ToolRecord {
     riskLevel: 'MEDIUM',
     enabled: true,
     configJson: '{}',
-    flowDefinitionJson: '{\n  "description": "",\n  "steps": []\n}',
     sourceStatus: 'DB_ONLY',
     hasCodeBean: false,
     hasDatabaseConfig: true,
@@ -449,10 +424,17 @@ function createEmptyForm(): ToolRecord {
   }
 }
 
+/**
+ * 深拷贝工具记录，确保 actions 和 parameters 的独立性。
+ *
+ * @param payload - 部分工具记录数据
+ * @returns 完整的工具记录对象
+ */
 function cloneTool(payload: Partial<ToolRecord> = {}): ToolRecord {
   return {
     ...createEmptyForm(),
     ...payload,
+    executionMode: 'BEAN',
     actions: payload.actions ? payload.actions.map((item) => ({
       ...item,
       parameters: item.parameters ? item.parameters.map((parameter) => ({ ...parameter })) : []
@@ -460,16 +442,23 @@ function cloneTool(payload: Partial<ToolRecord> = {}): ToolRecord {
   }
 }
 
+/**
+ * 将工具数据应用到响应式表单中。
+ *
+ * @param payload - 部分工具记录数据
+ */
 function applyForm(payload: Partial<ToolRecord> = {}) {
   Object.assign(form, cloneTool(payload))
+  form.executionMode = 'BEAN'
   form.configJson = payload.configJson || '{}'
-  if (form.executionMode === 'FLOW') {
-    form.flowDefinitionJson = payload.flowDefinitionJson || '{\n  "description": "",\n  "steps": []\n}'
-  } else {
-    form.flowDefinitionJson = payload.flowDefinitionJson || ''
-  }
 }
 
+/**
+ * 将来源状态枚举值转换为中文显示文本。
+ *
+ * @param status - 来源状态枚举值
+ * @returns 中文显示文本
+ */
 function sourceStatusText(status?: string) {
   if (status === 'CODE_ONLY') return '仅代码'
   if (status === 'DB_ONLY') return '仅数据库'
@@ -477,12 +466,23 @@ function sourceStatusText(status?: string) {
   return '未知'
 }
 
+/**
+ * 将来源状态枚举值转换为 Element Plus Tag 类型。
+ *
+ * @param status - 来源状态枚举值
+ * @returns Tag 类型字符串
+ */
 function sourceStatusTagType(status?: string) {
   if (status === 'CODE_ONLY') return 'warning'
   if (status === 'DB_ONLY') return 'info'
   return 'success'
 }
 
+/**
+ * 加载工具列表，并可选地选中指定编码的工具。
+ *
+ * @param preferredCode - 优先选中的工具编码
+ */
 async function loadTools(preferredCode?: string) {
   try {
     const response = await adminPortalApi.listTools(authStore.adminToken)
@@ -503,6 +503,11 @@ async function loadTools(preferredCode?: string) {
   }
 }
 
+/**
+ * 加载指定工具的详情数据并切换到编辑模式。
+ *
+ * @param code - 工具编码
+ */
 async function loadToolDetail(code: string) {
   try {
     const detail = await adminPortalApi.getTool(authStore.adminToken, code)
@@ -517,11 +522,17 @@ async function loadToolDetail(code: string) {
   }
 }
 
+/**
+ * 表格行选中事件处理，加载对应工具详情。
+ *
+ * @param row - 选中的工具记录
+ */
 async function handleCurrentChange(row?: ToolRecord) {
   if (!row) return
   await loadToolDetail(row.toolCode)
 }
 
+/** 切换到新增工具模式。 */
 function startCreateTool() {
   selectedToolCode.value = ''
   persistedSnapshot.value = undefined
@@ -531,6 +542,11 @@ function startCreateTool() {
   resetExecutionForm()
 }
 
+/**
+ * 为仅有代码实现的工具创建数据库元数据。
+ *
+ * @param row - 工具列表中选中的行数据
+ */
 function startCreateFromCode(row: ToolRecord) {
   selectedToolCode.value = row.toolCode
   persistedSnapshot.value = undefined
@@ -541,13 +557,12 @@ function startCreateFromCode(row: ToolRecord) {
     sourceStatus: 'CODE_ONLY',
     hasCodeBean: true,
     hasDatabaseConfig: false,
-    executionMode: row.executionMode || 'BEAN',
-    configJson: row.configJson || '{}',
-    flowDefinitionJson: row.flowDefinitionJson || ''
+    configJson: row.configJson || '{}'
   })
   resetExecutionForm()
 }
 
+/** 重置为空白状态。 */
 function resetToEmpty() {
   selectedToolCode.value = ''
   persistedSnapshot.value = undefined
@@ -557,6 +572,7 @@ function resetToEmpty() {
   resetExecutionForm()
 }
 
+/** 重置当前表单到上次持久化的数据。 */
 function resetCurrentForm() {
   if (pageMode.value === 'edit' && persistedSnapshot.value) {
     applyForm(persistedSnapshot.value)
@@ -572,6 +588,7 @@ function resetCurrentForm() {
   applyForm(createEmptyForm())
 }
 
+/** 重置手动执行表单。 */
 function resetExecutionForm() {
   executionForm.actionName = form.actions.length === 1 ? form.actions[0].actionName : ''
   executionForm.argumentsJson = '{}'
@@ -579,6 +596,7 @@ function resetExecutionForm() {
   lastExecutionResult.value = undefined
 }
 
+/** 提交工具配置表单，创建或更新数据库元数据。 */
 async function submitForm() {
   if (!form.toolCode.trim()) {
     ElMessage.warning('请输入 Tool 编码')
@@ -592,12 +610,8 @@ async function submitForm() {
     ElMessage.warning('请输入 Tool 描述')
     return
   }
-  if (form.executionMode === 'BEAN' && !form.beanName?.trim()) {
-    ElMessage.warning('BEAN 模式必须填写 Spring Bean 名称')
-    return
-  }
-  if (form.executionMode === 'FLOW' && !form.flowDefinitionJson?.trim()) {
-    ElMessage.warning('FLOW 模式必须填写 Flow DSL 定义 JSON')
+  if (!form.beanName?.trim()) {
+    ElMessage.warning('请填写 Spring Bean 名称')
     return
   }
 
@@ -607,19 +621,18 @@ async function submitForm() {
       toolCode: form.toolCode.trim(),
       toolName: form.toolName.trim(),
       description: form.description?.trim() || '',
-      beanName: form.executionMode === 'BEAN' ? form.beanName?.trim() || '' : form.beanName?.trim() || '',
-      executionMode: form.executionMode,
+      beanName: form.beanName?.trim() || '',
+      executionMode: 'BEAN',
       riskLevel: form.riskLevel || 'MEDIUM',
       enabled: form.enabled,
-      configJson: form.configJson || '{}',
-      flowDefinitionJson: form.executionMode === 'FLOW' ? form.flowDefinitionJson || '' : ''
+      configJson: form.configJson || '{}'
     }
 
     let toolCode = form.toolCode
     if (pageMode.value === 'create' || pageMode.value === 'createFromCode') {
       const created = await adminPortalApi.createTool(authStore.adminToken, payload)
       toolCode = created.toolCode
-      ElMessage.success('Tool 数据库信息创建成功')
+      ElMessage.success('Tool 数据库元数据创建成功')
     } else {
       const updated = await adminPortalApi.updateTool(authStore.adminToken, form.toolCode, payload)
       toolCode = updated.toolCode
@@ -635,6 +648,7 @@ async function submitForm() {
   }
 }
 
+/** 提交工具手动执行请求。 */
 async function submitExecution() {
   if (!form.toolCode) {
     ElMessage.warning('请先选择一个 Tool')
@@ -659,6 +673,14 @@ async function submitExecution() {
   }
 }
 
+/**
+ * 解析 JSON 输入字符串，空字符串返回空对象。
+ *
+ * @param value - JSON 字符串
+ * @param label - 字段标签，用于错误提示
+ * @returns 解析后的对象
+ * @throws {Error} 当 JSON 格式非法时抛出
+ */
 function parseJsonInput(value: string, label: string) {
   const text = value.trim()
   if (!text) {
@@ -671,6 +693,11 @@ function parseJsonInput(value: string, label: string) {
   }
 }
 
+/**
+ * 统一错误处理，将异常信息以消息提示展示给用户。
+ *
+ * @param error - 捕获的异常对象
+ */
 function handleError(error: unknown) {
   if (error instanceof Error) {
     ElMessage.error(error.message)
@@ -713,16 +740,18 @@ function handleError(error: unknown) {
   }
 }
 
-.filter-bar,
-.form-row {
+.filter-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) 180px 180px;
+  grid-template-columns: minmax(0, 1fr) 180px;
   gap: 12px;
   margin-bottom: 16px;
 }
 
 .form-row {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .form-row--compact {

@@ -8,7 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ToolDefinitionVo 视图对象。
+ * 工具定义视图对象，用于接口返回工具的完整信息。
+ *
+ * <p>在基础工具属性之上，额外包含来源状态、Bean 存在性、可执行性等运行时判定结果，
+ * 以及可调用的动作列表，供前端展示和管理使用。</p>
+ *
+ * @see com.smartcrew.agent.api.tool.domain.model.ResolvedToolDefinition
  */
 @Data
 @Builder
@@ -58,11 +63,6 @@ public class ToolDefinitionVo {
      * 运行时附加配置 JSON。
      */
     private String configJson;
-
-    /**
-     * 顺序流程 DSL 定义 JSON。
-     */
-    private String flowDefinitionJson;
 
     /**
      * 数据来源状态：CODE_ONLY / DB_ONLY / LINKED。

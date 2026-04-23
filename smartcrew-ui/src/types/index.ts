@@ -1,3 +1,8 @@
+/**
+ * 统一 API 响应信封结构。
+ *
+ * @template T 业务数据类型
+ */
 export interface ApiEnvelope<T> {
   success: boolean
   code: number
@@ -5,6 +10,7 @@ export interface ApiEnvelope<T> {
   data: T
 }
 
+/** 当前登录用户信息。 */
 export interface CurrentUser {
   userId: number
   username: string
@@ -13,6 +19,7 @@ export interface CurrentUser {
   avatarUrl?: string
 }
 
+/** 登录接口响应数据。 */
 export interface LoginResponse {
   token: string
   tokenType: string
@@ -21,6 +28,7 @@ export interface LoginResponse {
   user: CurrentUser
 }
 
+/** 客户端会话状态，持久化到 localStorage。 */
 export interface SessionState {
   token: string
   sessionId: string
@@ -28,6 +36,7 @@ export interface SessionState {
   user: CurrentUser
 }
 
+/** 聊天会话摘要。 */
 export interface ChatSession {
   sessionId: string
   title: string
@@ -37,6 +46,7 @@ export interface ChatSession {
   source: string
 }
 
+/** 聊天消息记录。 */
 export interface ChatMessage {
   id?: number
   sessionId: string
@@ -47,6 +57,7 @@ export interface ChatMessage {
   createTime: string
 }
 
+/** 用户管理记录。 */
 export interface UserRecord {
   id: number
   username: string
@@ -57,6 +68,7 @@ export interface UserRecord {
   lastLoginAt?: string
 }
 
+/** 用户第三方身份记录。 */
 export interface UserIdentityRecord {
   id: number
   userId: number
@@ -66,6 +78,7 @@ export interface UserIdentityRecord {
   profileSnapshotJson?: string
 }
 
+/** 智能体记录。 */
 export interface AgentRecord {
   id?: number
   agentCode: string
@@ -83,6 +96,7 @@ export interface AgentRecord {
   hasDatabaseConfig?: boolean
 }
 
+/** 智能体提示词绑定记录。 */
 export interface AgentPromptBindingRecord {
   id?: number
   agentCode: string
@@ -93,12 +107,15 @@ export interface AgentPromptBindingRecord {
   sortOrder: number
 }
 
+/** 工具动作参数记录。 */
 export interface ToolActionParameterRecord {
   name: string
   description?: string
+  type?: string
   required?: boolean
 }
 
+/** 工具动作记录。 */
 export interface ToolActionRecord {
   toolCode: string
   actionName: string
@@ -106,6 +123,7 @@ export interface ToolActionRecord {
   parameters: ToolActionParameterRecord[]
 }
 
+/** 工具定义记录，包含运行时解析信息。 */
 export interface ToolRecord {
   id?: number
   toolCode: string
@@ -116,7 +134,6 @@ export interface ToolRecord {
   riskLevel?: string
   enabled: boolean
   configJson?: string
-  flowDefinitionJson?: string
   sourceStatus?: string
   hasCodeBean?: boolean
   hasDatabaseConfig?: boolean
@@ -125,6 +142,7 @@ export interface ToolRecord {
   actions: ToolActionRecord[]
 }
 
+/** 工具执行结果记录。 */
 export interface ToolExecutionResultRecord {
   toolCode: string
   actionName: string
@@ -135,12 +153,14 @@ export interface ToolExecutionResultRecord {
   durationMs?: number
 }
 
+/** 智能体工具绑定记录。 */
 export interface AgentToolBindingRecord {
   agentCode: string
   boundTools: ToolRecord[]
   availableTools: ToolRecord[]
 }
 
+/** 提示词模板记录。 */
 export interface PromptRecord {
   id: number
   templateName: string
@@ -149,6 +169,7 @@ export interface PromptRecord {
   remark?: string
 }
 
+/** 用户偏好设置记录。 */
 export interface PreferenceRecord {
   id?: number
   userId: number
@@ -158,11 +179,13 @@ export interface PreferenceRecord {
   source: string
 }
 
+/** 通用分页表格数据结构。 */
 export interface TableData<T> {
   rows: T[]
   total: number
 }
 
+/** 知识库记录。 */
 export interface KnowledgeBaseRecord {
   id?: number
   baseCode: string
@@ -182,6 +205,7 @@ export interface KnowledgeBaseRecord {
   updateTime?: string
 }
 
+/** 知识库文档记录。 */
 export interface KnowledgeDocumentRecord {
   id?: number
   baseId?: number
@@ -198,6 +222,7 @@ export interface KnowledgeDocumentRecord {
   updateTime?: string
 }
 
+/** 文档切片记录。 */
 export interface DocumentChunkRecord {
   id?: number
   documentId?: number
@@ -213,6 +238,7 @@ export interface DocumentChunkRecord {
   updateTime?: string
 }
 
+/** 知识库智能体选项（用于绑定选择）。 */
 export interface KnowledgeBaseAgentOptionRecord {
   agentCode: string
   agentName: string
@@ -220,6 +246,7 @@ export interface KnowledgeBaseAgentOptionRecord {
   enabled: boolean
 }
 
+/** 知识库智能体绑定记录。 */
 export interface KnowledgeBaseAgentBindingRecord {
   baseCode: string
   boundAgents: KnowledgeBaseAgentOptionRecord[]

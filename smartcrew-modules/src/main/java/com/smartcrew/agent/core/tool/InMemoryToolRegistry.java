@@ -6,14 +6,13 @@ import com.smartcrew.agent.api.tool.domain.model.ResolvedToolDefinition;
 import com.smartcrew.agent.api.tool.domain.model.ToolActionMetadata;
 import com.smartcrew.agent.api.tool.domain.model.ToolActionParameter;
 import com.smartcrew.agent.api.tool.domain.model.ToolExecutionModes;
-import com.smartcrew.agent.api.tool.domain.model.ToolFlowDefinition;
+import com.smartcrew.agent.api.tool.domain.model.ToolParameterTypes;
 import com.smartcrew.agent.api.tool.domain.model.ToolSourceStatuses;
 import com.smartcrew.agent.api.tool.mapper.ToolDefinitionMapper;
 import com.smartcrew.agent.api.tool.service.SmartCrewTool;
 import com.smartcrew.agent.api.tool.service.ToolRegistry;
 import com.smartcrew.agent.common.config.SmartCrewProperties;
 import com.smartcrew.agent.common.exception.ServiceException;
-import com.smartcrew.agent.common.util.JsonUtils;
 import com.smartcrew.agent.common.util.StringUtils;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
@@ -29,14 +28,28 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 内存 Tool 注册表实现，统一解析代码 Tool 与数据库 Tool。
+ * 内存工具注册中心实现，融合代码层与数据库层的工具定义。
+ *
+ * <p>在应用启动时扫描所有 {@link SmartCrewTool} Bean 和数据库中的工具配置，
+ * 将两者合并为 {@link ResolvedToolDefinition}，并缓存到内存中供运行时查询。</p>
+ *
+ * <p>核心职责：</p>
+ * <ul>
+ *   <li>发现代码层工具（通过 {@link Tool} 注解扫描）</li>
+ *   <li>加载数据库层工具配置</li>
+ *   <li>合并两层定义并判定来源状态与可执行性</li>
+ *   <li>提供按编码查询、列表查询、启用/禁用等操作</li>
+ * </ul>
+ *
+ * @see ToolRegistry
+ * @see ResolvedToolDefinition
+ * @see SmartCrewTool
  */
 @Component
 public class InMemoryToolRegistry implements ToolRegistry {
@@ -46,8 +59,19 @@ public class InMemoryToolRegistry implements ToolRegistry {
     private final SmartCrewProperties smartCrewProperties;
     private final ApplicationContext applicationContext;
 
+    /**
+     * 工具定义缓存，以工具编码为键。
+     */
     private final ConcurrentHashMap<String, ResolvedToolDefinition> definitionMap = new ConcurrentHashMap<>();
 
+    /**
+     * 构造内存工具注册中心实例。
+     *
+     * @param toolBeanMap          Spring 容器中所有 {@link SmartCrewTool} Bean 的映射
+     * @param toolDefinitionMapper 工具定义数据库 Mapper
+     * @param smartCrewProperties  平台配置属性
+     * @param applicationContext   Spring 应用上下文，用于 Bean 比对
+     */
     public InMemoryToolRegistry(Map<String, SmartCrewTool> toolBeanMap,
                                 ToolDefinitionMapper toolDefinitionMapper,
                                 SmartCrewProperties smartCrewProperties,
@@ -59,7 +83,9 @@ public class InMemoryToolRegistry implements ToolRegistry {
     }
 
     /**
-     * 刷新工具注册表，重新扫描代码 Tool 与数据库 Tool。
+     * 刷新工具注册缓存，重新扫描代码层工具并加载数据库配置后合并。
+     *
+     * <p>在应用启动完成事件（{@link ApplicationReadyEvent}）触发时自动执行。</p>
      */
     @Override
     @EventListener(ApplicationReadyEvent.class)
@@ -79,9 +105,9 @@ public class InMemoryToolRegistry implements ToolRegistry {
     }
 
     /**
-     * 获取所有已注册的工具定义。
+     * 返回所有已注册工具的排序列表。
      *
-     * @return 工具定义列表
+     * @return 按工具编码排序的定义列表
      */
     @Override
     public List<ResolvedToolDefinition> listAll() {
@@ -91,10 +117,10 @@ public class InMemoryToolRegistry implements ToolRegistry {
     }
 
     /**
-     * 根据编码获取工具定义。
+     * 根据工具编码查询已注册的工具定义。
      *
      * @param toolCode 工具编码
-     * @return 工具定义（可选）
+     * @return 工具定义（可能为空）
      */
     @Override
     public Optional<ResolvedToolDefinition> getByCode(String toolCode) {
@@ -102,11 +128,11 @@ public class InMemoryToolRegistry implements ToolRegistry {
     }
 
     /**
-     * 获取指定工具的动作元数据。
+     * 查询指定工具的特定动作元数据。
      *
      * @param toolCode   工具编码
      * @param actionName 动作名称
-     * @return 动作元数据（可选）
+     * @return 动作元数据（可能为空）
      */
     @Override
     public Optional<ToolActionMetadata> getAction(String toolCode, String actionName) {
@@ -120,10 +146,11 @@ public class InMemoryToolRegistry implements ToolRegistry {
     }
 
     /**
-     * 设置工具启用状态。
+     * 设置工具的启用/禁用状态，并同步更新可执行性。
      *
      * @param toolCode 工具编码
      * @param enabled  是否启用
+     * @throws ServiceException 当工具编码不存在时抛出
      */
     @Override
     public void setEnabled(String toolCode, boolean enabled) {
@@ -135,12 +162,16 @@ public class InMemoryToolRegistry implements ToolRegistry {
         definition.setExecutable(enabled && StringUtils.isBlank(definition.getResolveError()));
     }
 
-    /* 扫描并发现代码中定义的 Tool。 */
+    /**
+     * 扫描 Spring 容器中所有 {@link SmartCrewTool} Bean，构建代码层工具描述符。
+     *
+     * @return 以工具编码为键的代码层工具描述符映射
+     * @throws ServiceException 当发现重复的工具编码时抛出
+     */
     private Map<String, CodeToolDescriptor> discoverCodeTools() {
         Map<String, CodeToolDescriptor> result = new LinkedHashMap<>();
         for (Map.Entry<String, SmartCrewTool> entry : toolBeanMap.entrySet()) {
-            SmartCrewTool tool = entry.getValue();
-            CodeToolDescriptor descriptor = buildCodeDescriptor(entry.getKey(), tool);
+            CodeToolDescriptor descriptor = buildCodeDescriptor(entry.getKey(), entry.getValue());
             CodeToolDescriptor previous = result.putIfAbsent(descriptor.toolCode(), descriptor);
             if (previous != null) {
                 throw new ServiceException("Duplicate tool code found: " + descriptor.toolCode());
@@ -149,79 +180,67 @@ public class InMemoryToolRegistry implements ToolRegistry {
         return result;
     }
 
-    /*
-     * 构建代码 Tool 的描述符。
-     * <p>
-     * 该方法通过反射扫描 SmartCrewTool 实现类中的 @Tool 注解方法，
-     * 解析方法参数和注解信息，构建完整的工具描述符。
-     * </p>
+    /**
+     * 根据代码层工具 Bean 构建描述符，扫描其 {@link Tool} 注解方法提取动作元数据。
      *
+     * @param beanName Bean 名称
+     * @param tool     工具实例
+     * @return 代码层工具描述符
      */
     private CodeToolDescriptor buildCodeDescriptor(String beanName, SmartCrewTool tool) {
-        // 获取目标类（去除 AOP 代理包装）
-        // AopUtils.getTargetClass 用于获取被代理对象的真实类型
         Class<?> targetClass = AopUtils.getTargetClass(tool);
-
-        // 初始化动作列表，用于存储工具的所有可执行动作
         List<ToolActionMetadata> actions = new ArrayList<>();
-
-        // 遍历目标类的所有方法
         for (Method method : targetClass.getMethods()) {
-            // 检查方法是否带有 @Tool 注解
-            // @Tool 注解标记该方法为工具的可执行动作
             Tool toolAnnotation = method.getAnnotation(Tool.class);
             if (toolAnnotation == null) {
-                // 跳过没有 @Tool 注解的方法
                 continue;
             }
 
-            // 初始化参数列表，用于存储方法的参数信息
             List<ToolActionParameter> parameters = new ArrayList<>();
-
-            // 遍历方法的所有参数
             for (Parameter parameter : method.getParameters()) {
-                // 检查参数是否带有 @P 注解
-                // @P 注解用于标记参数的描述信息
                 P pAnnotation = parameter.getAnnotation(P.class);
-
-                // 构建参数元数据
                 parameters.add(ToolActionParameter.builder()
-                        .name(resolveParameterName(parameter)) // 解析参数名称
-                        .description(pAnnotation == null ? "" : pAnnotation.value()) // 获取参数描述
-                        .required(true) // 默认为必填参数
+                        .name(resolveParameterName(parameter))
+                        .description(pAnnotation == null ? "" : pAnnotation.value())
+                        .type(resolveParameterType(parameter))
+                        .required(true)
                         .build());
             }
 
-            // 构建动作元数据
             actions.add(ToolActionMetadata.builder()
-                    .toolCode(tool.toolCode()) // 工具编码
-                    .actionName(method.getName()) // 动作名称（使用方法名）
-                    .description(String.join(" ", toolAnnotation.value())) // 动作描述（拼接 @Tool 注解值）
-                    .parameters(parameters) // 参数列表
+                    .toolCode(tool.toolCode())
+                    .actionName(method.getName())
+                    .description(String.join(" ", toolAnnotation.value()))
+                    .parameters(parameters)
                     .build());
         }
-
-        // 按动作名称排序，确保顺序一致
         actions.sort(Comparator.comparing(ToolActionMetadata::getActionName));
-
-        // 创建并返回代码工具描述符
         return new CodeToolDescriptor(
-                tool.toolCode(),           // 工具编码
-                tool.toolName(),           // 工具名称
-                tool.description(),        // 工具描述
-                beanName,                  // Spring Bean 名称
-                tool.riskLevel(),          // 风险等级
-                tool.enabledByDefault(),   // 默认启用状态
-                actions                    // 动作列表
+                tool.toolCode(),
+                tool.toolName(),
+                tool.description(),
+                beanName,
+                tool.riskLevel(),
+                tool.enabledByDefault(),
+                actions
         );
     }
 
-    /* 构建合并后的工具定义，整合代码 Tool 与数据库 Tool。 */
+    /**
+     * 合并代码层与数据库层工具定义，构建运行时解析后的工具定义。
+     *
+     * <p>优先使用数据库配置覆盖代码层默认值，同时校验 Bean 名称匹配性
+     * 并判定来源状态与可执行性。</p>
+     *
+     * @param codeTool    代码层工具描述符，可为 null
+     * @param databaseTool 数据库层工具定义，可为 null
+     * @return 合并后的运行时工具定义
+     */
     private ResolvedToolDefinition buildResolvedDefinition(CodeToolDescriptor codeTool, ToolDefinition databaseTool) {
         String toolCode = databaseTool != null ? databaseTool.getToolCode() : codeTool.toolCode();
         boolean hasCodeBean = codeTool != null;
         boolean hasDatabaseConfig = databaseTool != null;
-        String executionMode = resolveExecutionMode(databaseTool);
+        String executionMode = ToolExecutionModes.BEAN;
 
         String toolName = firstNonBlank(hasDatabaseConfig ? databaseTool.getToolName() : null,
                 hasCodeBean ? codeTool.toolName() : null,
@@ -242,32 +261,7 @@ public class InMemoryToolRegistry implements ToolRegistry {
         String resolveError = null;
         boolean executable = enabled;
 
-        if (ToolExecutionModes.FLOW.equals(executionMode)) {
-            sourceStatus = ToolSourceStatuses.DB_ONLY;
-            if (!hasDatabaseConfig) {
-                resolveError = "FLOW 模式缺少数据库配置";
-                executable = false;
-            } else {
-                try {
-                    ToolFlowDefinition flowDefinition = JsonUtils.parse(databaseTool.getFlowDefinitionJson(), ToolFlowDefinition.class);
-                    String actionName = StringUtils.isBlank(flowDefinition.getActionName())
-                            ? "execute"
-                            : flowDefinition.getActionName().trim();
-                    actions.add(ToolActionMetadata.builder()
-                            .toolCode(toolCode)
-                            .actionName(actionName)
-                            .description(firstNonBlank(flowDefinition.getDescription(), description, "执行数据库流程"))
-                            .build());
-                    if (flowDefinition.getSteps() == null || flowDefinition.getSteps().isEmpty()) {
-                        resolveError = "FLOW 模式步骤为空";
-                        executable = false;
-                    }
-                } catch (Exception exception) {
-                    resolveError = "FLOW 定义解析失败: " + safeMessage(exception);
-                    executable = false;
-                }
-            }
-        } else if (hasCodeBean) {
+        if (hasCodeBean) {
             sourceStatus = hasDatabaseConfig ? ToolSourceStatuses.LINKED : ToolSourceStatuses.CODE_ONLY;
             actions.addAll(codeTool.actions());
             if (hasDatabaseConfig) {
@@ -303,7 +297,6 @@ public class InMemoryToolRegistry implements ToolRegistry {
                 .riskLevel(riskLevel)
                 .enabled(enabled)
                 .configJson(databaseTool == null ? null : databaseTool.getConfigJson())
-                .flowDefinitionJson(databaseTool == null ? null : databaseTool.getFlowDefinitionJson())
                 .sourceStatus(sourceStatus)
                 .hasCodeBean(hasCodeBean)
                 .hasDatabaseConfig(hasDatabaseConfig)
@@ -313,7 +306,14 @@ public class InMemoryToolRegistry implements ToolRegistry {
                 .build();
     }
 
-    /* 解析工具启用状态，优先使用数据库配置。 */
+    /**
+     * 解析工具启用状态，优先使用数据库配置，其次使用配置属性与代码层默认值。
+     *
+     * @param toolCode    工具编码
+     * @param codeTool    代码层工具描述符
+     * @param databaseTool 数据库层工具定义
+     * @return 是否启用
+     */
     private boolean resolveEnabled(String toolCode, CodeToolDescriptor codeTool, ToolDefinition databaseTool) {
         if (databaseTool != null && databaseTool.getEnabled() != null) {
             return databaseTool.getEnabled();
@@ -324,15 +324,13 @@ public class InMemoryToolRegistry implements ToolRegistry {
         return true;
     }
 
-    /* 解析工具执行模式。 */
-    private String resolveExecutionMode(ToolDefinition databaseTool) {
-        if (databaseTool == null || StringUtils.isBlank(databaseTool.getExecutionMode())) {
-            return ToolExecutionModes.BEAN;
-        }
-        return databaseTool.getExecutionMode().trim().toUpperCase(Locale.ROOT);
-    }
-
-    /* 判断两个 Bean 名称是否指向同一个 Bean 实例。 */
+    /**
+     * 比较配置的 Bean 名称与运行时 Bean 名称是否指向同一实例。
+     *
+     * @param configuredBeanName 数据库配置的 Bean 名称
+     * @param runtimeBeanName    代码层注册的 Bean 名称
+     * @return 是否为同一 Bean 实例
+     */
     private boolean isSameBean(String configuredBeanName, String runtimeBeanName) {
         if (StringUtils.isBlank(configuredBeanName) || StringUtils.isBlank(runtimeBeanName)) {
             return false;
@@ -346,7 +344,12 @@ public class InMemoryToolRegistry implements ToolRegistry {
         return applicationContext.getBean(configuredBeanName) == applicationContext.getBean(runtimeBeanName);
     }
 
-    /* 解析方法参数名称。 */
+    /**
+     * 解析方法参数名称，优先使用 {@link P} 注解值，否则使用反射参数名。
+     *
+     * @param parameter 方法参数
+     * @return 参数名称
+     */
     private String resolveParameterName(Parameter parameter) {
         P pAnnotation = parameter.getAnnotation(P.class);
         if (pAnnotation != null && StringUtils.isNotBlank(pAnnotation.value())) {
@@ -355,7 +358,28 @@ public class InMemoryToolRegistry implements ToolRegistry {
         return parameter.getName();
     }
 
-    /* 返回第一个非空字符串。 */
+    /**
+     * 根据参数类型映射为工具参数类型常量。
+     *
+     * @param parameter 方法参数
+     * @return 工具参数类型字符串
+     * @see ToolParameterTypes
+     */
+    private String resolveParameterType(Parameter parameter) {
+        Class<?> type = parameter.getType();
+        if (type == Integer.class || type == int.class || type == Long.class || type == long.class
+                || type == Short.class || type == short.class || type == Byte.class || type == byte.class) {
+            return ToolParameterTypes.INTEGER;
+        }
+        if (type == Double.class || type == double.class || type == Float.class || type == float.class) {
+            return ToolParameterTypes.NUMBER;
+        }
+        if (type == Boolean.class || type == boolean.class) {
+            return ToolParameterTypes.BOOLEAN;
+        }
+        return ToolParameterTypes.STRING;
+    }
+
     private String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.isNotBlank(value)) {
@@ -365,12 +389,17 @@ public class InMemoryToolRegistry implements ToolRegistry {
         return null;
     }
 
-    /* 安全获取异常消息。 */
-    private String safeMessage(Exception exception) {
-        return exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
-    }
-
-    /* 代码 Tool 描述符，用于存储扫描结果。 */
+    /**
+     * 代码层工具描述符，封装从 {@link SmartCrewTool} Bean 扫描得到的工具信息。
+     *
+     * @param toolCode        工具编码
+     * @param toolName        工具名称
+     * @param description     工具描述
+     * @param beanName        Spring Bean 名称
+     * @param riskLevel       风险等级
+     * @param enabledByDefault 是否默认启用
+     * @param actions         动作元数据列表
+     */
     private record CodeToolDescriptor(String toolCode,
                                       String toolName,
                                       String description,

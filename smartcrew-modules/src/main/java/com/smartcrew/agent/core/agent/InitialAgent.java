@@ -3,44 +3,76 @@ package com.smartcrew.agent.core.agent;
 import com.smartcrew.agent.api.agent.domain.model.AgentDispatchCommand;
 import com.smartcrew.agent.api.agent.domain.vo.AgentDispatchResponse;
 import com.smartcrew.agent.api.agent.service.Agent;
-import com.smartcrew.agent.api.agent.service.AgentToolBindingService;
-import com.smartcrew.agent.api.decision.domain.request.DecisionPlanRequest;
-import com.smartcrew.agent.api.decision.domain.vo.DecisionPlanResponse;
-import com.smartcrew.agent.api.llm.domain.request.LlmChatRequest;
-import com.smartcrew.agent.api.llm.domain.vo.LlmChatResponse;
-import com.smartcrew.agent.api.llm.service.LlmClient;
+import com.smartcrew.agent.api.llm.service.LlmConversationStore;
 import com.smartcrew.agent.api.rag.domain.vo.RagAugmentationResult;
 import com.smartcrew.agent.api.rag.service.RagAugmentationService;
-import com.smartcrew.agent.api.tool.domain.model.ResolvedToolDefinition;
-import com.smartcrew.agent.api.tool.domain.model.ToolExecutionResult;
-import com.smartcrew.agent.api.decision.service.DecisionEngine;
-import com.smartcrew.agent.common.util.JsonUtils;
-import com.smartcrew.agent.core.agent.service.AgentToolOrchestrator;
+import com.smartcrew.agent.core.agent.service.InitialAgentChatService;
+import com.smartcrew.agent.core.agent.service.InitialAgentMemoryId;
 import com.smartcrew.agent.core.agent.service.InitialAgentPromptService;
-import lombok.RequiredArgsConstructor;
+import com.smartcrew.agent.core.tool.ToolCallContextHolder;
+import dev.langchain4j.service.Result;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * SmartCrew 的初始智能体。
+ * 初始智能体实现，平台默认的对话与编排智能体。
+ *
+ * <p>负责接收用户调度命令，结合 RAG 增强与系统提示词构建对话上下文，
+ * 通过 LangChain4j AI Service 调用大模型完成推理，并返回响应结果。</p>
+ *
+ * <p>核心处理流程：</p>
+ * <ol>
+ *   <li>检测大模型服务是否可用</li>
+ *   <li>执行 RAG 检索增强（如已启用）</li>
+ *   <li>构建系统提示词并编码会话记忆 ID</li>
+ *   <li>加锁保护同一会话的并发安全</li>
+ *   <li>调用对话服务获取模型回复</li>
+ *   <li>异常时持久化降级对话记录</li>
+ * </ol>
+ *
+ * @see Agent
+ * @see InitialAgentChatService
+ * @see InitialAgentMemoryId
  */
 @Component
-@RequiredArgsConstructor
 public class InitialAgent implements Agent {
 
-    private final LlmClient llmClient;
     private final InitialAgentPromptService promptService;
-    private final Optional<RagAugmentationService> ragAugmentationService;// 当项目配置为不启用RAG时可能为null，所以使用Optional
-    private final AgentToolBindingService agentToolBindingService;
-    private final DecisionEngine decisionEngine;
-    private final AgentToolOrchestrator agentToolOrchestrator;
+    private final Optional<RagAugmentationService> ragAugmentationService;
+    private final ObjectProvider<InitialAgentChatService> chatServiceProvider;
+    private final LlmConversationStore conversationStore;
 
     /**
-     * 返回 Agent 唯一编码。
+     * 会话级并发锁映射，防止同一用户会话的并发请求导致上下文错乱。
+     */
+    private final ConcurrentHashMap<String, ReentrantLock> conversationLocks = new ConcurrentHashMap<>();
+
+    /**
+     * 构造初始智能体实例。
+     *
+     * @param promptService         提示词构建服务
+     * @param ragAugmentationService RAG 增强服务（可选，未配置时为空）
+     * @param chatServiceProvider    对话服务提供者，延迟获取以避免循环依赖
+     * @param conversationStore      会话持久化存储
+     */
+    public InitialAgent(InitialAgentPromptService promptService,
+                        Optional<RagAugmentationService> ragAugmentationService,
+                        ObjectProvider<InitialAgentChatService> chatServiceProvider,
+                        LlmConversationStore conversationStore) {
+        this.promptService = promptService;
+        this.ragAugmentationService = ragAugmentationService;
+        this.chatServiceProvider = chatServiceProvider;
+        this.conversationStore = conversationStore;
+    }
+
+    /**
+     * 返回智能体编码标识。
+     *
+     * @return 固定值 "initial-agent"
      */
     @Override
     public String code() {
@@ -48,7 +80,9 @@ public class InitialAgent implements Agent {
     }
 
     /**
-     * 返回 Agent 显示名称。
+     * 返回智能体显示名称。
+     *
+     * @return 固定值 "初始智能体"
      */
     @Override
     public String name() {
@@ -56,10 +90,10 @@ public class InitialAgent implements Agent {
     }
 
     /**
-     * 判断是否支持指定能力。
+     * 判断智能体是否支持指定能力。
      *
      * @param capability 能力标识
-     * @return 是否支持
+     * @return 支持 chat、orchestrate、rag 三种能力时返回 true
      */
     @Override
     public boolean supports(String capability) {
@@ -69,122 +103,64 @@ public class InitialAgent implements Agent {
     }
 
     /**
-     * 处理用户指令，执行 RAG 检索、工具决策与调用、LLM 对话。
+     * 处理智能体调度命令，执行对话推理并返回响应。
      *
-     * @param command Agent 派发指令
-     * @return 处理响应
+     * <p>处理流程：检测大模型可用性 → RAG 增强 → 构建提示词 → 加锁调用对话 → 返回结果。
+     * 异常时持久化降级对话记录，确保用户消息不丢失。</p>
+     *
+     * @param command 智能体调度命令，包含用户消息、会话信息及上下文
+     * @return 调度响应，包含推理结果或错误信息
      */
     @Override
     public AgentDispatchResponse handle(AgentDispatchCommand command) {
-        String llmSessionId = code() + "::" + command.getSessionId();
-        // 构建RAG检索结果
-        RagAugmentationResult augmentationResult = resolveRagAugmentation(command);
-        // 构建工具决策计划
-        List<ResolvedToolDefinition> availableTools = agentToolBindingService.listEnabledResolvedToolsByAgentCode(code());
-        DecisionPlanResponse decisionPlan = buildDecisionPlan(command, availableTools);
-        List<ToolExecutionResult> toolResults = agentToolOrchestrator.execute(
-                code(),
-                decisionPlan.getPlannedToolCalls(),
-                buildExecutionContext(command, augmentationResult, availableTools)
-        );
-
-        LlmChatRequest request = LlmChatRequest.builder()
-                .userId(command.getUserId())
-                .sessionId(llmSessionId)
-                .userMessage(buildUserMessage(command.getMessage(), toolResults))
-                .systemPrompt(promptService.buildSystemPrompt(code(), command.getUserId(), augmentationResult.getPromptBlock()))
-                .traceId(command.getTraceId())
-                .build();
-
-        LlmChatResponse response = llmClient.chat(request);
-        if (!Boolean.TRUE.equals(response.getSuccess())) {
+        InitialAgentChatService chatService = chatServiceProvider.getIfAvailable();
+        if (chatService == null) {
+            persistFallbackConversation(command, "当前未启用大模型服务");
             return AgentDispatchResponse.builder()
                     .traceId(command.getTraceId())
                     .agentCode(code())
                     .accepted(false)
-                    .message(response.getErrorMessage() == null ? "当前无法处理请求，请稍后再试" : response.getErrorMessage())
+                    .message("当前未启用大模型服务")
                     .build();
         }
 
-        return AgentDispatchResponse.builder()
-                .traceId(command.getTraceId())
-                .agentCode(code())
-                .accepted(true)
-                .message(response.getContent())
-                .build();
+        RagAugmentationResult augmentationResult = resolveRagAugmentation(command);
+        String memoryId = InitialAgentMemoryId.encode(code(), command.getUserId(), command.getSessionId());
+        String systemPrompt = promptService.buildSystemPrompt(code(), command.getUserId(), augmentationResult.getPromptBlock());
+        String conversationKey = command.getUserId() + "::" + command.getSessionId();
+        ReentrantLock lock = conversationLocks.computeIfAbsent(conversationKey, key -> new ReentrantLock());
+
+        lock.lock();
+        try {
+            ToolCallContextHolder.set(command.getTraceId(), command.getContext());
+            Result<String> result = chatService.chat(memoryId, command.getMessage(), systemPrompt);
+            return AgentDispatchResponse.builder()
+                    .traceId(command.getTraceId())
+                    .agentCode(code())
+                    .accepted(true)
+                    .message(result == null ? "" : result.content())
+                    .build();
+        } catch (Exception exception) {
+            String message = exception.getMessage() == null ? "当前无法处理请求，请稍后再试" : exception.getMessage();
+            persistFallbackConversation(command, message);
+            return AgentDispatchResponse.builder()
+                    .traceId(command.getTraceId())
+                    .agentCode(code())
+                    .accepted(false)
+                    .message(message)
+                    .build();
+        } finally {
+            ToolCallContextHolder.clear();
+            lock.unlock();
+        }
     }
 
-    /* 构建工具决策计划。 */
-    private DecisionPlanResponse buildDecisionPlan(AgentDispatchCommand command, List<ResolvedToolDefinition> availableTools) {
-        DecisionPlanRequest request = new DecisionPlanRequest();
-        request.setAgentCode(code());
-        request.setUserId(command.getUserId());
-        request.setInput(command.getMessage());
-        Map<String, Object> context = new LinkedHashMap<>();
-        if (command.getContext() != null) {
-            context.putAll(command.getContext());
-        }
-        context.put("availableTools", availableTools);
-        request.setContext(context);
-        return decisionEngine.plan(request);
-    }
-
-    /* 构建工具执行上下文。 */
-    private Map<String, Object> buildExecutionContext(AgentDispatchCommand command,
-                                                      RagAugmentationResult augmentationResult,
-                                                      List<ResolvedToolDefinition> availableTools) {
-        Map<String, Object> context = new LinkedHashMap<>();
-        context.put("traceId", command.getTraceId());
-        context.put("sessionId", command.getSessionId());
-        context.put("userId", command.getUserId());
-        context.put("input", command.getMessage());
-        context.put("ragHitCount", augmentationResult.getHitCount());
-        context.put("availableTools", availableTools.stream().map(ResolvedToolDefinition::toVo).toList());
-        if (command.getContext() != null) {
-            context.putAll(command.getContext());
-        }
-        return context;
-    }
-
-    /* 构建包含工具执行结果的用户消息。 */
-    private String buildUserMessage(String originalMessage, List<ToolExecutionResult> toolResults) {
-        if (toolResults == null || toolResults.isEmpty()) {
-            return originalMessage;
-        }
-        StringBuilder builder = new StringBuilder();
-        builder.append("用户原始问题：").append(originalMessage).append(System.lineSeparator()).append(System.lineSeparator());
-        builder.append("已执行的工具结果如下，请优先基于这些结果回答：").append(System.lineSeparator());
-        int index = 1;
-        for (ToolExecutionResult result : toolResults) {
-            builder.append(index++)
-                    .append(". ")
-                    .append(result.getToolCode())
-                    .append("#")
-                    .append(result.getActionName())
-                    .append(System.lineSeparator());
-            if (Boolean.TRUE.equals(result.getSuccess())) {
-                builder.append("输出：").append(formatOutput(result.getOutput())).append(System.lineSeparator());
-            } else {
-                builder.append("错误：").append(result.getErrorMessage()).append(System.lineSeparator());
-            }
-        }
-        builder.append(System.lineSeparator())
-                .append("请结合系统提示、知识库上下文和以上工具结果进行回答；若工具结果不足，请明确说明。");
-        return builder.toString();
-    }
-
-    /* 格式化工具输出对象。 */
-    private String formatOutput(Object output) {
-        if (output == null) {
-            return "";
-        }
-        if (output instanceof String text) {
-            return text;
-        }
-        return JsonUtils.toJson(output);
-    }
-
-    /* 解析当前请求的检索增强结果。 */
+    /**
+     * 执行 RAG 检索增强，获取与用户消息相关的知识片段。
+     *
+     * @param command 智能体调度命令
+     * @return RAG 增强结果，未启用 RAG 时返回空结果
+     */
     private RagAugmentationResult resolveRagAugmentation(AgentDispatchCommand command) {
         return ragAugmentationService
                 .map(service -> service.augment(code(), command.getMessage(), command.getTraceId()))
@@ -193,5 +169,35 @@ public class InitialAgent implements Agent {
                         .promptBlock("")
                         .hitCount(0)
                         .build());
+    }
+
+    /**
+     * 持久化降级对话记录，在大模型不可用或调用异常时确保用户消息不丢失。
+     *
+     * @param command          智能体调度命令
+     * @param assistantMessage 降级回复内容
+     */
+    private void persistFallbackConversation(AgentDispatchCommand command, String assistantMessage) {
+        String sessionId = code() + "::" + command.getSessionId();
+        conversationStore.ensureSession(command.getUserId(), sessionId);
+        long userMessageSeq = conversationStore.nextMessageSeq(command.getUserId(), sessionId);
+        conversationStore.saveUserMessage(
+                command.getUserId(),
+                sessionId,
+                userMessageSeq,
+                command.getMessage(),
+                command.getTraceId()
+        );
+        conversationStore.saveAssistantMessage(
+                command.getUserId(),
+                sessionId,
+                userMessageSeq + 1,
+                assistantMessage,
+                command.getTraceId(),
+                null,
+                null,
+                null,
+                null
+        );
     }
 }

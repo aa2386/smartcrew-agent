@@ -4,7 +4,12 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
- * ToolDefinitionRequest 请求对象。
+ * 工具定义创建/更新请求对象，用于接收前端提交的工具配置参数。
+ *
+ * <p>包含工具的基本属性、执行模式、风险等级及扩展配置，
+ * 通过 JSR-303 注解进行入参校验。</p>
+ *
+ * @see com.smartcrew.agent.api.tool.domain.entity.ToolDefinition
  */
 @Data
 public class ToolDefinitionRequest {
@@ -53,8 +58,4 @@ public class ToolDefinitionRequest {
      */
     private String configJson;
 
-    /**
-     * 顺序流程 DSL 定义 JSON。
-     */
-    private String flowDefinitionJson;
 }

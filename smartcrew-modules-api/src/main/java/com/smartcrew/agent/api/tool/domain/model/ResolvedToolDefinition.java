@@ -8,7 +8,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 运行时解析后的工具定义。
+ * 运行时解析后的工具定义，融合数据库配置与代码 Bean 实现的完整工具信息。
+ *
+ * <p>在数据库 {@link com.smartcrew.agent.api.tool.domain.entity.ToolDefinition} 的基础上，
+ * 补充了来源状态、Bean 存在性、可执行性等运行时判定结果，
+ * 用于工具注册与调度环节的统一视图。</p>
+ *
+ * @see com.smartcrew.agent.api.tool.domain.entity.ToolDefinition
+ * @see ToolDefinitionVo
  */
 @Data
 @Builder
@@ -60,11 +67,6 @@ public class ResolvedToolDefinition {
     private String configJson;
 
     /**
-     * 流程定义 JSON。
-     */
-    private String flowDefinitionJson;
-
-    /**
      * 工具来源状态。
      */
     private String sourceStatus;
@@ -96,7 +98,9 @@ public class ResolvedToolDefinition {
     private List<ToolActionMetadata> actions = new ArrayList<>();
 
     /**
-     * 转换为接口输出视图。
+     * 转换为接口输出视图对象。
+     *
+     * @return 包含完整解析信息的工具定义视图
      */
     public ToolDefinitionVo toVo() {
         return ToolDefinitionVo.builder()
@@ -109,7 +113,6 @@ public class ResolvedToolDefinition {
                 .riskLevel(riskLevel)
                 .enabled(enabled)
                 .configJson(configJson)
-                .flowDefinitionJson(flowDefinitionJson)
                 .sourceStatus(sourceStatus)
                 .hasCodeBean(hasCodeBean)
                 .hasDatabaseConfig(hasDatabaseConfig)
