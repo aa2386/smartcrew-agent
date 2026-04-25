@@ -1,4 +1,4 @@
-package com.smartcrew.agent.core.tool;
+package com.smartcrew.agent.core.tool.executable;
 
 import cn.hutool.http.HttpUtil;
 import com.smartcrew.agent.api.tool.service.SmartCrewTool;
