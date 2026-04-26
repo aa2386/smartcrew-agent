@@ -5,23 +5,17 @@ import com.smartcrew.agent.api.llm.domain.entity.LlmConversationMessage;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
 /**
- * 大模型会话消息 Mapper，负责会话消息的数据访问。
+ * 大模型会话消息 Mapper。
  */
 @Mapper
 public interface LlmConversationMessageMapper extends BaseMapper<LlmConversationMessage> {
 
     /**
-     * 按会话加载最近若干条消息，结果按顺序号倒序返回。
-     *
-     * @param userId 用户 ID
-     * @param sessionId 会话 ID
-     * @param limit 查询条数
-     * @return 最近消息列表
+     * 按会话加载最近若干条消息，结果按消息顺序倒序返回。
      */
     @Select("""
             select *
@@ -37,10 +31,6 @@ public interface LlmConversationMessageMapper extends BaseMapper<LlmConversation
 
     /**
      * 查询指定会话当前最大的消息顺序号。
-     *
-     * @param userId 用户 ID
-     * @param sessionId 会话 ID
-     * @return 当前最大顺序号；若不存在则返回 0
      */
     @Select("""
             select coalesce(max(message_seq), 0)
@@ -53,10 +43,6 @@ public interface LlmConversationMessageMapper extends BaseMapper<LlmConversation
 
     /**
      * 查询指定会话最新的一条消息。
-     *
-     * @param userId 用户 ID
-     * @param sessionId 会话 ID
-     * @return 最新消息；未命中时返回 {@code null}
      */
     @Select("""
             select *
@@ -68,19 +54,4 @@ public interface LlmConversationMessageMapper extends BaseMapper<LlmConversation
             """)
     LlmConversationMessage selectLatestMessage(@Param("userId") Long userId,
                                                @Param("sessionId") String sessionId);
-
-    /**
-     * 将指定消息标记为失败。
-     *
-     * @param id 消息 ID
-     * @param errorMessage 错误信息
-     * @return 受影响的行数
-     */
-    @Update("""
-            update llm_conversation_message
-            set status = 'FAILED',
-                error_message = #{errorMessage}
-            where id = #{id}
-            """)
-    int markMessageFailed(@Param("id") Long id, @Param("errorMessage") String errorMessage);
 }
