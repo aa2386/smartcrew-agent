@@ -8,6 +8,7 @@ import com.smartcrew.agent.core.agent.service.InitialAgentMemoryId;
 import com.smartcrew.agent.core.tool.ToolCallContextHolder;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.memory.ChatMemory;
 
@@ -42,6 +43,10 @@ public class PersistentChatMemory implements ChatMemory {
 
     @Override
     public void add(ChatMessage message) {
+        if (message instanceof SystemMessage systemMessage) {
+            upsertSystemMessage(systemMessage);
+            return;
+        }
         messages.add(message);
         if (message instanceof UserMessage userMessage) {
             persistUserMessage(userMessage);
@@ -62,6 +67,14 @@ public class PersistentChatMemory implements ChatMemory {
     @Override
     public void clear() {
         messages.clear();
+    }
+
+    /**
+     * Qwen 要求 system message 必须位于消息首位，否则会在适配层清空此前历史。
+     */
+    private void upsertSystemMessage(SystemMessage systemMessage) {
+        messages.removeIf(existing -> existing instanceof SystemMessage);
+        messages.add(0, systemMessage);
     }
 
     private void loadHistory() {
