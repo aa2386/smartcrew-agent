@@ -1,264 +1,215 @@
 # SmartCrew-Agent
 
-## 导航
+SmartCrew-Agent 是一个基于 Spring Boot 3、LangChain4j、MyBatis-Plus 和 Vue 3 的多模块智能体平台示例工程，面向多 Agent 协作、Prompt 编排、工具注册执行、用户记忆、RAG 检索增强以及 Web / Admin 管理场景。
 
-- [开发手册](docs/DEVELOPER_MANUAL.md)
-- [项目基础 Skill](docs/skills/PROJECT_BASELINE_SKILL.md)
-- [前端风格 Skill](docs/skills/SMARTCREW_UI_STYLE_SKILL.md)
+项目当前更适合作为智能体平台的基础脚手架与学习型工程，而不是“开箱即用”的完整生产方案。你可以在这个仓库上继续扩展 Agent 运行时、工具体系、知识库能力、平台接入和后台管理界面。
 
-## 项目简介
+## 开源信息
 
-SmartCrew-Agent 是一个基于 Spring Boot 3、LangChain4j、MyBatis-Plus 的多模块 Java 项目脚手架，面向“多代理协作 + 工具注册执行 + 用户记忆 + 提示词模板 + 平台事件接入”这类智能体应用场景。
+- 开源许可证：[MIT License](LICENSE)
+- 贡献指南：[CONTRIBUTING.md](CONTRIBUTING.md)
+- 变更记录：[CHANGELOG.md](CHANGELOG.md)
 
-当前仓库更偏向基础骨架和模块拆分示例，已经具备代理注册、工具元数据管理、简单决策规划、用户偏好记忆、提示词模板管理以及平台适配器占位接入等能力，适合作为后续扩展智能体平台的起点工程。
+## 项目特性
 
-## 技术栈与运行环境
+- 多模块后端架构，便于拆分领域模型、业务实现与启动模块
+- 同时提供 `/api/v1`、`/api/web`、`/api/admin` 三层接口体系
+- 支持本地 JWT 鉴权、用户注册登录、管理员后台能力
+- 支持 Agent 定义、Prompt 模板、工具绑定、用户偏好管理
+- 支持 RAG 基础设施、知识库、文档切片与向量检索
+- 提供 Vue 3 前端工程，包含公众端与后台管理端
+- 保留平台接入扩展点，便于继续接入企业微信、飞书等外部平台
+
+## 项目结构
+
+- `smartcrew-admin`
+  Spring Boot 启动模块、控制器层、资源配置、集成测试
+- `smartcrew-common`
+  公共配置、异常处理、分页模型、工具类
+- `smartcrew-modules-api`
+  领域实体、VO、Mapper、Service 接口契约
+- `smartcrew-modules`
+  Agent、Prompt、鉴权、RAG、工具、平台适配等核心业务实现
+- `smartcrew-ui`
+  Vue 3 前端工程，包含公众聊天页与后台页面
+- `sql`
+  数据库初始化脚本
+- `docs`
+  开发手册、技术文档、测试文档和仓库内技能说明
+
+## 技术栈
 
 - Java 17
 - Maven 3.9+
 - Spring Boot 3.4.4
 - MyBatis-Plus 3.5.11
 - MySQL 8.x
-- LangChain4j 1.2.0
-- Hutool 5.8.35
-- OkHttp 4.12.0
-- PlantUML 1.2024.3
+- H2（测试环境）
+- LangChain4j 1.0.0-beta2
+- Chroma Vector Store
+- Vue 3
+- Vite 6
+- Element Plus
 
-## 模块结构说明
+## 快速开始
 
-- `smartcrew-common`
-  - 公共能力模块
-  - 提供统一返回体、异常处理、分页模型、配置类和工具类
-- `smartcrew-modules-api`
-  - API 契约模块
-  - 提供实体、请求对象、视图对象、Mapper 接口和 Service 接口
-- `smartcrew-modules`
-  - 核心实现模块
-  - 提供代理、工具、记忆、提示词、MCP、平台适配器等实现
-- `smartcrew-admin`
-  - 管理端与启动模块
-  - 提供 Spring Boot 启动入口、REST 控制器、资源配置和测试代码
-- `sql`
-  - 初始化脚本目录
-  - 包含项目启动所需的数据库建表脚本
+### 1. 环境准备
 
-## 核心能力概览
+- 安装 Java 17 并正确配置 `JAVA_HOME`
+- 安装 Maven，并确保 `mvn -v` 可用
+- 安装 MySQL 8.x
+- 可选：准备 Chroma 服务，用于 RAG 向量存储
+- 可选：安装 Node.js 18+，用于启动前端
 
-- 代理管理
-  - 支持代理定义注册、查询和按编码派发
-  - 内置 `echo-agent`、`planner-agent` 示例代理
-  - 支持将数据库中定义但尚未实现的代理注册为占位代理
-- 工具注册与执行
-  - 支持工具元数据刷新、工具定义维护、启用/禁用管理
-  - 当前内置基础工具、文件工具、终端工具、网页搜索、网页读取、图片搜索、文档读取、PlantUML 等能力
-- 用户记忆与偏好
-  - 支持按用户查询偏好
-  - 支持新增或更新用户偏好
-  - 会话记忆服务基于用户偏好服务进行封装
-- 提示词模板
-  - 支持提示词模板新增、全量查询、按分类获取最新模板
-- 决策规划
-  - 提供占位版 ReAct 决策计划生成能力
-  - 返回思考过程、步骤、建议工具和下一步动作
-- 平台事件接入
-  - 提供 `wecom`、`feishu` 两个平台适配器占位实现
-  - 当前主要用于演示平台事件分发流程
+### 2. 初始化数据库
 
-## 环境准备
-
-在启动项目之前，请先确认本地已经准备好以下环境：
-
-1. 安装 Java 17，并正确配置 `JAVA_HOME`
-2. 安装 Maven，并确保命令行可执行 `mvn -v`
-3. 启动 MySQL 数据库服务
-4. 创建数据库 `smartcrew_agent`
-
-示例建库语句：
+先创建数据库：
 
 ```sql
 CREATE DATABASE smartcrew_agent DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 ```
 
-## 数据库初始化
-
-项目初始化脚本位于：
-
-- `sql/init-smartcrew-agent.sql`
-
-执行方式示例：
+然后执行初始化脚本：
 
 ```bash
-mysql -uroot -proot smartcrew_agent < sql/init-smartcrew-agent.sql
+mysql -u root -p smartcrew_agent < sql/init-smartcrew-agent.sql
 ```
 
-脚本会初始化以下核心表：
+### 3. 配置本地环境变量
 
-- `prompt_template`
-- `mcp_info`
-- `user_preference`
-- `agent_definition`
-- `tool_definition`
-- `agent_tool_binding`
+后端推荐配置以下变量；如果用于共享环境或正式部署，建议全部显式设置，不要依赖默认值：
 
-## 配置文件说明
-
-### 1. 主配置文件
-
-文件位置：
-
-- `smartcrew-admin/src/main/resources/application.yml`
-
-主要用途：
-
-- 指定应用名称和激活环境
-- 配置服务端口
-- 配置 MyBatis-Plus 基础参数
-- 配置 SmartCrew 的默认工具开关与基础能力
-
-当前默认端口：
-
-- `8085`
-
-### 2. 开发环境配置文件
-
-文件位置：
-
-- `smartcrew-admin/src/main/resources/application-dev.yml`
-
-主要用途：
-
-- 配置 MySQL 数据源
-- 配置 Tavily 搜索接口参数
-- 配置 Pexels 图片搜索接口参数
-
-你至少需要根据本地环境修改以下内容：
-
-- `spring.datasource.url`
-- `spring.datasource.username`
-- `spring.datasource.password`
-
-### 3. 关键配置项说明
-
-#### LLM 配置
-
-`application.yml` 中默认包含以下配置：
-
-```yaml
-smartcrew:
-  llm:
-    enabled: false
-    provider: openai
-    model: gpt-4o-mini
+```bash
+MYSQL_DB_USERNAME=root
+MYSQL_DB_PASSWORD=your-db-password
+SMARTCREW_TOKEN_SECRET=replace-with-a-strong-secret
+SMARTCREW_BOOTSTRAP_ADMIN_ENABLED=true
+SMARTCREW_BOOTSTRAP_ADMIN_PASSWORD=replace-with-a-strong-admin-password
 ```
 
-说明：
+如果你要启用模型或外部工具，还需要按需配置：
 
-- `enabled=false` 表示默认不启用大模型调用
-- 当前项目保留了 LLM 配置入口，但并未在所有业务链路中完全打通
-
-#### 工具开关配置
-
-默认工具开关位于：
-
-```yaml
-smartcrew:
-  tools:
-    enabled:
-      basic: true
-      file: true
-      image-search: true
-      plantuml: true
-      web-search: true
-      web-page: true
-      document: true
-      terminal: false
+```bash
+DASHSCOPE_API_KEY=your-dashscope-api-key
+TAVILY_API_KEY=your-tavily-api-key
+PEXELS_API_KEY=your-pexels-api-key
 ```
 
-说明：
-
-- `terminal` 默认关闭，避免在未明确授权的情况下执行命令
-- 其他工具默认开启，但部分工具依赖外部 API Key
-
-#### 工具外部依赖配置
-
-`application-dev.yml` 中可配置以下参数：
-
-```yaml
-smartcrew:
-  tooling:
-    tavily:
-      api-key:
-      base-url: https://api.tavily.com/search
-    pexels:
-      api-key:
-      api-url: https://api.pexels.com/v1/search
-```
-
-说明：
-
-- 未配置 Tavily API Key 时，网页搜索工具无法正常调用
-- 未配置 Pexels API Key 时，图片搜索工具无法正常调用
-
-#### 文件工具目录
-
-默认文件工具目录位于：
-
-```yaml
-smartcrew:
-  tooling:
-    file:
-      save-dir: ./tmp
-```
-
-说明：
-
-- 文件工具和终端工具会基于该目录进行读写或执行命令
-
-## 编译与启动步骤
-
-### 1. 清理并编译项目
+### 4. 启动后端
 
 在仓库根目录执行：
-
-```bash
-mvn clean package
-```
-
-### 2. 启动管理端应用
-
-可直接运行启动类：
-
-- `smartcrew-admin/src/main/java/com/smartcrew/agent/SmartCrewAgentApplication.java`
-
-或者在模块目录执行：
 
 ```bash
 mvn -pl smartcrew-admin spring-boot:run
 ```
 
-### 3. 访问服务
+默认端口：
 
-启动成功后，可通过以下地址访问项目接口：
+- 后端服务：`http://localhost:8085`
 
-```text
-http://localhost:8085
+### 5. 启动前端
+
+在 `smartcrew-ui` 目录执行：
+
+```bash
+npm install
+npm run dev
 ```
 
-## 默认配置与注意事项
+常用前端脚本：
 
-- 当前 `wecom` 与 `feishu` 平台适配器为占位实现，主要用于演示事件分发流程
-- 当前决策引擎 `ReActDecisionEngine` 返回的是占位型规划结果，适合作为后续扩展入口
-- `DefaultToolExecutor` 当前主要完成工具元数据校验和 Bean 定位，尚未完全实现动态方法调用
-- 终端工具 `terminal` 默认关闭，这是一个偏高风险能力，建议仅在受控环境下开启
-- 图片搜索和网页搜索依赖外部 API，如果未配置密钥会抛出业务异常
-- 项目中已经包含基础测试与 H2 测试配置，可在后续扩展业务时继续完善
+- `npm run dev`
+- `npm run build`
+- `npm run preview`
 
-## 建议的开发接入顺序
+## 构建与测试
 
-如果你准备在这个仓库上继续开发，建议按下面的顺序阅读与接手：
+全量构建：
 
-1. 先阅读 `smartcrew-admin` 下的控制器，了解目前暴露了哪些能力入口
-2. 再阅读 `smartcrew-modules-api`，理解领域对象、请求响应模型和服务契约
-3. 最后阅读 `smartcrew-modules`，重点关注代理注册、工具注册、记忆服务和决策引擎实现
+```bash
+mvn clean package
+```
 
-这样能更快从“接口入口”过渡到“核心实现”和“后续扩展点”。
+仅启动模块构建：
+
+```bash
+mvn -pl smartcrew-admin -am package
+```
+
+执行测试：
+
+```bash
+mvn -pl smartcrew-admin -am test -DskipTests=false
+```
+
+说明：
+
+- 测试环境默认使用 H2 内存数据库
+- 如果你扩展了 RAG、工具或平台接入能力，建议同时补充对应集成测试
+
+## 关键配置说明
+
+主要配置文件位于：
+
+- `smartcrew-admin/src/main/resources/application.yml`
+- `smartcrew-admin/src/main/resources/application-dev.yml`
+- `smartcrew-admin/src/test/resources/application-test.yml`
+
+当前接口分层约定：
+
+- `/api/v1/*`
+  兼容型接口，新增能力应尽量避免破坏既有语义
+- `/api/web/*`
+  面向公众端页面的服务接口
+- `/api/admin/*`
+  面向后台管理页面的服务接口
+
+## 安全说明
+
+- 仓库默认不应提交真实 API Key、密码、私钥、证书文件或本地环境配置
+- 在共享环境或正式部署中，务必显式配置 `SMARTCREW_TOKEN_SECRET`
+- 启用默认管理员初始化时，务必显式配置 `SMARTCREW_BOOTSTRAP_ADMIN_PASSWORD`
+- 请不要在 `application-local.yml`、`.env`、证书文件中写入真实密钥后再提交
+- 正式部署前，请替换所有本地测试用配置，并限制跨域来源、数据库权限与管理员初始化策略
+
+## 文档索引
+
+- 开发手册：`docs/DEVELOPER_MANUAL.md`
+- 项目基线说明：`docs/skills/PROJECT_BASELINE_SKILL.md`
+- 前端风格规范：`docs/skills/SMARTCREW_UI_STYLE_SKILL.md`
+- 技术文档：`docs/technical-docs`
+
+## 适用场景
+
+- 想快速搭建一个可扩展的多 Agent 平台原型
+- 想学习 LangChain4j 在 Java 工程中的落地方式
+- 想基于现有后台和前端页面继续扩展 Prompt、Tool、RAG、会话管理能力
+
+不建议直接用于未审计的生产环境，尤其是在鉴权、审计、限流、隔离和密钥管理尚未补强之前。
+
+## 开发建议
+
+- 新增后端接口优先放在 `/api/web` 或 `/api/admin`
+- 尽量保持 `/api/v1` 兼容
+- 分页能力建议复用 `PageQuery + TableDataInfo + MyBatis-Plus`
+- 前端页面建议保持现有统一视觉风格，不额外引入新主题系统
+
+## 贡献方式
+
+欢迎通过 Issue 和 Pull Request 参与改进，具体流程和约定请参考 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+如果你的改动涉及接口、配置、安全策略或数据库结构，请在 PR 描述中明确说明影响范围、验证结果和风险点。
+
+## 路线建议
+
+这个仓库后续可以优先补强以下方向：
+
+- 更清晰的 Agent 编排与运行时抽象
+- 更完整的工具权限与风险控制
+- 更稳定的 RAG 文档处理与向量检索链路
+- 更规范的部署、监控和审计能力
+- 更完善的安全响应与发布流程，例如 `SECURITY`、版本发布说明、升级指南
+
+## License
+
+本项目当前采用 [MIT License](LICENSE) 开源发布。
