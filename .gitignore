@@ -21,3 +21,4 @@ smartcrew-admin/src/main/resources/application-*.prod.yml
 *.pfx
 *.jks
 uploads/
+docs/Job Resume/
