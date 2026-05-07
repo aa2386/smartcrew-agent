@@ -34,10 +34,10 @@ smartcrew:
     token-secret: ${SMARTCREW_TOKEN_SECRET:}
     token-expire-minutes: 720
     bootstrap-admin:
-      enabled: true
-      username: admin
+      enabled: ${SMARTCREW_BOOTSTRAP_ADMIN_ENABLED:false}
+      username: ${SMARTCREW_BOOTSTRAP_ADMIN_USERNAME:admin}
       password: ${SMARTCREW_BOOTSTRAP_ADMIN_PASSWORD:}
-      display-name: 系统管理员
+      display-name: ${SMARTCREW_BOOTSTRAP_ADMIN_DISPLAY_NAME:系统管理员}
   cors:
     allowed-origins:
       - http://localhost:8080
@@ -56,7 +56,6 @@ smartcrew:
     vector-store:
       type: chroma
       chroma:
-#        base-url: ${CHROMA_BASE_URL:http://localhost:8000}
         base-url: http://localhost:8000
         timeout-seconds: 60
     document:

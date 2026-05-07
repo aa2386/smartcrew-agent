@@ -119,7 +119,7 @@ public class SmartCrewSecurityProperties {
         /**
          * 是否初始化管理员。
          */
-        private boolean enabled = true;
+        private boolean enabled = false;
 
         /**
          * 管理员用户名。

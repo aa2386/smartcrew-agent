@@ -13,8 +13,11 @@ smartcrew:
   rag:
     enabled: false
   auth:
+    token-secret: test-only-token-secret
     require-admin-login: false
     require-web-login: false
+    bootstrap-admin:
+      enabled: false
   llm:
     enabled: false
     api-key: ${DASHSCOPE_API_KEY:}
