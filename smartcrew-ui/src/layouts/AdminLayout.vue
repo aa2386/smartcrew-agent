@@ -57,7 +57,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { CollectionTag, Connection, Cpu, DataAnalysis, MessageBox, Setting, Tools, UserFilled } from '@element-plus/icons-vue'
+import { Clock, CollectionTag, Connection, Cpu, DataAnalysis, MessageBox, Setting, Tools, UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
@@ -72,7 +72,8 @@ const menuItems = [
   { path: '/admin/tools', label: 'Tool 管理', icon: Tools },
   { path: '/admin/knowledge-bases', label: '知识库管理', icon: CollectionTag },
   { path: '/admin/prompts', label: 'Prompt 配置', icon: Setting },
-  { path: '/admin/conversations', label: '消息记录', icon: MessageBox }
+  { path: '/admin/conversations', label: '消息记录', icon: MessageBox },
+  { path: '/admin/agent-logs', label: 'Agent 日志', icon: Clock }
 ]
 
 const titleMap = new Map(menuItems.map((item) => [item.path, item.label]))

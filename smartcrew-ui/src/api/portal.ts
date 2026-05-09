@@ -1,5 +1,9 @@
 import { request } from './http'
 import type {
+  AgentCallableRecord,
+  AgentLogQueryParams,
+  AgentLogTracePayload,
+  AgentBehaviorLogRecord,
   AgentRecord,
   AgentPromptBindingRecord,
   AgentToolBindingRecord,
@@ -416,6 +420,42 @@ export const adminPortalApi = {
       method: 'PUT',
       token,
       bodyJson: { agentCodes }
+    })
+  },
+
+  // --- Agent 协作 ---
+
+  /** 查询 Agent 可调用的协作 Agent */
+  listAgentCallableAgents(token: string, agentCode: string) {
+    return request<TablePayload<AgentCallableRecord>>(`/api/admin/agents/${agentCode}/callable-agents`, {
+      token
+    })
+  },
+
+  /** 查询 Agent 行为日志（分页） */
+  listAgentLogs(token: string, params: AgentLogQueryParams) {
+    const search = new URLSearchParams()
+    if (params.traceId) search.set('traceId', params.traceId)
+    if (params.sessionId) search.set('sessionId', params.sessionId)
+    if (params.userId) search.set('userId', params.userId)
+    if (params.agentCode) search.set('agentCode', params.agentCode)
+    if (params.eventType) search.set('eventType', params.eventType)
+    if (params.eventStatus) search.set('eventStatus', params.eventStatus)
+    if (params.startTime) search.set('startTime', params.startTime)
+    if (params.endTime) search.set('endTime', params.endTime)
+    search.set('pageNum', String(params.pageNum))
+    search.set('pageSize', String(params.pageSize))
+    const query = search.toString()
+    return request<TablePayload<AgentBehaviorLogRecord>>(
+      `/api/admin/agent-logs${query ? `?${query}` : ''}`,
+      { token }
+    )
+  },
+
+  /** 查询 trace 完整时间线 */
+  listAgentLogTrace(token: string, traceId: string) {
+    return request<AgentLogTracePayload>(`/api/admin/agent-logs/traces/${traceId}`, {
+      token
     })
   }
 }

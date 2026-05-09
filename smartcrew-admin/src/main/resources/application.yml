@@ -44,6 +44,8 @@ smartcrew:
       - http://localhost:8081
     allow-credentials: true
     max-age: 3600
+  agent:
+    default-chat-agent: initial-agent
   llm:
     enabled: true
     provider: dashscope

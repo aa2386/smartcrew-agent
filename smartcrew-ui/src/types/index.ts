@@ -250,3 +250,63 @@ export interface KnowledgeBaseAgentBindingRecord {
   boundAgents: KnowledgeBaseAgentOptionRecord[]
   availableAgents: KnowledgeBaseAgentOptionRecord[]
 }
+
+/** Agent 可调用关系记录。 */
+export interface AgentCallableRecord {
+  sourceAgentCode: string
+  targetAgentCode: string
+  targetAgentName: string
+  targetAgentType: string
+  callable: boolean
+  enabled: boolean
+  runtimeMode: string
+  sourceStatus: string
+  viaToolCode: string
+  reason: string
+}
+
+/** Agent 可调用关系包装。 */
+export interface AgentCallableInfo {
+  sourceAgentCode: string
+  callableAgents: AgentCallableRecord[]
+}
+
+/** Agent 行为日志记录。 */
+export interface AgentBehaviorLogRecord {
+  id: string | number
+  traceId: string
+  userId: string
+  sessionId: string
+  agentCode: string
+  sourceAgent: string
+  targetAgent: string
+  eventType: string
+  eventStatus: string
+  eventSummary: string
+  toolCode: string
+  actionName: string
+  durationMs: number | null
+  errorMessage: string
+  metadataJson: string
+  createTime: string
+}
+
+export interface AgentLogTracePayload {
+  traceId: string
+  logs: AgentBehaviorLogRecord[]
+  count: number
+}
+
+/** Agent 日志查询参数。 */
+export interface AgentLogQueryParams {
+  traceId?: string
+  sessionId?: string
+  userId?: string
+  agentCode?: string
+  eventType?: string
+  eventStatus?: string
+  startTime?: string
+  endTime?: string
+  pageNum: number
+  pageSize: number
+}

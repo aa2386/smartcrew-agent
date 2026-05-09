@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS agent_behavior_log;
+DROP TABLE IF EXISTS life_task_record;
 DROP TABLE IF EXISTS agent_knowledge_binding;
 DROP TABLE IF EXISTS document_chunk;
 DROP TABLE IF EXISTS knowledge_document;
@@ -265,3 +267,53 @@ CREATE TABLE llm_conversation_message (
     remark VARCHAR(255) NULL COMMENT '备注信息',
     INDEX idx_user_session_seq (user_id, session_id, message_seq)
 ) COMMENT='大模型会话消息表';
+
+CREATE TABLE IF NOT EXISTS life_task_record (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    user_id BIGINT NOT NULL COMMENT '用户 ID',
+    title VARCHAR(256) NOT NULL COMMENT '任务标题',
+    description TEXT NULL COMMENT '任务描述',
+    due_time DATETIME NULL COMMENT '截止时间',
+    time_text VARCHAR(128) NULL COMMENT '原始时间文本（如"明天上午九点"）',
+    timezone VARCHAR(64) NULL COMMENT '时区',
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING' COMMENT '任务状态: PENDING / DONE / CANCELLED / NEEDS_CONFIRMATION',
+    priority VARCHAR(16) NOT NULL DEFAULT 'MEDIUM' COMMENT '优先级: LOW / MEDIUM / HIGH',
+    source VARCHAR(32) NOT NULL DEFAULT 'DELEGATION' COMMENT '来源标识',
+    trace_id VARCHAR(64) NULL COMMENT '关联追踪 ID',
+    metadata_json TEXT NULL COMMENT '扩展元数据 JSON',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
+    INDEX idx_ltr_user_id (user_id),
+    INDEX idx_ltr_status (status),
+    INDEX idx_ltr_due_time (due_time)
+) COMMENT='生活日程任务记录表';
+
+CREATE TABLE IF NOT EXISTS agent_behavior_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    trace_id VARCHAR(64) NULL COMMENT '追踪 ID',
+    user_id BIGINT NULL COMMENT '用户 ID',
+    session_id VARCHAR(128) NULL COMMENT '会话 ID',
+    agent_code VARCHAR(64) NULL COMMENT 'Agent 编码',
+    source_agent VARCHAR(64) NULL COMMENT '来源 Agent（委托场景）',
+    target_agent VARCHAR(64) NULL COMMENT '目标 Agent（委托场景）',
+    event_type VARCHAR(32) NOT NULL COMMENT '事件类型',
+    event_status VARCHAR(32) NOT NULL COMMENT '事件状态',
+    event_summary VARCHAR(256) NULL COMMENT '事件摘要',
+    tool_code VARCHAR(64) NULL COMMENT '工具编码',
+    action_name VARCHAR(128) NULL COMMENT '动作名称',
+    duration_ms BIGINT NULL COMMENT '耗时（毫秒）',
+    error_message VARCHAR(512) NULL COMMENT '错误信息',
+    metadata_json TEXT NULL COMMENT '扩展元数据 JSON',
+    create_time DATETIME NULL COMMENT '创建时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
+    INDEX idx_abl_trace_id (trace_id),
+    INDEX idx_abl_session_id (session_id),
+    INDEX idx_abl_user_id (user_id),
+    INDEX idx_abl_agent_code (agent_code),
+    INDEX idx_abl_event_type (event_type),
+    INDEX idx_abl_create_time (create_time)
+) COMMENT='Agent 行为日志表';

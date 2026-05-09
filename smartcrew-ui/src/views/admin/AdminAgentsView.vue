@@ -278,6 +278,60 @@
               </div>
             </div>
           </el-tab-pane>
+
+          <el-tab-pane label="可调用 Agent" name="callable">
+            <div class="tab-pane-layout">
+              <div class="detail-scroll">
+                <div class="binding-head binding-head--tools">
+                  <div>
+                    <h4>可调用协作 Agent</h4>
+                    <p class="muted">
+                      展示当前 Agent 通过委托工具可调用的协作 Agent，包括绑定来源、启用状态和不可调用原因。
+                    </p>
+                  </div>
+                </div>
+
+                <el-table
+                  v-if="callableAgents.length > 0"
+                  :data="callableAgents"
+                  stripe
+                  class="binding-table"
+                  max-height="100%"
+                >
+                  <el-table-column prop="targetAgentName" label="Agent 名称" min-width="140" />
+                  <el-table-column prop="targetAgentCode" label="编码" min-width="160" />
+                  <el-table-column prop="targetAgentType" label="类型" width="120" />
+                  <el-table-column label="启用" width="80">
+                    <template #default="{ row }">
+                      <el-tag :type="row.enabled ? 'success' : 'info'">
+                        {{ row.enabled ? '启用' : '停用' }}
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="可调用" width="90">
+                    <template #default="{ row }">
+                      <el-tag :type="row.callable ? 'success' : 'danger'">
+                        {{ row.callable ? '是' : '否' }}
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="运行模式" width="110">
+                    <template #default="{ row }">
+                      <el-tag :type="row.runtimeMode === 'STUB' ? 'warning' : 'primary'">
+                        {{ row.runtimeMode || '未知' }}
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="viaToolCode" label="绑定来源" width="150" show-overflow-tooltip />
+                  <el-table-column prop="reason" label="说明" min-width="180" show-overflow-tooltip />
+                </el-table>
+
+                <div v-else class="binding-empty muted">
+                  {{ callableLoaded ? '当前 Agent 未配置可调用协作 Agent，或目标 Agent 尚未注册。' : '请在左侧列表选择一个 Agent 后查看可调用关系。' }}
+                </div>
+              </div>
+            </div>
+          </el-tab-pane>
         </el-tabs>
       </template>
     </GlassPanel>
@@ -290,7 +344,7 @@ import { ElMessage } from 'element-plus'
 import GlassPanel from '../../components/common/GlassPanel.vue'
 import { adminPortalApi } from '../../api/portal'
 import { useAuthStore } from '../../stores/auth'
-import type { AgentPromptBindingRecord, AgentRecord, AgentToolBindingRecord, PromptRecord, ToolRecord } from '../../types'
+import type { AgentCallableRecord, AgentPromptBindingRecord, AgentRecord, AgentToolBindingRecord, PromptRecord, ToolRecord } from '../../types'
 
 type AgentPageMode = 'empty' | 'create' | 'createFromCode' | 'edit'
 
@@ -306,6 +360,9 @@ const saving = ref(false)
 const pageMode = ref<AgentPageMode>('empty')
 const selectedAgentCode = ref('')
 const activeTab = ref('basic')
+
+const callableAgents = ref<AgentCallableRecord[]>([])
+const callableLoaded = ref(false)
 
 const form = reactive<AgentRecord>(createEmptyForm())
 
@@ -448,6 +505,20 @@ async function loadAgents(preferredCode?: string) {
   }
 }
 
+async function loadAgentCallableAgents(code: string) {
+  callableLoaded.value = false
+  callableAgents.value = []
+  try {
+    const result = await adminPortalApi.listAgentCallableAgents(authStore.adminToken, code)
+    callableAgents.value = result.rows || []
+  } catch (error) {
+    // 后端接口可能尚未实现，静默处理
+    callableAgents.value = []
+  } finally {
+    callableLoaded.value = true
+  }
+}
+
 async function loadAgentDetail(code: string) {
   try {
     const [detail, bindings, toolBindingResult] = await Promise.all([
@@ -463,6 +534,7 @@ async function loadAgentDetail(code: string) {
     normalizeBindingSortOrder()
     pageMode.value = detail.hasDatabaseConfig ? 'edit' : 'createFromCode'
     activeTab.value = 'basic'
+    loadAgentCallableAgents(detail.agentCode)
   } catch (error) {
     if (error instanceof Error) {
       ElMessage.error(error.message)
@@ -484,6 +556,8 @@ function startCreateAgent() {
   toolBindings.value = { agentCode: '', boundTools: [], availableTools: allToolOptions.value }
   bindingTargetToolCodes.value = []
   selectedPromptTemplateId.value = undefined
+  callableAgents.value = []
+  callableLoaded.value = false
 }
 
 function startCreateFromCode(row: AgentRecord) {
@@ -513,6 +587,8 @@ function resetToEmpty() {
   toolBindings.value = undefined
   bindingTargetToolCodes.value = []
   selectedPromptTemplateId.value = undefined
+  callableAgents.value = []
+  callableLoaded.value = false
 }
 
 function addPromptBinding() {

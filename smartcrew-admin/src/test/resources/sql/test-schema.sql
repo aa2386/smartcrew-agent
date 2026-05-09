@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS agent_behavior_log;
+DROP TABLE IF EXISTS life_task_record;
 DROP TABLE IF EXISTS agent_knowledge_binding;
 DROP TABLE IF EXISTS document_chunk;
 DROP TABLE IF EXISTS knowledge_document;
@@ -266,3 +268,53 @@ CREATE INDEX idx_agent_prompt_order ON agent_prompt_binding (agent_code, sort_or
 CREATE INDEX idx_knowledge_document_base_id ON knowledge_document (base_id);
 CREATE INDEX idx_document_chunk_document_id ON document_chunk (document_id);
 CREATE INDEX idx_document_chunk_vector_id ON document_chunk (vector_id);
+
+CREATE TABLE life_task_record (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(256) NOT NULL,
+    description CLOB NULL,
+    due_time TIMESTAMP NULL,
+    time_text VARCHAR(128) NULL,
+    timezone VARCHAR(64) NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    priority VARCHAR(16) NOT NULL DEFAULT 'MEDIUM',
+    source VARCHAR(32) NOT NULL DEFAULT 'DELEGATION',
+    trace_id VARCHAR(64) NULL,
+    metadata_json CLOB NULL,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL
+);
+CREATE INDEX idx_ltr_user_id ON life_task_record (user_id);
+CREATE INDEX idx_ltr_status ON life_task_record (status);
+CREATE INDEX idx_ltr_due_time ON life_task_record (due_time);
+
+CREATE TABLE agent_behavior_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    trace_id VARCHAR(64) NULL,
+    user_id BIGINT NULL,
+    session_id VARCHAR(128) NULL,
+    agent_code VARCHAR(64) NULL,
+    source_agent VARCHAR(64) NULL,
+    target_agent VARCHAR(64) NULL,
+    event_type VARCHAR(32) NOT NULL,
+    event_status VARCHAR(32) NOT NULL,
+    event_summary VARCHAR(256) NULL,
+    tool_code VARCHAR(64) NULL,
+    action_name VARCHAR(128) NULL,
+    duration_ms BIGINT NULL,
+    error_message VARCHAR(512) NULL,
+    metadata_json CLOB NULL,
+    create_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL
+);
+CREATE INDEX idx_abl_trace_id ON agent_behavior_log (trace_id);
+CREATE INDEX idx_abl_session_id ON agent_behavior_log (session_id);
+CREATE INDEX idx_abl_user_id ON agent_behavior_log (user_id);
+CREATE INDEX idx_abl_agent_code ON agent_behavior_log (agent_code);
+CREATE INDEX idx_abl_event_type ON agent_behavior_log (event_type);
+CREATE INDEX idx_abl_create_time ON agent_behavior_log (create_time);

@@ -32,6 +32,11 @@ public class SmartCrewProperties {
      */
     private Tools tools = new Tools();
     /**
+     * Agent 相关配置。
+     */
+    private Agent agent = new Agent();
+
+    /**
      * RAG 基础配置。
      */
     private Rag rag = new Rag();
@@ -62,6 +67,18 @@ public class SmartCrewProperties {
          * 模型名称。
          */
         private String model;
+    }
+
+    /**
+     * Agent 配置项。
+     */
+    @Data
+    public static class Agent {
+
+        /**
+         * 默认聊天 Agent 编码，前端/平台入口默认派发到此 Agent。
+         */
+        private String defaultChatAgent = "initial-agent";
     }
 
     /**

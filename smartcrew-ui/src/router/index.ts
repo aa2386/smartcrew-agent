@@ -70,6 +70,12 @@ const router = createRouter({
           path: 'conversations',
           name: 'admin-conversations',
           component: () => import('../views/admin/AdminConversationsView.vue')
+        },
+        {
+          path: 'agent-logs',
+          name: 'AdminAgentLogs',
+          component: () => import('../views/admin/AdminAgentLogsView.vue'),
+          meta: { title: 'Agent 日志' }
         }
       ]
     }
