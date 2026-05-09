@@ -250,3 +250,28 @@ export interface KnowledgeBaseAgentBindingRecord {
   boundAgents: KnowledgeBaseAgentOptionRecord[]
   availableAgents: KnowledgeBaseAgentOptionRecord[]
 }
+
+/** 协作日志概览记录。*/
+export interface CollaborationLogRecord {
+  id?: number
+  traceId: string
+  rootSessionId: string
+  userId: number
+  source?: string
+  agentCode: string
+  stepType: string
+  stepName?: string
+  status: string
+  startTime: string
+  durationMs?: number
+}
+
+/** 协作日志步骤详情。*/
+export interface CollaborationLogStepRecord extends CollaborationLogRecord {
+  parentStepId?: number
+  inputSnapshot?: string
+  outputSnapshot?: string
+  decisionSnapshot?: string
+  errorMessage?: string
+  endTime?: string
+}

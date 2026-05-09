@@ -1,6 +1,8 @@
 import { request } from './http'
 import type {
   AgentRecord,
+  CollaborationLogRecord,
+  CollaborationLogStepRecord,
   AgentPromptBindingRecord,
   AgentToolBindingRecord,
   ChatMessage,
@@ -300,6 +302,43 @@ export const adminPortalApi = {
     if (params.sessionId) search.set('sessionId', params.sessionId)
     const query = search.toString()
     return request<ChatMessage[]>(`/api/admin/conversations/messages${query ? `?${query}` : ''}`, {
+      token
+    })
+  },
+  listCollaborationLogs(
+    token: string,
+    params: {
+      traceId?: string
+      rootSessionId?: string
+      agentCode?: string
+      stepType?: string
+      status?: string
+      keyword?: string
+      startTimeFrom?: string
+      startTimeTo?: string
+    } & PageParams
+  ) {
+    const search = new URLSearchParams()
+    if (params.traceId) search.set('traceId', params.traceId)
+    if (params.rootSessionId) search.set('rootSessionId', params.rootSessionId)
+    if (params.agentCode) search.set('agentCode', params.agentCode)
+    if (params.stepType) search.set('stepType', params.stepType)
+    if (params.status) search.set('status', params.status)
+    if (params.keyword) search.set('keyword', params.keyword)
+    if (params.startTimeFrom) search.set('startTimeFrom', params.startTimeFrom)
+    if (params.startTimeTo) search.set('startTimeTo', params.startTimeTo)
+    if (params.pageNum) search.set('pageNum', String(params.pageNum))
+    if (params.pageSize) search.set('pageSize', String(params.pageSize))
+    const query = search.toString()
+    return request<TablePayload<CollaborationLogRecord>>(
+      `/api/admin/collaboration-logs${query ? `?${query}` : ''}`,
+      {
+        token
+      }
+    )
+  },
+  listCollaborationLogSteps(token: string, traceId: string) {
+    return request<CollaborationLogStepRecord[]>(`/api/admin/collaboration-logs/${traceId}/steps`, {
       token
     })
   },

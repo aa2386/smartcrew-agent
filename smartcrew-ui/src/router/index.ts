@@ -70,6 +70,11 @@ const router = createRouter({
           path: 'conversations',
           name: 'admin-conversations',
           component: () => import('../views/admin/AdminConversationsView.vue')
+        },
+        {
+          path: 'collaboration-logs',
+          name: 'admin-collaboration-logs',
+          component: () => import('../views/admin/AdminCollaborationLogsView.vue')
         }
       ]
     }
