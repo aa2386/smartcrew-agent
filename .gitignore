@@ -22,3 +22,4 @@ smartcrew-admin/src/main/resources/application-*.prod.yml
 *.jks
 uploads/
 docs/Job Resume/
+.worktrees/
