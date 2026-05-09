@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS agent_experience_hit_log;
+DROP TABLE IF EXISTS agent_experience_pool;
+DROP TABLE IF EXISTS agent_collaboration_log;
 DROP TABLE IF EXISTS agent_knowledge_binding;
 DROP TABLE IF EXISTS document_chunk;
 DROP TABLE IF EXISTS knowledge_document;
@@ -224,6 +227,75 @@ CREATE TABLE agent_knowledge_binding (
     CONSTRAINT uk_agent_knowledge UNIQUE (agent_code, base_code)
 );
 
+CREATE TABLE agent_collaboration_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    trace_id VARCHAR(64) NOT NULL,
+    root_session_id VARCHAR(128) NOT NULL,
+    user_id BIGINT NULL,
+    source VARCHAR(64) NOT NULL,
+    agent_code VARCHAR(64) NOT NULL,
+    step_type VARCHAR(32) NOT NULL,
+    step_name VARCHAR(128) NOT NULL,
+    parent_step_id BIGINT NULL,
+    status VARCHAR(32) NOT NULL,
+    input_snapshot CLOB NULL,
+    output_snapshot CLOB NULL,
+    decision_snapshot CLOB NULL,
+    error_message VARCHAR(512) NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NULL,
+    duration_ms BIGINT NULL,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL
+);
+
+CREATE TABLE agent_experience_pool (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    experience_code VARCHAR(64) NOT NULL,
+    scope_type VARCHAR(32) NOT NULL,
+    experience_type VARCHAR(32) NOT NULL,
+    title VARCHAR(128) NOT NULL,
+    trigger_pattern VARCHAR(512) NULL,
+    strategy_summary CLOB NOT NULL,
+    recommended_agent_code VARCHAR(64) NULL,
+    recommended_tool_codes CLOB NULL,
+    success_sample CLOB NULL,
+    failure_avoidance CLOB NULL,
+    quality_score DECIMAL(10, 4) NULL,
+    hit_count INT NOT NULL DEFAULT 0,
+    success_count INT NOT NULL DEFAULT 0,
+    last_used_at TIMESTAMP NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    source_trace_id VARCHAR(64) NULL,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL,
+    CONSTRAINT uk_agent_experience_pool_code UNIQUE (experience_code)
+);
+
+CREATE TABLE agent_experience_hit_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    trace_id VARCHAR(64) NOT NULL,
+    experience_code VARCHAR(64) NOT NULL,
+    agent_code VARCHAR(64) NOT NULL,
+    applied_stage VARCHAR(32) NOT NULL,
+    applied_snapshot CLOB NULL,
+    success_flag BOOLEAN NOT NULL DEFAULT FALSE,
+    create_dept BIGINT NULL,
+    create_by BIGINT NULL,
+    create_time TIMESTAMP NULL,
+    update_by BIGINT NULL,
+    update_time TIMESTAMP NULL,
+    remark VARCHAR(255) NULL
+);
+
 CREATE TABLE llm_conversation_session (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -266,3 +338,14 @@ CREATE INDEX idx_agent_prompt_order ON agent_prompt_binding (agent_code, sort_or
 CREATE INDEX idx_knowledge_document_base_id ON knowledge_document (base_id);
 CREATE INDEX idx_document_chunk_document_id ON document_chunk (document_id);
 CREATE INDEX idx_document_chunk_vector_id ON document_chunk (vector_id);
+CREATE INDEX idx_agent_collaboration_trace ON agent_collaboration_log (trace_id);
+CREATE INDEX idx_agent_collaboration_session_time ON agent_collaboration_log (root_session_id, start_time);
+CREATE INDEX idx_agent_collaboration_agent_time ON agent_collaboration_log (agent_code, start_time);
+CREATE INDEX idx_agent_collaboration_status_time ON agent_collaboration_log (status, start_time);
+CREATE INDEX idx_agent_collaboration_step_time ON agent_collaboration_log (step_type, start_time);
+CREATE INDEX idx_agent_experience_pool_scope ON agent_experience_pool (scope_type, enabled);
+CREATE INDEX idx_agent_experience_pool_type ON agent_experience_pool (experience_type, enabled);
+CREATE INDEX idx_agent_experience_pool_quality ON agent_experience_pool (quality_score, success_count, last_used_at);
+CREATE INDEX idx_agent_experience_pool_trace ON agent_experience_pool (source_trace_id);
+CREATE INDEX idx_agent_experience_hit_log_trace ON agent_experience_hit_log (trace_id);
+CREATE INDEX idx_agent_experience_hit_log_code_time ON agent_experience_hit_log (experience_code, create_time);

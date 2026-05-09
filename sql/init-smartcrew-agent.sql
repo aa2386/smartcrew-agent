@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS agent_experience_hit_log;
+DROP TABLE IF EXISTS agent_experience_pool;
+DROP TABLE IF EXISTS agent_collaboration_log;
 DROP TABLE IF EXISTS agent_knowledge_binding;
 DROP TABLE IF EXISTS document_chunk;
 DROP TABLE IF EXISTS knowledge_document;
@@ -227,6 +230,86 @@ CREATE TABLE IF NOT EXISTS agent_knowledge_binding (
     remark VARCHAR(255) NULL COMMENT '备注信息',
     CONSTRAINT uk_agent_knowledge UNIQUE (agent_code, base_code)
     ) COMMENT='Agent 知识库绑定表';
+
+CREATE TABLE agent_collaboration_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    trace_id VARCHAR(64) NOT NULL COMMENT '协作链路 ID',
+    root_session_id VARCHAR(128) NOT NULL COMMENT '根会话 ID',
+    user_id BIGINT NULL COMMENT '用户 ID',
+    source VARCHAR(64) NOT NULL COMMENT '来源标识',
+    agent_code VARCHAR(64) NOT NULL COMMENT 'Agent 编码',
+    step_type VARCHAR(32) NOT NULL COMMENT '步骤类型',
+    step_name VARCHAR(128) NOT NULL COMMENT '步骤名称',
+    parent_step_id BIGINT NULL COMMENT '父步骤 ID',
+    status VARCHAR(32) NOT NULL COMMENT '处理状态',
+    input_snapshot TEXT NULL COMMENT '输入摘要',
+    output_snapshot TEXT NULL COMMENT '输出摘要',
+    decision_snapshot TEXT NULL COMMENT '决策摘要',
+    error_message VARCHAR(512) NULL COMMENT '错误信息',
+    start_time DATETIME NOT NULL COMMENT '开始时间',
+    end_time DATETIME NULL COMMENT '结束时间',
+    duration_ms BIGINT NULL COMMENT '耗时毫秒',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
+    INDEX idx_agent_collaboration_trace (trace_id),
+    INDEX idx_agent_collaboration_session_time (root_session_id, start_time),
+    INDEX idx_agent_collaboration_agent_time (agent_code, start_time),
+    INDEX idx_agent_collaboration_status_time (status, start_time),
+    INDEX idx_agent_collaboration_step_time (step_type, start_time)
+) COMMENT='步骤级协作日志表';
+
+CREATE TABLE agent_experience_pool (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    experience_code VARCHAR(64) NOT NULL COMMENT '经验编码',
+    scope_type VARCHAR(32) NOT NULL COMMENT '作用域类型',
+    experience_type VARCHAR(32) NOT NULL COMMENT '经验类型',
+    title VARCHAR(128) NOT NULL COMMENT '经验标题',
+    trigger_pattern VARCHAR(512) NULL COMMENT '触发模式',
+    strategy_summary TEXT NOT NULL COMMENT '策略摘要',
+    recommended_agent_code VARCHAR(64) NULL COMMENT '推荐 Agent 编码',
+    recommended_tool_codes TEXT NULL COMMENT '推荐工具编码 JSON 数组字符串',
+    success_sample TEXT NULL COMMENT '成功样例',
+    failure_avoidance TEXT NULL COMMENT '失败规避建议',
+    quality_score DECIMAL(10, 4) NULL COMMENT '质量分',
+    hit_count INT NOT NULL DEFAULT 0 COMMENT '命中次数',
+    success_count INT NOT NULL DEFAULT 0 COMMENT '成功次数',
+    last_used_at DATETIME NULL COMMENT '最近使用时间',
+    enabled TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用',
+    source_trace_id VARCHAR(64) NULL COMMENT '来源链路 ID',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
+    CONSTRAINT uk_agent_experience_pool_code UNIQUE (experience_code),
+    INDEX idx_agent_experience_pool_scope (scope_type, enabled),
+    INDEX idx_agent_experience_pool_type (experience_type, enabled),
+    INDEX idx_agent_experience_pool_quality (quality_score, success_count, last_used_at),
+    INDEX idx_agent_experience_pool_trace (source_trace_id)
+) COMMENT='全局经验池主表';
+
+CREATE TABLE agent_experience_hit_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
+    trace_id VARCHAR(64) NOT NULL COMMENT '协作链路 ID',
+    experience_code VARCHAR(64) NOT NULL COMMENT '经验编码',
+    agent_code VARCHAR(64) NOT NULL COMMENT 'Agent 编码',
+    applied_stage VARCHAR(32) NOT NULL COMMENT '应用阶段',
+    applied_snapshot TEXT NULL COMMENT '应用摘要',
+    success_flag TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否成功',
+    create_dept BIGINT NULL COMMENT '创建部门',
+    create_by BIGINT NULL COMMENT '创建人',
+    create_time DATETIME NULL COMMENT '创建时间',
+    update_by BIGINT NULL COMMENT '更新人',
+    update_time DATETIME NULL COMMENT '更新时间',
+    remark VARCHAR(255) NULL COMMENT '备注信息',
+    INDEX idx_agent_experience_hit_log_trace (trace_id),
+    INDEX idx_agent_experience_hit_log_code_time (experience_code, create_time)
+) COMMENT='经验命中日志表';
 
 CREATE TABLE llm_conversation_session (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键 ID',
