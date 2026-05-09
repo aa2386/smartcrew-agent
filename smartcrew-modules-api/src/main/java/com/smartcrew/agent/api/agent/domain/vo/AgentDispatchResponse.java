@@ -3,6 +3,9 @@ package com.smartcrew.agent.api.agent.domain.vo;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * AgentDispatchResponse 视图对象，封装接口返回给调用方的数据。
  */
@@ -26,4 +29,9 @@ public class AgentDispatchResponse {
      * 消息内容。
      */
     private String message;
+    /**
+     * 附加元数据。
+     */
+    @Builder.Default
+    private Map<String, Object> metadata = new HashMap<>();
 }

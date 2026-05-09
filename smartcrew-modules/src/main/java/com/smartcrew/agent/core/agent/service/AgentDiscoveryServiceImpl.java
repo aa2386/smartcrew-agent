@@ -7,6 +7,7 @@ import com.smartcrew.agent.api.agent.service.AgentDiscoveryService;
 import com.smartcrew.agent.api.agent.service.AgentRegistry;
 import com.smartcrew.agent.core.agent.StubAgent;
 import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class AgentDiscoveryServiceImpl implements AgentDiscoveryService {
      * 发现并注册代理。
      */
     @Override
+    @PostConstruct
     @EventListener(ApplicationReadyEvent.class)
     public void discoverAndRegister() {
         builtinAgents.forEach(agent -> {

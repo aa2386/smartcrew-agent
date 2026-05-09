@@ -3,12 +3,13 @@ package com.smartcrew.agent;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.smartcrew.agent.api.agent.domain.entity.AgentToolBinding;
 import com.smartcrew.agent.api.agent.domain.model.AgentDispatchCommand;
+import com.smartcrew.agent.api.agent.domain.vo.AgentDispatchResponse;
 import com.smartcrew.agent.api.agent.mapper.AgentToolBindingMapper;
+import com.smartcrew.agent.api.auth.service.AuthTokenService;
 import com.smartcrew.agent.core.agent.InitialAgent;
-import com.smartcrew.agent.core.agent.service.InitialAgentChatService;
+import com.smartcrew.agent.core.collaboration.MultiAgentOrchestrator;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.service.Result;
 import dev.langchain4j.service.tool.ToolExecutor;
 import dev.langchain4j.service.tool.ToolProvider;
 import dev.langchain4j.service.tool.ToolProviderRequest;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,11 +67,14 @@ class ToolInfrastructureIntegrationTests {
     private DataSource dataSource;
 
     @MockBean
-    private InitialAgentChatService initialAgentChatService;
+    private MultiAgentOrchestrator multiAgentOrchestrator;
+
+    @MockBean
+    private AuthTokenService authTokenService;
 
     @BeforeEach
     void setUp() {
-        Mockito.reset(initialAgentChatService);
+        Mockito.reset(multiAgentOrchestrator);
         agentToolBindingMapper.delete(new LambdaQueryWrapper<AgentToolBinding>()
                 .eq(AgentToolBinding::getAgentCode, "initial-agent"));
     }
@@ -156,9 +161,19 @@ class ToolInfrastructureIntegrationTests {
     }
 
     @Test
-    void shouldDelegateInitialAgentChatToNewService() throws Exception {
-        when(initialAgentChatService.chat(anyString(), anyString(), anyString()))
-                .thenReturn(new Result<>("已经通过 LangChain4j Tool Calling 回答", null, null, null, List.of()));
+    void shouldDelegateInitialAgentToMultiAgentOrchestrator() throws Exception {
+        when(multiAgentOrchestrator.orchestrate(any()))
+                .thenReturn(AgentDispatchResponse.builder()
+                        .traceId("trace-tool")
+                        .agentCode("initial-agent")
+                        .accepted(true)
+                        .message("已经通过协同编排器回答")
+                        .metadata(Map.of(
+                                "orchestrator", "default-multi-agent",
+                                "executionAgent", "execution-agent",
+                                "experienceCount", 1
+                        ))
+                        .build());
 
         var response = initialAgent.handle(AgentDispatchCommand.builder()
                 .agentCode("initial-agent")
@@ -168,15 +183,10 @@ class ToolInfrastructureIntegrationTests {
                 .traceId("trace-tool")
                 .build());
 
-        ArgumentCaptor<String> systemPromptCaptor = ArgumentCaptor.forClass(String.class);
-        verify(initialAgentChatService).chat(
-                org.mockito.ArgumentMatchers.eq("initial-agent::1001::tool-session"),
-                org.mockito.ArgumentMatchers.eq("现在几点"),
-                systemPromptCaptor.capture()
-        );
         assertThat(response.isAccepted()).isTrue();
-        assertThat(response.getMessage()).isEqualTo("已经通过 LangChain4j Tool Calling 回答");
-        assertThat(systemPromptCaptor.getValue()).isNotBlank();
+        assertThat(response.getAgentCode()).isEqualTo("initial-agent");
+        assertThat(response.getMetadata()).containsEntry("orchestrator", "default-multi-agent");
+        verify(multiAgentOrchestrator).orchestrate(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -186,20 +196,22 @@ class ToolInfrastructureIntegrationTests {
 
             assertThat(hasColumn(metaData, "tool_definition", "execution_mode")).isFalse();
             assertThat(hasColumn(metaData, "tool_definition", "flow_definition_json")).isFalse();
-            assertThat(isColumnNotNull(metaData, "tool_definition", "bean_name")).isTrue();
+            assertThat(hasColumn(metaData, "tool_definition", "bean_name")).isTrue();
+            assertThat(countNullBeanNameRows(connection)).isZero();
         }
     }
 
     private boolean hasColumn(DatabaseMetaData metaData, String tableName, String columnName) throws Exception {
-        try (ResultSet columns = metaData.getColumns(null, null, tableName.toUpperCase(), columnName.toUpperCase())) {
+        try (ResultSet columns = metaData.getColumns(null, null, tableName, columnName)) {
             return columns.next();
         }
     }
 
-    private boolean isColumnNotNull(DatabaseMetaData metaData, String tableName, String columnName) throws Exception {
-        try (ResultSet columns = metaData.getColumns(null, null, tableName.toUpperCase(), columnName.toUpperCase())) {
-            assertThat(columns.next()).isTrue();
-            return columns.getInt("NULLABLE") == DatabaseMetaData.columnNoNulls;
+    private long countNullBeanNameRows(Connection connection) throws Exception {
+        try (var statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) FROM tool_definition WHERE bean_name IS NULL")) {
+            assertThat(resultSet.next()).isTrue();
+            return resultSet.getLong(1);
         }
     }
 }
