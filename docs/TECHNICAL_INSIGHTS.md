@@ -219,3 +219,214 @@ public void processDocument(Long documentId) {
 ---
 
 
+## 5. 多 Agent 分工协作执行链路 (Collaborative Multi-Agent Pipeline)
+**简介**：系统将原本偏单体的对话处理链路拆分为“统一入口 + 编排内核 + 记忆 Agent + 执行 Agent”的多智能体协作模型。通过 `InitialAgent -> DefaultMultiAgentOrchestrator -> MemoryAgent -> ExecutionAgent -> MemoryAgent` 的固定执行顺序，实现了经验先召回、执行再回写、全过程留痕的闭环链路，在不破坏既有对话入口的前提下引入多 Agent 协作能力。
+
+### 5.1 技术亮点
+- **统一入口收敛 (Single Entry Agent)**：`InitialAgent` 作为唯一对外入口，优先委派 `MultiAgentOrchestrator`，仅在编排器不可用时退化到单 Agent 对话模式，保证入口稳定、演进成本低。
+- **职责拆分清晰 (Role-Specific Agents)**：`MemoryAgent` 专注经验召回与经验回写，`ExecutionAgent` 专注 RAG 增强、Prompt 组装与大模型执行，避免调度、记忆、执行逻辑耦合在同一个 Agent 中。
+- **阶段驱动协作上下文 (Phase-Driven Context)**：通过 `AgentDispatchCommand.context` 中的 `orchestratorPhase`、`experienceCount`、`selectedExperienceCode`、`executionSummary` 等上下文字段显式传递阶段状态，形成轻量但可扩展的 Agent 协议。
+- **记忆优先的执行顺序 (Memory-First Collaboration)**：链路固定为 `RECALL -> EXECUTION -> WRITE_BACK -> FINAL_RESPONSE`，让历史经验能够真正参与本次执行，而不是只作为事后统计数据存在。
+- **会话级串行执行 (Conversation-Level Serialization)**：`ExecutionAgent` 基于 `ConcurrentHashMap<String, ReentrantLock>` 对同一 `userId + sessionId` 加锁，避免同会话并发写入记忆上下文、工具调用上下文冲突和消息乱序。
+- **失败兜底持久化 (Failure-Safe Persistence)**：当 `InitialAgentChatService` 不可用或执行阶段抛出异常时，`ExecutionAgent` 会将用户消息与失败响应写入 `LlmConversationStore`，避免会话链路在异常情况下完全丢失。
+
+### 5.2 核心代码实现
+```java
+@Override
+public AgentDispatchResponse orchestrate(AgentDispatchCommand command) {
+    Agent memoryAgent = requireAgent("memory-agent");
+    Agent executionAgent = requireAgent("execution-agent");
+
+    AgentDispatchResponse recallResponse = memoryAgent.handle(enrich(command, Map.of(
+            "orchestratorPhase", "RECALL"
+    )));
+    int experienceCount = asInt(recallResponse.getMetadata().get("experienceCount"));
+    String selectedExperienceCode = firstExperienceCode(recallResponse.getMetadata().get("experienceCodes"));
+
+    AgentDispatchResponse executionResponse = executionAgent.handle(enrich(command, Map.of(
+            "orchestratorPhase", "EXECUTION",
+            "experienceCount", experienceCount,
+            "selectedExperienceCode", selectedExperienceCode
+    )));
+
+    memoryAgent.handle(enrich(command, Map.of(
+            "orchestratorPhase", "WRITE_BACK",
+            "experienceCount", experienceCount,
+            "selectedExperienceCode", selectedExperienceCode,
+            "executionSummary", executionResponse.getMessage()
+    )));
+
+    return AgentDispatchResponse.builder()
+            .traceId(command.getTraceId())
+            .agentCode("initial-agent")
+            .accepted(executionResponse.isAccepted())
+            .message(executionResponse.getMessage())
+            .build();
+}
+```
+
+### 5.3 关键设计取舍
+| 设计点 | 取舍方案 | 价值 |
+| :--- | :--- | :--- |
+| **入口设计** | 保留 `InitialAgent` 作为统一入口，而非直接暴露多个 Agent | 避免前台接入面膨胀，兼容原有调用方式 |
+| **协作模式** | 采用固定串行流水线，而非首版即上动态 DAG 编排 | 先保证链路可控、可测、可观察，再逐步扩展编排策略 |
+| **上下文传递** | 通过轻量 `context` 字段显式传递阶段信息 | 降低 Agent 之间的直接依赖，便于后续插入新阶段 |
+| **执行并发控制** | 仅对同会话加锁，不做全局串行 | 保证一致性的同时维持整体吞吐 |
+| **异常处理** | 执行异常时写回会话存储，而非直接吞掉请求 | 保留调试现场，降低线上排障成本 |
+
+### 5.4 简历描述建议
+- **主导落地多 Agent 协作执行链路**，将单 Agent 对话架构拆分为统一入口、编排内核、记忆 Agent 与执行 Agent，形成“经验召回 -> 执行生成 -> 经验回写”的闭环流程。
+- **设计基于阶段上下文的 Agent 协议**，通过 `orchestratorPhase + context metadata` 实现跨 Agent 状态传递，支持协作链路低耦合扩展。
+- **实现会话级并发隔离与异常兜底持久化机制**，保障多请求场景下的消息顺序一致性与故障可追溯性。
+
+### 5.5 核心组件职责映射
+| 组件 | 核心职责 | 相关类 |
+| :--- | :--- | :--- |
+| **统一入口 Agent** | 接收用户请求并优先委派编排器 | `InitialAgent` |
+| **协作编排器** | 控制多 Agent 调用顺序与上下文注入 | `DefaultMultiAgentOrchestrator` |
+| **记忆 Agent** | 负责经验召回、命中记录与经验回写 | `MemoryAgent` |
+| **执行 Agent** | 负责 RAG 增强、Prompt 组装、LLM 执行与兜底持久化 | `ExecutionAgent` |
+| **会话存储层** | 持久化失败兜底消息与会话内容 | `LlmConversationStore` |
+
+---
+
+## 6. 多 Agent 统一编排层 (Unified Orchestration Kernel)
+**简介**：`DefaultMultiAgentOrchestrator` 是多智能体运行时的统一编排层，不直接参与内容生成，而是承担 Agent 路由、阶段切换、上下文拼装、协作日志留痕与最终响应封装职责。它本质上是一个轻量的状态机内核，把多 Agent 协作从“多个 Agent 各自判断”收敛为“由单一内核统一调度”。
+
+### 6.1 技术亮点
+- **注册表驱动路由 (Registry-Driven Routing)**：通过 `AgentRegistry` 动态解析 `memory-agent` 与 `execution-agent`，避免在入口层硬编码 Bean 依赖，为后续替换或扩展 Agent 留出空间。
+- **固定阶段状态机 (Deterministic Stage Machine)**：统一约束 `DISPATCH`、`MEMORY_READ`、`EXECUTION`、`MEMORY_WRITE`、`FINAL_RESPONSE` 五类协作步骤，使链路顺序、阶段边界和日志时序都具备确定性。
+- **上下文增量拼装 (Incremental Context Enrichment)**：通过 `enrich(...)` 合并旧上下文与新阶段元数据，而不是直接修改原命令对象，降低链路内共享状态污染风险。
+- **统一响应封装 (Final Response Assembly)**：由编排器统一构建最终 `AgentDispatchResponse`，将 `orchestrator`、`executionAgent`、`experienceCount` 等元数据集中归并，避免各 Agent 对外返回结构不一致。
+- **协作日志即内建观测点 (Logs as Built-in Observability)**：编排层在调度前后主动记录 `inputSnapshot / outputSnapshot / decisionSnapshot / durationMs`，将多 Agent 黑盒执行转为可回放、可审计的白盒链路。
+- **弱依赖日志服务 (Optional Logging Dependency)**：通过 `ObjectProvider<AgentCollaborationLogService>` 按需获取日志服务，即使日志模块未启用也不阻断主流程，保证编排链路可降级运行。
+
+### 6.2 核心代码实现
+```java
+private AgentDispatchCommand enrich(AgentDispatchCommand source, Map<String, Object> extraContext) {
+    Map<String, Object> context = new HashMap<>();
+    if (source.getContext() != null) {
+        context.putAll(source.getContext());
+    }
+    context.putAll(extraContext);
+    return AgentDispatchCommand.builder()
+            .traceId(source.getTraceId())
+            .agentCode(source.getAgentCode())
+            .userId(source.getUserId())
+            .sessionId(source.getSessionId())
+            .message(source.getMessage())
+            .context(context)
+            .build();
+}
+
+private void recordCollaborationStep(AgentDispatchCommand command,
+                                     String agentCode,
+                                     String stepType,
+                                     String stepName,
+                                     String status,
+                                     String inputSnapshot,
+                                     String outputSnapshot,
+                                     String decisionSnapshot,
+                                     String errorMessage,
+                                     LocalDateTime startTime,
+                                     LocalDateTime endTime) {
+    AgentCollaborationLog log = new AgentCollaborationLog();
+    log.setTraceId(command.getTraceId());
+    log.setRootSessionId(command.getSessionId());
+    log.setAgentCode(agentCode);
+    log.setStepType(stepType);
+    log.setStatus(status);
+    log.setInputSnapshot(truncate(inputSnapshot));
+    log.setOutputSnapshot(truncate(outputSnapshot));
+    log.setDecisionSnapshot(truncate(decisionSnapshot));
+    log.setDurationMs(durationMs(startTime, endTime));
+    collaborationLogService.createCollaborationLog(log);
+}
+```
+
+### 6.3 为什么需要统一编排层
+| 维度 | 无统一编排层 | 当前统一编排层设计 |
+| :--- | :--- | :--- |
+| **调用顺序** | 各 Agent 自己决定，链路容易发散 | 由编排器集中定义，顺序确定 |
+| **上下文边界** | 阶段信息散落在多个 Agent 内 | 由 `context` 统一注入和传递 |
+| **返回结构** | 不同 Agent 可能各自拼装响应 | 最终响应由编排器统一封口 |
+| **可观测性** | 只能看到局部处理结果 | 可按 `traceId` 查看完整协作链路 |
+| **扩展性** | 新增阶段容易牵一发而动全身 | 可在编排器中插入新阶段或替换路由策略 |
+
+### 6.4 简历描述建议
+- **设计并实现多 Agent 统一编排层**，基于 `AgentRegistry`、阶段状态机和上下文增量拼装机制，收敛多智能体调度逻辑并统一对外响应协议。
+- **构建协作链路可观测体系**，在编排层沉淀 `DISPATCH / EXECUTION / FINAL_RESPONSE` 等步骤日志，支持按 `traceId` 回放完整协作过程。
+- **通过弱依赖与可降级设计提升运行稳定性**，即使日志或扩展模块未启用，主协作链路仍可稳定执行。
+
+### 6.5 核心组件职责映射
+| 组件 | 核心职责 | 相关类 |
+| :--- | :--- | :--- |
+| **编排接口层** | 定义多 Agent 协作统一入口 | `MultiAgentOrchestrator` |
+| **默认编排实现** | 承担路由、阶段切换、结果归并与日志留痕 | `DefaultMultiAgentOrchestrator` |
+| **Agent 注册中心** | 按编码解析实际执行 Agent | `AgentRegistry` |
+| **协作日志实体** | 承载步骤级输入、输出、决策与耗时快照 | `AgentCollaborationLog` |
+| **协作日志服务** | 持久化编排阶段日志并支持后台查询 | `AgentCollaborationLogService`、`AgentCollaborationLogServiceImpl` |
+
+---
+
+## 7. Agent 经验沉淀与经验池闭环 (Agent Experience Accumulation Loop)
+**简介**：系统围绕 `MemoryAgent + AgentExperienceServiceImpl` 构建了经验召回、命中记录、成功回写、向量同步的经验沉淀闭环。经验不再只是原始历史对话，而是被结构化为可筛选、可排序、可重用的经验卡片，并以 MySQL 作为权威存储、向量索引作为语义增强层，实现“越协作越会复用经验”的弱自增强能力。
+
+### 7.1 技术亮点
+- **经验卡片化建模 (Structured Experience Cards)**：通过 `agent_experience_pool` 将经验沉淀为 `experienceCode / triggerPattern / strategySummary / recommendedAgentCode / successSample / qualityScore` 等结构化字段，便于后台治理与程序化召回。
+- **混合召回策略 (Hybrid Recall)**：先使用 MyBatis-Plus 按 `scopeType / experienceType / enabled / keyword` 做结构化粗筛，再在存在 `EmbeddingService + VectorStoreService` 时执行语义重排，兼顾可控性与召回语义质量。
+- **双阶段命中记录 (Two-Stage Hit Tracking)**：`MemoryAgent` 在 `RECALL` 阶段写入 `successFlag=false` 的命中日志，在 `WRITE_BACK` 阶段对真正参与成功执行的经验补写 `successFlag=true` 记录，区分“被召回”与“被证明有效”。
+- **增量合并回写 (Merge Instead of Blind Insert)**：`recordSuccessfulExperience(...)` 按 `experienceCode` 判断经验是否已存在；不存在则新建，存在则合并字段并累加 `hitCount / successCount`，避免经验池膨胀为重复样本集合。
+- **MySQL 权威存储 + 向量同步索引 (Authoritative DB + Vector Sync)**：MySQL 负责经验事实存储，向量库仅用于语义搜索与重排；即使向量同步失败，也不会影响主数据写入，保障经验沉淀主链路稳定。
+- **默认全局经验池 (Global-First Experience Scope)**：当前以 `scopeType = GLOBAL` 为主，保证多 Agent 协作经验可以跨会话、跨用户复用，为后续扩展 `USER / TEAM` 级经验池预留了模型空间。
+
+### 7.2 核心代码实现
+```java
+@Override
+@Transactional
+public AgentExperiencePool recordSuccessfulExperience(AgentExperiencePool experiencePool) {
+    AgentExperiencePool safeExperience = normalizeExperience(experiencePool);
+    AgentExperiencePool existing = agentExperiencePoolMapper.selectOne(
+            Wrappers.lambdaQuery(AgentExperiencePool.class)
+                    .eq(AgentExperiencePool::getExperienceCode, safeExperience.getExperienceCode())
+                    .last("limit 1"));
+    if (existing == null) {
+        safeExperience.setHitCount(resolvePositiveCount(safeExperience.getHitCount(), 1));
+        safeExperience.setSuccessCount(resolvePositiveCount(safeExperience.getSuccessCount(), 1));
+        safeExperience.setLastUsedAt(LocalDateTime.now());
+        agentExperiencePoolMapper.insert(safeExperience);
+        syncVectorIndex(safeExperience);
+        return safeExperience;
+    }
+
+    mergeExperience(existing, safeExperience);
+    agentExperiencePoolMapper.updateById(existing);
+    syncVectorIndex(existing);
+    return existing;
+}
+```
+
+### 7.3 关键设计取舍
+| 设计点 | 取舍方案 | 价值 |
+| :--- | :--- | :--- |
+| **经验载体** | 采用结构化经验池，而非直接复用原始聊天日志 | 便于筛选、排序、治理与后台展示 |
+| **召回策略** | 先 MySQL 粗筛，再向量重排 | 降低误召回风险，同时保留语义相关性 |
+| **命中统计** | 区分 `RECALL` 与 `FINAL_RESPONSE` 两阶段命中 | 可以识别真正有效的经验，便于后续评分优化 |
+| **回写策略** | 按 `experienceCode` 合并更新，而非每次新插入 | 避免经验池快速污染成重复样本库 |
+| **索引策略** | 数据库为权威源，向量库做增强层 | 向量故障不阻断主链路，整体稳定性更高 |
+
+### 7.4 简历描述建议
+- **实现 Agent 经验沉淀闭环**，围绕经验池、命中日志与回写机制构建“召回 -> 使用 -> 成功标记 -> 经验沉淀”的弱自增强体系。
+- **设计混合经验召回方案**，结合 MyBatis-Plus 结构化过滤与向量语义重排，提升经验复用命中率与可控性。
+- **构建经验去重合并与索引同步机制**，通过 `experienceCode` 合并更新、命中计数累加和向量同步，避免经验池重复膨胀。
+
+### 7.5 核心组件职责映射
+| 组件 | 核心职责 | 相关类 |
+| :--- | :--- | :--- |
+| **经验召回入口** | 根据消息与经验类型发起经验查询 | `MemoryAgent` |
+| **经验服务层** | 负责召回、命中记录、成功经验回写与索引同步 | `AgentExperienceServiceImpl` |
+| **经验池实体** | 结构化存储可复用经验卡片 | `AgentExperiencePool` |
+| **命中日志实体** | 记录经验在不同阶段的命中与成功情况 | `AgentExperienceHitLog` |
+| **语义增强层** | 为经验召回提供向量重排能力 | `EmbeddingService`、`VectorStoreService` |
+
+---
