@@ -30,6 +30,12 @@ public class AgentCollaborationLogServiceImpl implements AgentCollaborationLogSe
         this.agentCollaborationLogMapper = agentCollaborationLogMapper;
     }
 
+    /**
+     * 分页查询协作日志列表。
+     *
+     * @param query 查询条件
+     * @return 协作日志分页数据
+     */
     @Override
     public TableDataInfo<AgentCollaborationLogVo> listCollaborationLogs(AgentCollaborationLogQuery query) {
         AgentCollaborationLogQuery safeQuery = query == null ? new AgentCollaborationLogQuery() : query;
@@ -51,6 +57,12 @@ public class AgentCollaborationLogServiceImpl implements AgentCollaborationLogSe
                 .toList());
     }
 
+    /**
+     * 查询指定 traceId 下的协作步骤时间线。
+     *
+     * @param traceId 追踪ID
+     * @return 协作步骤列表
+     */
     @Override
     public List<AgentCollaborationStepVo> listTraceSteps(String traceId) {
         if (StringUtils.isBlank(traceId)) {
@@ -65,6 +77,12 @@ public class AgentCollaborationLogServiceImpl implements AgentCollaborationLogSe
                 .toList();
     }
 
+    /**
+     * 创建协作日志记录。
+     *
+     * @param collaborationLog 协作日志实体
+     * @return 保存后的协作日志
+     */
     @Override
     @Transactional
     public AgentCollaborationLog createCollaborationLog(AgentCollaborationLog collaborationLog) {
@@ -75,6 +93,12 @@ public class AgentCollaborationLogServiceImpl implements AgentCollaborationLogSe
         return collaborationLog;
     }
 
+    /**
+     * 根据ID查询协作日志。
+     *
+     * @param id 日志ID
+     * @return 协作日志（可选）
+     */
     @Override
     public Optional<AgentCollaborationLog> findById(Long id) {
         if (id == null) {

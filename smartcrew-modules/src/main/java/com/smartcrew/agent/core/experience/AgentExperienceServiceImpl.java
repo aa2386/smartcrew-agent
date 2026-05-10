@@ -53,6 +53,13 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
     private final ObjectProvider<EmbeddingService> embeddingServiceProvider;
     private final ObjectProvider<VectorStoreService> vectorStoreServiceProvider;
 
+    /**
+     * 根据查询条件召回全局经验列表。
+     * 默认会尝试使用向量服务对结果进行语义重排序，若不可用则回退到数据库默认排序。
+     *
+     * @param query 经验池查询条件
+     * @return 经验召回分页数据
+     */
     @Override
     public TableDataInfo<AgentExperienceRecallVo> recallGlobalExperiences(AgentExperiencePoolQuery query) {
         AgentExperiencePoolQuery safeQuery = query == null ? new AgentExperiencePoolQuery() : query;
@@ -66,6 +73,13 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         return TableDataInfo.build(result);
     }
 
+    /**
+     * 记录成功经验并同步向量索引。
+     * 若经验代码已存在则合并更新（新增计数字段累加），否则新增一条经验记录。
+     *
+     * @param experiencePool 经验实体
+     * @return 保存或更新后的经验
+     */
     @Override
     @Transactional
     public AgentExperiencePool recordSuccessfulExperience(AgentExperiencePool experiencePool) {
@@ -88,6 +102,11 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         return existing;
     }
 
+    /**
+     * 记录经验命中日志。
+     *
+     * @param hitLog 经验命中日志实体
+     */
     @Override
     @Transactional
     public void recordExperienceHit(AgentExperienceHitLog hitLog) {
@@ -106,6 +125,12 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         agentExperienceHitLogMapper.insert(hitLog);
     }
 
+    /**
+     * 分页查询经验命中日志列表。
+     *
+     * @param query 查询条件
+     * @return 命中日志分页数据
+     */
     @Override
     public TableDataInfo<AgentExperienceHitLogVo> listExperienceHits(AgentExperienceHitLogQuery query) {
         AgentExperienceHitLogQuery safeQuery = query == null ? new AgentExperienceHitLogQuery() : query;
@@ -133,6 +158,12 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         return TableDataInfo.build(result);
     }
 
+    /**
+     * 根据ID查询经验池。
+     *
+     * @param id 经验ID
+     * @return 经验实体（可选）
+     */
     @Override
     public Optional<AgentExperiencePool> findExperienceById(Long id) {
         if (id == null) {
@@ -141,6 +172,7 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         return Optional.ofNullable(agentExperiencePoolMapper.selectById(id));
     }
 
+    /* 构建召回查询条件。 */
     private LambdaQueryWrapper<AgentExperiencePool> buildRecallWrapper(AgentExperiencePoolQuery query) {
         LambdaQueryWrapper<AgentExperiencePool> wrapper = Wrappers.lambdaQuery(AgentExperiencePool.class);
         String scopeType = StringUtils.isNotBlank(query.getScopeType()) ? query.getScopeType().trim() : AgentExperienceScopes.GLOBAL;
@@ -179,6 +211,7 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         return wrapper;
     }
 
+    /* 利用向量服务对数据库召回结果进行语义重排序。 */
     private List<AgentExperiencePool> reorderByVectorIfAvailable(String keyword, List<AgentExperiencePool> records) {
         if (records == null || records.size() <= 1 || StringUtils.isBlank(keyword)) {
             return records == null ? List.of() : records;
@@ -215,6 +248,7 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         }
     }
 
+    /* 从向量匹配结果的元数据中提取 experienceCode。 */
     private String extractExperienceCode(EmbeddingMatch<TextSegment> match) {
         if (match == null || match.embedded() == null || match.embedded().metadata() == null) {
             return "";
@@ -223,6 +257,7 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         return experienceCode == null ? "" : String.valueOf(experienceCode);
     }
 
+    /* 同步经验数据到向量索引。 */
     private void syncVectorIndex(AgentExperiencePool experiencePool) {
         EmbeddingService embeddingService = embeddingServiceProvider.getIfAvailable();
         VectorStoreService vectorStoreService = vectorStoreServiceProvider.getIfAvailable();
@@ -247,6 +282,7 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         }
     }
 
+    /* 构建用于向量嵌入的经验文本。 */
     private String buildExperienceDocument(AgentExperiencePool experiencePool) {
         List<String> sections = new ArrayList<>();
         appendSection(sections, experiencePool.getExperienceCode());
@@ -260,12 +296,14 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         return String.join("\n", sections);
     }
 
+    /* 向文档列表中追加非空字段。 */
     private void appendSection(List<String> sections, String value) {
         if (StringUtils.isNotBlank(value)) {
             sections.add(value.trim());
         }
     }
 
+    /* 将源经验数据合并到目标经验。 */
     private void mergeExperience(AgentExperiencePool target, AgentExperiencePool source) {
         if (StringUtils.isNotBlank(source.getScopeType())) {
             target.setScopeType(source.getScopeType().trim());
@@ -308,6 +346,7 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         }
     }
 
+    /* 规范化经验实体，确保必填字段有默认值。 */
     private AgentExperiencePool normalizeExperience(AgentExperiencePool experiencePool) {
         if (experiencePool == null) {
             throw new ServiceException(400, "经验不能为空");
@@ -343,6 +382,7 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         return normalized;
     }
 
+    /* 转换为经验召回视图。 */
     private AgentExperienceRecallVo toRecallVo(AgentExperiencePool experiencePool) {
         AgentExperienceRecallVo vo = new AgentExperienceRecallVo();
         vo.setExperienceCode(experiencePool.getExperienceCode());
@@ -363,6 +403,7 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         return vo;
     }
 
+    /* 转换为命中日志视图。 */
     private AgentExperienceHitLogVo toHitVo(AgentExperienceHitLog hitLog) {
         AgentExperienceHitLogVo vo = new AgentExperienceHitLogVo();
         vo.setTraceId(hitLog.getTraceId());
@@ -375,6 +416,7 @@ public class AgentExperienceServiceImpl implements AgentExperienceService {
         return vo;
     }
 
+    /* 解析工具编码 JSON 为列表。 */
     private List<String> parseToolCodes(String json) {
         try {
             return AgentExperienceToolCodes.fromJson(json);

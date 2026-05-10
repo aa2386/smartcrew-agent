@@ -53,16 +53,28 @@ public class ExecutionAgent implements Agent {
         this.collaborationLogServiceProvider = collaborationLogServiceProvider;
     }
 
+    /**
+     * 返回 Agent 唯一编码。
+     */
     @Override
     public String code() {
         return "execution-agent";
     }
 
+    /**
+     * 返回 Agent 显示名称。
+     */
     @Override
     public String name() {
         return "执行智能体";
     }
 
+    /**
+     * 判断是否支持指定能力。
+     *
+     * @param capability 能力标识
+     * @return 是否支持
+     */
     @Override
     public boolean supports(String capability) {
         return "execute".equalsIgnoreCase(capability)
@@ -70,6 +82,12 @@ public class ExecutionAgent implements Agent {
                 || "orchestrate".equalsIgnoreCase(capability);
     }
 
+    /**
+     * 处理用户指令，执行 RAG 检索增强、LLM 对话并记录协作日志。
+     *
+     * @param command Agent 派发指令
+     * @return 处理响应
+     */
     @Override
     public AgentDispatchResponse handle(AgentDispatchCommand command) {
         LocalDateTime startTime = LocalDateTime.now();
@@ -142,6 +160,7 @@ public class ExecutionAgent implements Agent {
         }
     }
 
+    /* 解析当前请求的 RAG 检索增强结果。 */
     private RagAugmentationResult resolveRagAugmentation(String agentCode, AgentDispatchCommand command) {
         return ragAugmentationService
                 .map(service -> service.augment(agentCode, command.getMessage(), command.getTraceId()))
@@ -152,6 +171,7 @@ public class ExecutionAgent implements Agent {
                         .build());
     }
 
+    /* 构建响应元数据。 */
     private Map<String, Object> buildMetadata(AgentDispatchCommand command, int ragHitCount) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("executionAgent", code());
@@ -161,6 +181,7 @@ public class ExecutionAgent implements Agent {
         return metadata;
     }
 
+    /* 从指令上下文中读取经验计数。 */
     private int readExperienceCount(AgentDispatchCommand command) {
         Object value = safeContext(command).get("experienceCount");
         if (value instanceof Number number) {
@@ -176,6 +197,7 @@ public class ExecutionAgent implements Agent {
         }
     }
 
+    /* 解析指令中的 Agent 编码，默认使用 initial-agent。 */
     private String resolveCommandAgentCode(AgentDispatchCommand command) {
         if (command.getAgentCode() == null || command.getAgentCode().isBlank()) {
             return "initial-agent";
@@ -183,6 +205,7 @@ public class ExecutionAgent implements Agent {
         return command.getAgentCode().trim();
     }
 
+    /* 安全获取指令上下文，避免空指针。 */
     private Map<String, Object> safeContext(AgentDispatchCommand command) {
         if (command.getContext() == null) {
             return Map.of();
@@ -190,10 +213,12 @@ public class ExecutionAgent implements Agent {
         return command.getContext();
     }
 
+    /* 在对话存储中持久化兜底回复。 */
     private void persistFallbackConversation(AgentDispatchCommand command, String assistantMessage) {
         String agentCode = resolveCommandAgentCode(command);
         String sessionId = agentCode + "::" + command.getSessionId();
         conversationStore.ensureSession(command.getUserId(), sessionId);
+        /* 顺序写入用户消息和助手消息 */
         long userMessageSeq = conversationStore.nextMessageSeq(command.getUserId(), sessionId);
         conversationStore.saveUserMessage(
                 command.getUserId(),
@@ -215,6 +240,7 @@ public class ExecutionAgent implements Agent {
         );
     }
 
+    /* 构建执行步骤输入快照。 */
     private String buildExecutionInputSnapshot(AgentDispatchCommand command,
                                                String commandAgentCode,
                                                int ragHitCount,
@@ -231,6 +257,7 @@ public class ExecutionAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 构建执行步骤输出快照。 */
     private String buildExecutionOutputSnapshot(String assistantMessage,
                                                 boolean accepted,
                                                 Map<String, Object> metadata) {
@@ -241,6 +268,7 @@ public class ExecutionAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 构建执行步骤决策快照。 */
     private String buildExecutionDecisionSnapshot(AgentDispatchCommand command,
                                                   String commandAgentCode,
                                                   int ragHitCount,
@@ -256,6 +284,7 @@ public class ExecutionAgent implements Agent {
         return snapshotString(decision);
     }
 
+    /* 记录执行步骤到协作日志。 */
     private void recordExecutionStep(AgentDispatchCommand command,
                                      String status,
                                      String inputSnapshot,
@@ -290,6 +319,7 @@ public class ExecutionAgent implements Agent {
         }
     }
 
+    /* 计算两个时间点之间的毫秒差值。 */
     private Long durationMs(LocalDateTime startTime, LocalDateTime endTime) {
         if (startTime == null || endTime == null) {
             return 0L;
@@ -297,14 +327,17 @@ public class ExecutionAgent implements Agent {
         return Math.max(Duration.between(startTime, endTime).toMillis(), 0L);
     }
 
+    /* 将快照 Map 转为字符串并截断。 */
     private String snapshotString(Map<String, Object> snapshot) {
         return truncate(String.valueOf(snapshot));
     }
 
+    /* 截断字符串（snapshotString 的别名）。 */
     private String clip(String value) {
         return truncate(value);
     }
 
+    /* 截断字符串到指定长度上限（2000 字符）。 */
     private String truncate(String value) {
         if (value == null || value.isBlank()) {
             return "";

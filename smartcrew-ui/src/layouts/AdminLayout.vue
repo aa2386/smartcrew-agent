@@ -74,6 +74,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
+/** 后台左侧导航菜单配置 */
 const menuItems = [
   { path: '/admin/dashboard', label: '总览', icon: DataAnalysis },
   { path: '/admin/users', label: '用户管理', icon: UserFilled },
@@ -90,6 +91,7 @@ const titleMap = new Map(menuItems.map((item) => [item.path, item.label]))
 const currentTitle = computed(() => titleMap.get(route.path) ?? '后台管理台')
 const adminName = computed(() => authStore.adminUser?.displayName || authStore.adminUser?.username || '管理员')
 
+/** 退出后台登录，清除 token 并跳转至登录页 */
 async function logout() {
   try {
     await authStore.logoutAdmin()

@@ -172,6 +172,7 @@ const activeLog = ref<CollaborationLogRecord | null>(null)
 
 onMounted(loadLogs)
 
+/** 加载协作日志列表，并将第一行设为当前选中行以加载步骤时间线 */
 async function loadLogs() {
   try {
     const response = await adminPortalApi.listCollaborationLogs(authStore.adminToken, {
@@ -205,22 +206,26 @@ async function loadLogs() {
   }
 }
 
+/** 搜索按钮点击：重置至第一页并重新加载 */
 async function handleSearch() {
   pager.pageNum = 1
   await loadLogs()
 }
 
+/** 分页页码变化时重新加载 */
 async function handlePageChange(pageNum: number) {
   pager.pageNum = pageNum
   await loadLogs()
 }
 
+/** 每页条数变化时重置至第一页并重新加载 */
 async function handleSizeChange(pageSize: number) {
   pager.pageSize = pageSize
   pager.pageNum = 1
   await loadLogs()
 }
 
+/** 选中某行协作日志时加载其步骤时间线详情 */
 async function handleCurrentChange(row?: CollaborationLogRecord) {
   if (!row) return
   activeLog.value = row
@@ -235,6 +240,7 @@ async function handleCurrentChange(row?: CollaborationLogRecord) {
   }
 }
 
+/** 根据步骤状态返回对应的 Element Plus Tag 类型 */
 function statusTagType(status?: string) {
   switch (status) {
     case 'SUCCESS':
@@ -250,6 +256,7 @@ function statusTagType(status?: string) {
   }
 }
 
+/** 格式化 ISO 日期为中文本地时间字符串 */
 function formatDate(value?: string) {
   if (!value) return '暂无'
   return new Date(value).toLocaleString('zh-CN')

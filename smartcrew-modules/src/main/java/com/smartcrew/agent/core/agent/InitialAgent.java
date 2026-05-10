@@ -31,16 +31,28 @@ public class InitialAgent implements Agent {
         this.chatServiceProvider = chatServiceProvider;
     }
 
+    /**
+     * 返回 Agent 唯一编码。
+     */
     @Override
     public String code() {
         return "initial-agent";
     }
 
+    /**
+     * 返回 Agent 显示名称。
+     */
     @Override
     public String name() {
         return "初始智能体";
     }
 
+    /**
+     * 判断是否支持指定能力。
+     *
+     * @param capability 能力标识
+     * @return 是否支持
+     */
     @Override
     public boolean supports(String capability) {
         return "chat".equalsIgnoreCase(capability)
@@ -48,6 +60,12 @@ public class InitialAgent implements Agent {
                 || "rag".equalsIgnoreCase(capability);
     }
 
+    /**
+     * 处理用户指令。优先委派多智能体编排器，回退到单智能体对话。
+     *
+     * @param command Agent 派发指令
+     * @return 处理响应
+     */
     @Override
     public AgentDispatchResponse handle(AgentDispatchCommand command) {
         MultiAgentOrchestrator orchestrator = multiAgentOrchestratorProvider.getIfAvailable();
@@ -79,6 +97,7 @@ public class InitialAgent implements Agent {
                 .build();
     }
 
+    /* 解析指令中的 Agent 编码，默认使用自身编码。 */
     private String resolveCommandAgentCode(AgentDispatchCommand command) {
         if (command.getAgentCode() == null || command.getAgentCode().isBlank()) {
             return code();

@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/auth'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    /** 公众聊天入口布局 */
     {
       path: '/',
       component: () => import('../layouts/PublicLayout.vue'),
@@ -16,71 +17,40 @@ const router = createRouter({
         }
       ]
     },
+    /** 后台登录页（独立布局） */
     {
       path: '/admin/login',
       name: 'admin-login',
       component: () => import('../views/admin/AdminLoginView.vue')
     },
+    /** 后台管理台布局 */
     {
       path: '/admin',
       component: () => import('../layouts/AdminLayout.vue'),
       redirect: '/admin/dashboard',
       children: [
-        {
-          path: 'dashboard',
-          name: 'admin-dashboard',
-          component: () => import('../views/admin/AdminDashboardView.vue')
-        },
-        {
-          path: 'users',
-          name: 'admin-users',
-          component: () => import('../views/admin/AdminUsersView.vue')
-        },
-        {
-          path: 'identities',
-          name: 'admin-identities',
-          component: () => import('../views/admin/AdminIdentitiesView.vue')
-        },
-        {
-          path: 'agents',
-          name: 'admin-agents',
-          component: () => import('../views/admin/AdminAgentsView.vue')
-        },
-        {
-          path: 'tools',
-          name: 'admin-tools',
-          component: () => import('../views/admin/AdminToolsView.vue')
-        },
-        {
-          path: 'knowledge-bases',
-          name: 'admin-knowledge-bases',
-          component: () => import('../views/admin/AdminKnowledgeBasesView.vue')
-        },
-        {
-          path: 'prompts',
-          name: 'admin-prompts',
-          component: () => import('../views/admin/AdminPromptsView.vue')
-        },
-        {
-          path: 'preferences',
-          name: 'admin-preferences',
-          component: () => import('../views/admin/AdminPreferencesView.vue')
-        },
-        {
-          path: 'conversations',
-          name: 'admin-conversations',
-          component: () => import('../views/admin/AdminConversationsView.vue')
-        },
-        {
-          path: 'collaboration-logs',
-          name: 'admin-collaboration-logs',
-          component: () => import('../views/admin/AdminCollaborationLogsView.vue')
-        }
+        { path: 'dashboard', name: 'admin-dashboard', component: () => import('../views/admin/AdminDashboardView.vue') },
+        { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsersView.vue') },
+        { path: 'identities', name: 'admin-identities', component: () => import('../views/admin/AdminIdentitiesView.vue') },
+        { path: 'agents', name: 'admin-agents', component: () => import('../views/admin/AdminAgentsView.vue') },
+        { path: 'tools', name: 'admin-tools', component: () => import('../views/admin/AdminToolsView.vue') },
+        { path: 'knowledge-bases', name: 'admin-knowledge-bases', component: () => import('../views/admin/AdminKnowledgeBasesView.vue') },
+        { path: 'prompts', name: 'admin-prompts', component: () => import('../views/admin/AdminPromptsView.vue') },
+        { path: 'preferences', name: 'admin-preferences', component: () => import('../views/admin/AdminPreferencesView.vue') },
+        { path: 'conversations', name: 'admin-conversations', component: () => import('../views/admin/AdminConversationsView.vue') },
+        { path: 'collaboration-logs', name: 'admin-collaboration-logs', component: () => import('../views/admin/AdminCollaborationLogsView.vue') }
       ]
     }
   ]
 })
 
+/**
+ * 全局路由守卫：校验后台访问权限与功能开关。
+ * - 后台路径需 enableAdmin 开关开启
+ * - 未登录后台用户重定向至登录页
+ * - 已登录后台用户访问登录页时重定向至仪表盘
+ * - 公众入口关闭时自动跳转后台
+ */
 router.beforeEach((to) => {
   const authStore = useAuthStore()
   if (to.path.startsWith('/admin')) {

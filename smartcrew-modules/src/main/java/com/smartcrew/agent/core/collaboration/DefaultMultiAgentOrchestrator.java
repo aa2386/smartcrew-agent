@@ -43,6 +43,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         this.collaborationLogServiceProvider = collaborationLogServiceProvider;
     }
 
+    /* 按照固定流水线编排：记忆召回 → 执行 → 记忆回写 → 最终响应。 */
     @Override
     public AgentDispatchResponse orchestrate(AgentDispatchCommand command) {
         LocalDateTime requestStart = LocalDateTime.now();
@@ -92,11 +93,13 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return finalResponse;
     }
 
+    /* 从注册中心获取指定编码的 Agent 实例，不存在则抛异常。 */
     private Agent requireAgent(String agentCode) {
         return agentRegistry.get(agentCode)
                 .orElseThrow(() -> new ServiceException("Unknown agent: " + agentCode));
     }
 
+    /* 合并原始命令和额外上下文，构造新的派发命令。 */
     private AgentDispatchCommand enrich(AgentDispatchCommand source, Map<String, Object> extraContext) {
         Map<String, Object> context = new HashMap<>();
         if (source.getContext() != null) {
@@ -113,6 +116,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
                 .build();
     }
 
+    /* 安全地将 Object 转为 int，转换失败返回 0。 */
     private int asInt(Object value) {
         if (value instanceof Number number) {
             return number.intValue();
@@ -128,6 +132,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
     }
 
     @SuppressWarnings("unchecked")
+    /* 从集合或字符串中提取第一个经验编码。 */
     private String firstExperienceCode(Object value) {
         if (value instanceof List<?> list && !list.isEmpty()) {
             Object first = list.get(0);
@@ -139,6 +144,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return "";
     }
 
+    /* 构建最终响应的元数据。 */
     private Map<String, Object> buildFinalMetadata(AgentDispatchResponse executionResponse, int experienceCount) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("orchestrator", ORCHESTRATOR_NAME);
@@ -150,6 +156,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return metadata;
     }
 
+    /* 构建请求快照用于协作日志。 */
     private String buildRequestSnapshot(AgentDispatchCommand command) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("traceId", command.getTraceId());
@@ -161,6 +168,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return snapshotString(snapshot);
     }
 
+    /* 构建调度分发输出快照。 */
     private String buildDispatchOutputSnapshot() {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("nextSteps", List.of(
@@ -174,6 +182,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return snapshotString(snapshot);
     }
 
+    /* 构建调度分发决策快照。 */
     private String buildDispatchDecisionSnapshot() {
         Map<String, Object> decision = new LinkedHashMap<>();
         decision.put("orchestrator", ORCHESTRATOR_NAME);
@@ -183,6 +192,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return snapshotString(decision);
     }
 
+    /* 构建最终响应的输入快照。 */
     private String buildFinalInputSnapshot(AgentDispatchCommand command,
                                            AgentDispatchResponse recallResponse,
                                            AgentDispatchResponse executionResponse,
@@ -197,6 +207,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return snapshotString(snapshot);
     }
 
+    /* 构建最终响应的输出快照。 */
     private String buildFinalOutputSnapshot(AgentDispatchResponse response, String selectedExperienceCode) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("accepted", response.isAccepted());
@@ -206,6 +217,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return snapshotString(snapshot);
     }
 
+    /* 构建最终响应的决策快照。 */
     private String buildFinalDecisionSnapshot(String selectedExperienceCode) {
         Map<String, Object> decision = new LinkedHashMap<>();
         decision.put("orchestrator", ORCHESTRATOR_NAME);
@@ -220,6 +232,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return snapshotString(decision);
     }
 
+    /* 安全获取指令上下文，避免空指针。 */
     private Map<String, Object> safeContext(AgentDispatchCommand command) {
         if (command.getContext() == null) {
             return Map.of();
@@ -227,6 +240,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return command.getContext();
     }
 
+    /* 记录协作步骤到日志服务。 */
     private void recordCollaborationStep(AgentDispatchCommand command,
                                          String agentCode,
                                          String stepType,
@@ -264,6 +278,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         }
     }
 
+    /* 计算两个时间点之间的毫秒差值。 */
     private Long durationMs(LocalDateTime startTime, LocalDateTime endTime) {
         if (startTime == null || endTime == null) {
             return 0L;
@@ -272,10 +287,12 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         return Math.max(duration, 0L);
     }
 
+    /* 将快照 Map 转为字符串并截断。 */
     private String snapshotString(Map<String, Object> snapshot) {
         return truncate(String.valueOf(snapshot));
     }
 
+    /* 截断字符串到指定长度上限。 */
     private String truncate(String value) {
         if (value == null || value.isBlank()) {
             return "";

@@ -47,16 +47,28 @@ public class MemoryAgent implements Agent {
         this.collaborationLogServiceProvider = collaborationLogServiceProvider;
     }
 
+    /**
+     * 返回 Agent 唯一编码。
+     */
     @Override
     public String code() {
         return CODE;
     }
 
+    /**
+     * 返回 Agent 显示名称。
+     */
     @Override
     public String name() {
         return "记忆智能体";
     }
 
+    /**
+     * 判断是否支持指定能力。
+     *
+     * @param capability 能力标识
+     * @return 是否支持
+     */
     @Override
     public boolean supports(String capability) {
         return "memory".equalsIgnoreCase(capability)
@@ -94,6 +106,7 @@ public class MemoryAgent implements Agent {
         return recall(command, experienceService, phase);
     }
 
+    /* 经验召回主流程：根据关键字从经验池查询并记录命中日志。 */
     private AgentDispatchResponse recall(AgentDispatchCommand command,
                                          AgentExperienceService experienceService,
                                          String phase) {
@@ -136,6 +149,7 @@ public class MemoryAgent implements Agent {
                 .build();
     }
 
+    /* 经验回写主流程：将执行成功的经验沉淀到经验池并同步向量索引。 */
     private AgentDispatchResponse writeBack(AgentDispatchCommand command, AgentExperienceService experienceService) {
         LocalDateTime startTime = LocalDateTime.now();
         String selectedExperienceCode = stringValue(safeContext(command).get("selectedExperienceCode"));
@@ -198,6 +212,7 @@ public class MemoryAgent implements Agent {
                 .build();
     }
 
+    /* 根据指令构建经验池查询条件并执行召回。 */
     private TableDataInfo<AgentExperienceRecallVo> recallExperiences(AgentDispatchCommand command,
                                                                      AgentExperienceService experienceService) {
         AgentExperiencePoolQuery query = new AgentExperiencePoolQuery();
@@ -208,6 +223,7 @@ public class MemoryAgent implements Agent {
         return experienceService.recallGlobalExperiences(query);
     }
 
+    /* 从指令上下文中解析经验类型。 */
     private String resolveExperienceType(AgentDispatchCommand command) {
         Object value = safeContext(command).get("experienceType");
         if (value == null || String.valueOf(value).isBlank()) {
@@ -216,6 +232,7 @@ public class MemoryAgent implements Agent {
         return String.valueOf(value).trim();
     }
 
+    /* 构建响应元数据。 */
     private Map<String, Object> buildMetadata(String phase, int experienceCount, List<String> experienceCodes) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("phase", phase);
@@ -224,6 +241,7 @@ public class MemoryAgent implements Agent {
         return metadata;
     }
 
+    /* 安全获取指令上下文，避免空指针。 */
     private Map<String, Object> safeContext(AgentDispatchCommand command) {
         if (command.getContext() == null) {
             return Map.of();
@@ -231,6 +249,7 @@ public class MemoryAgent implements Agent {
         return command.getContext();
     }
 
+    /* 构建召回输入快照。 */
     private String buildRecallInputSnapshot(AgentDispatchCommand command, String phase) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("traceId", command.getTraceId());
@@ -240,6 +259,7 @@ public class MemoryAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 构建召回输出快照。 */
     private String buildRecallOutputSnapshot(int experienceCount, List<String> experienceCodes) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("experienceCount", experienceCount);
@@ -247,6 +267,7 @@ public class MemoryAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 构建召回决策快照。 */
     private String buildRecallDecisionSnapshot(AgentDispatchCommand command, List<String> experienceCodes) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("scope", AgentExperienceScopes.GLOBAL);
@@ -256,6 +277,7 @@ public class MemoryAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 构建回写输入快照。 */
     private String buildWriteBackInputSnapshot(AgentDispatchCommand command,
                                                String selectedExperienceCode,
                                                String executionSummary) {
@@ -267,6 +289,7 @@ public class MemoryAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 构建回写输出快照。 */
     private String buildWriteBackOutputSnapshot(String selectedExperienceCode,
                                                 String executionSummary,
                                                 String status) {
@@ -277,6 +300,7 @@ public class MemoryAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 构建回写决策快照。 */
     private String buildWriteBackDecisionSnapshot(AgentDispatchCommand command, String selectedExperienceCode) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("experienceType", resolveExperienceType(command));
@@ -285,6 +309,7 @@ public class MemoryAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 构建服务未启用时的输入快照。 */
     private String buildNoServiceInputSnapshot(AgentDispatchCommand command, String phase) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("traceId", command.getTraceId());
@@ -293,6 +318,7 @@ public class MemoryAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 构建服务未启用时的输出快照。 */
     private String buildNoServiceOutputSnapshot(String message) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("message", message);
@@ -300,6 +326,7 @@ public class MemoryAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 构建服务未启用时的决策快照。 */
     private String buildNoServiceDecisionSnapshot(String phase) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("phase", phase);
@@ -307,6 +334,7 @@ public class MemoryAgent implements Agent {
         return snapshotString(snapshot);
     }
 
+    /* 记录记忆步骤到协作日志。 */
     private void recordMemoryStep(AgentDispatchCommand command,
                                   String stepType,
                                   String stepName,
@@ -343,6 +371,7 @@ public class MemoryAgent implements Agent {
         }
     }
 
+    /* 计算两个时间点之间的毫秒差值。 */
     private Long durationMs(LocalDateTime startTime, LocalDateTime endTime) {
         if (startTime == null || endTime == null) {
             return 0L;
@@ -350,14 +379,17 @@ public class MemoryAgent implements Agent {
         return Math.max(Duration.between(startTime, endTime).toMillis(), 0L);
     }
 
+    /* 将快照 Map 转为字符串并截断。 */
     private String snapshotString(Map<String, Object> snapshot) {
         return truncate(String.valueOf(snapshot));
     }
 
+    /* 安全获取对象的字符串值。 */
     private String stringValue(Object value) {
         return value == null ? "" : String.valueOf(value).trim();
     }
 
+    /* 截断字符串到指定长度上限。 */
     private String truncate(String value) {
         if (value == null || value.isBlank()) {
             return "";

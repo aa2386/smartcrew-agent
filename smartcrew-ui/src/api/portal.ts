@@ -31,6 +31,7 @@ interface PageParams {
   pageSize?: number
 }
 
+/** 面向公众用户的 API 集合（注册、登录、聊天会话）。 */
 export const webPortalApi = {
   register(payload: { username: string; password: string; displayName: string }) {
     return request<LoginResponse>('/api/web/auth/register', {
@@ -80,6 +81,7 @@ export const webPortalApi = {
   }
 }
 
+/** 面向后台管理员的 API 集合（用户、Agent、工具、知识库、协作日志等管理接口）。 */
 export const adminPortalApi = {
   login(payload: { username: string; password: string }) {
     return request<LoginResponse>('/api/admin/auth/login', {
@@ -305,6 +307,9 @@ export const adminPortalApi = {
       token
     })
   },
+  /**
+   * 分页查询协作日志，支持按 Trace ID、会话 ID、Agent、步骤类型、状态、关键词和时间范围筛选。
+   */
   listCollaborationLogs(
     token: string,
     params: {
@@ -337,6 +342,9 @@ export const adminPortalApi = {
       }
     )
   },
+  /**
+   * 按 Trace ID 查询协作日志的步骤时间线详情。
+   */
   listCollaborationLogSteps(token: string, traceId: string) {
     return request<CollaborationLogStepRecord[]>(`/api/admin/collaboration-logs/${traceId}/steps`, {
       token
